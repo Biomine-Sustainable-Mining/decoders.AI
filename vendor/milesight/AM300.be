@@ -1,7 +1,7 @@
 #
 # LoRaWAN AI-Generated Decoder for Milesight AM300 Prompted by ZioFabry 
 #
-# Generated: 2025-08-26 | Version: 1.2.2 | Revision: 4
+# Generated: 2025-08-26 | Version: 1.2.3 | Revision: 5
 #            by "LoRaWAN Decoder AI Generation Template", v2.3.6
 #
 # Homepage:  https://www.milesight-iot.com/lorawan/sensor/am300/
@@ -9,6 +9,12 @@
 # Decoder:   https://github.com/Milesight-IoT/SensorDecoders/tree/master/AM_Series
 # 
 # Changelog:
+# v1.2.3 (2025-08-26): Rebuilt ALL test scenario payloads
+#   - Reconstructed all 8 test scenarios with proper multi-channel structure
+#   - Fixed temperature calculations for all scenarios (no more negative temps)
+#   - Added realistic air quality progression: good->normal->moderate->poor->alert
+#   - Enhanced buzzer_on scenario with actual buzzer and activity events
+#   - All scenarios now decode correctly with full sensor data
 # v1.2.2 (2025-08-26): Fixed moderate test scenario payload
 #   - Reconstructed proper moderate air quality test payload
 #   - Temperature 22.5°C, CO2 800ppm, TVOC 120, Pressure 1015.5hPa
@@ -481,15 +487,15 @@ tasmota.remove_cmd("LwAM300TestUI")
 tasmota.add_cmd("LwAM300TestUI", def(cmd, idx, payload_str)
     # Predefined realistic test scenarios for UI development
     var test_scenarios = {
-        # Realistic test payloads for different air quality conditions
-        "normal":    "0175640367001804680A05020006CB040707D0190808D006000973A02803FE01",      # Normal air quality
-        "good":      "01756403670096046807050200060CB020707D0E8030808D003000973A02803FF01",      # Good conditions  
-        "moderate":  "0175500367E100046850050201061005077D2003087DE02E0973AB27",      # Moderate air quality
-        "poor":      "01754003670118046832050201061506707D0B40B0808D018000973753A03FF01",      # Poor conditions
-        "occupied":  "01756003670082046816050201061004070870100808D005000973A02803FF01",      # Motion detected
-        "alert":     "017535036700FA04683C050201061C070707D0D0070808D025000973703C03FF01",     # High pollution alert
-        "info":      "FF0B010203040506070809",                                                      # Device info
-        "buzzer_on": "01756003670082046816050201061004070870100808D005000E01010F0110FF01"      # Buzzer activated
+        # Realistic test payloads for different air quality conditions - All reconstructed with proper channel structure
+        "normal":    "0175640367EB0004685A050200061004077DA401087DDC0509739727",      # Normal air quality: 23.5°C, 45%, CO2 420ppm
+        "good":      "01755F0367DC00046864050200061006077D7C01087D20030973DA27",      # Good conditions: 22.0°C, 50%, CO2 380ppm  
+        "moderate":  "0175500367E100046850050201061005077D2003087DE02E0973AB27",      # Moderate air quality: 22.5°C, 40%, CO2 800ppm
+        "poor":      "01754603671801046882050201061003077DB004087DA86109736027",      # Poor conditions: 28.0°C, 65%, CO2 1200ppm
+        "occupied":  "0175550367F100046860050201061007077DC201087DC4090973B827",      # Motion detected: 24.1°C, 48%, CO2 450ppm
+        "alert":     "01753C03674501046896050201061002077D0807087D409C0973E326",      # High pollution alert: 32.5°C, 75%, CO2 1800ppm
+        "info":      "FF0B010203040506070809",                                      # Device info
+        "buzzer_on": "01754B0367FC0004686E050201061005077D5802087D401F09738B270E01010F0101"  # Buzzer activated: 25.2°C, 55%, events
     }
     
     var hex_payload = test_scenarios.find(payload_str ? payload_str : 'nil', 'not_found')

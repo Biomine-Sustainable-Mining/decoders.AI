@@ -13,46 +13,41 @@ This document maintains a comprehensive list of all AI-generated drivers for the
 ## Driver Registry
 
 ### Dragino
-| Model | Version | Date | Channels | Test | | | Debug Mode | Model Version | Prompt Ver | Description |
-|-------|---------|------|----------|------|------|------|------------|---------------|------------|-------------|
-| | | | | Uplink | Downlink | Others | | | | |
-| D2x | 1.0.0 | 2025-08-20 | 15/15 | 🔲 None | 🔲 None | 🔲 None | 🔴 Inactive | D20/D20S/D22/D23-LB/LS | v2.2.8 | Multi-probe temperature sensor series |
-| DDS75-LB | 2.0.0 | 2025-08-26 | 8/8 | 🔲 None | 🔲 None | 🔲 None | 🔴 Inactive | DDS75-LB/LS | v2.3.6 | Ultrasonic distance detection sensor |
-| LDS02 | 2.0.0 | 2025-08-26 | 8/8 | 🔲 None | 🔲 None | 🔲 None | 🔴 Inactive | LDS02 | v2.3.6 | Magnetic door sensor with event counting |
-| LHT52 | 2.0.0 | 2025-08-26 | 16/16 | 🔲 None | 🔲 None | 🔲 None | 🔴 Inactive | LHT52 | v2.3.6 | Temperature & humidity sensor with datalog & alarm features |
-| LHT65 | 1.0.0 | 2025-08-16 | 18/18 | 🔲 None | 🔲 None | 🔲 None | 🔴 Inactive | LHT65 | v2.3.0 | Temperature & humidity sensor with 9 external sensor types |
-| PS-LB | 2.0.0 | 2025-08-26 | 13/13 | 🔲 None | 🔲 None | 🔲 None | 🔴 Inactive | PS-LB/LS | v2.3.6 | Pressure/water level sensor with probe detection |
-| SE01-LB | 1.0.0 | 2025-08-20 | 28/28 | 🔲 None | 🔲 None | 🔲 None | 🔴 Inactive | SE01-LB/LS | v2.3.3 | Soil moisture & EC sensor with multi-mode support |
-| SN50v3-LB | 1.0.0 | 2025-08-20 | 36/36 | 🔲 None | 🔲 None | 🔲 None | 🔴 Inactive | SN50v3-LB/LS | v2.3.3 | Generic LoRaWAN sensor node with 12 working modes |
+| Model | Version | Date | Channels | Model Version | Prompt Ver | Description |
+|-------|---------|------|----------|---------------|------------|-------------|
+| [D2x](vendor/dragino/D2x.md) | [1.0.0](vendor/dragino/D2x.be) | 2025-08-20 | 15/15 | D20/D20S/D22/D23-LB/LS | [v2.2.8](vendor/dragino/D2x-REPORT.md) | [Multi-probe temperature sensor series](vendor/dragino/D2x-REQ.md) |
+| [DDS75-LB](vendor/dragino/DDS75-LB.md) | [2.0.0](vendor/dragino/DDS75-LB.be) | 2025-08-26 | 8/8 | DDS75-LB/LS | [v2.3.6](vendor/dragino/DDS75-LB-REPORT.md) | [Ultrasonic distance detection sensor](vendor/dragino/DDS75-LB-REQ.md) |
+| [LDS02](vendor/dragino/LDS02.md) | [2.0.0](vendor/dragino/LDS02.be) | 2025-08-26 | 8/8 | LDS02 | [v2.3.6](vendor/dragino/LDS02-REPORT.md) | [Magnetic door sensor with event counting](vendor/dragino/LDS02-REQ.md) |
+| [LHT52](vendor/dragino/LHT52.md) | [2.0.0](vendor/dragino/LHT52.be) | 2025-08-26 | 16/16 | LHT52 | [v2.3.6](vendor/dragino/LHT52-REPORT.md) | [Temperature & humidity sensor with datalog & alarm features](vendor/dragino/LHT52-REQ.md) |
+| [LHT65](vendor/dragino/LHT65.md) | [1.0.0](vendor/dragino/LHT65.be) | 2025-08-16 | 18/18 | LHT65 | [v2.3.0](vendor/dragino/LHT65-REPORT.md) | [Temperature & humidity sensor with 9 external sensor types](vendor/dragino/LHT65-REQ.md) |
+| [PS-LB](vendor/dragino/PS-LB.md) | [2.0.0](vendor/dragino/PS-LB.be) | 2025-08-26 | 13/13 | PS-LB/LS | [v2.3.6](vendor/dragino/PS-LB-REPORT.md) | [Pressure/water level sensor with probe detection](vendor/dragino/PS-LB-REQ.md) |
+| [SE01-LB](vendor/dragino/SE01-LB.md) | [1.0.0](vendor/dragino/SE01-LB.be) | 2025-08-20 | 28/28 | SE01-LB/LS | [v2.3.3](vendor/dragino/SE01-LB-REPORT.md) | [Soil moisture & EC sensor with multi-mode support](vendor/dragino/SE01-LB-REQ.md) |
+| [SN50v3-LB](vendor/dragino/SN50v3-LB.md) | [1.0.0](vendor/dragino/SN50v3-LB.be) | 2025-08-20 | 36/36 | SN50v3-LB/LS | [v2.3.3](vendor/dragino/SN50v3-LB-REPORT.md) | [Generic LoRaWAN sensor node with 12 working modes](vendor/dragino/SN50v3-LB-REQ.md) |
 
 ### Milesight
-| Model | Version | Date | Channels | Test | | | Debug Mode | Model Version | Prompt Ver | Description |
-|-------|---------|------|----------|------|------|------|------------|---------------|------------|-------------|
-| | | | | Uplink | Downlink | Others | | | | |
-| AM300 | 1.2.0 | 2025-08-26 | 20/20 | 🔲 None | 🔲 None | 🔲 None | 🔴 Inactive | AM300(L) Series | v2.3.6 | 9-in-1 indoor air quality monitor with WELL certification |
-| WS101 | 2.0.0 | 2025-08-26 | 8/8 | 🏃 Running | 🔲 None | 🔲 None | 🔴 Inactive | WS101 | v2.3.6 | Smart button with multiple press types |
-| WS202 | 1.2.0 | 2025-08-20 | 9/9 | 🔲 None | 🔲 None | 🔲 None | 🔴 Inactive | WS202 | v2.2.6 | PIR & Light sensor for motion and illuminance detection |
-| WS301 | 1.3.0 | 2025-08-20 | 10/10 | 🔲 None | 🔲 None | 🔲 None | 🔴 Inactive | WS301 | v2.2.6 | Magnetic door/window sensor |
-| WS523 | 3.0.0 | 2025-08-26 | 33/33 | 🔲 None | 🔲 None | 🔲 None | 🔴 Inactive | WS523 | v2.3.6 | Portable smart socket with power monitoring |
-| WS52x | 2.0.0 | 2025-08-25 | 25/25 | 🔲 None | 🔲 None | 🔲 None | 🔴 Inactive | WS52x Series | v2.3.6 | Smart socket series with comprehensive power monitoring |
+| Model | Version | Date | Channels | Model Version | Prompt Ver | Description |
+|-------|---------|------|----------|---------------|------------|-------------|
+| [AM300](vendor/milesight/AM300.md) | [1.2.0](vendor/milesight/AM300.be) | 2025-08-26 | 20/20 | AM300(L) Series | [v2.3.6](vendor/milesight/AM300-REPORT.md) | [9-in-1 indoor air quality monitor with WELL certification](vendor/milesight/AM300-REQ.md) |
+| [WS101](vendor/milesight/WS101.md) | [2.0.0](vendor/milesight/WS101.be) | 2025-08-26 | 8/8 | WS101 | [v2.3.6](vendor/milesight/WS101-REPORT.md) | [Smart button with multiple press types](vendor/milesight/WS101-REQ.md) |
+| [WS202](vendor/milesight/WS202.md) | [1.2.0](vendor/milesight/WS202.be) | 2025-08-20 | 9/9 | WS202 | [v2.2.6](vendor/milesight/WS202-REPORT.md) | [PIR & Light sensor for motion and illuminance detection](vendor/milesight/WS202-REQ.md) |
+| [WS301](vendor/milesight/WS301.md) | [1.3.0](vendor/milesight/WS301.be) | 2025-08-20 | 10/10 | WS301 | [v2.2.6](vendor/milesight/WS301-REPORT.md) | [Magnetic door/window sensor](vendor/milesight/WS301-REQ.md) |
+| [WS523](vendor/milesight/WS523.md) | [3.0.0](vendor/milesight/WS523.be) | 2025-08-26 | 33/33 | WS523 | [v2.3.6](vendor/milesight/WS523-REPORT.md) | [Portable smart socket with power monitoring](vendor/milesight/WS523-REQ.md) |
+| [WS52x](vendor/milesight/WS52x.md) | [2.0.0](vendor/milesight/WS52x.be) | 2025-08-25 | 25/25 | WS52x Series | [v2.3.6](vendor/milesight/WS52x-REPORT.md) | [Smart socket series with comprehensive power monitoring](vendor/milesight/WS52x-REQ.md) |
 
 ### Mutelcor
-| Model | Version | Date | Channels | Test | | | Debug Mode | Model Version | Prompt Ver | Description |
-|-------|---------|------|----------|------|------|------|------------|---------------|------------|-------------|
-| | | | | Uplink | Downlink | Others | | | | |
-| MTC-AQ01 | 1.0.0 | 2025-08-20 | 12/12 | 🔲 None | 🔲 None | 🔲 None | 🔴 Inactive | MTC-AQ01/02/03 | v2.3.3 | Air quality sensor with temperature, humidity & pressure |
+| Model | Version | Date | Channels | Model Version | Prompt Ver | Description |
+|-------|---------|------|----------|---------------|------------|-------------|
+| [MTC-AQ01](vendor/mutelcor/MTC-AQ01.md) | [1.0.0](vendor/mutelcor/MTC-AQ01.be) | 2025-08-20 | 12/12 | MTC-AQ01/02/03 | [v2.3.3](vendor/mutelcor/MTC-AQ01-REPORT.md) | [Air quality sensor with temperature, humidity & pressure](vendor/mutelcor/MTC-AQ01-REQ.md) |
 
 ### Micropelt
-| Model | Version | Date | Channels | Test | | | Debug Mode | Model Version | Prompt Ver | Description |
-|-------|---------|------|----------|------|------|------|------------|---------------|------------|-------------|
-| | | | | Uplink | Downlink | Others | | | | |
-| MLR003 | 1.0.0 | 2025-08-20 | 52/52 | 🔲 None | 🔲 None | 🔲 None | 🔴 Inactive | MLR003 | v2.3.3 | Thermostatic radiator valve with energy harvesting |
+| Model | Version | Date | Channels | Model Version | Prompt Ver | Description |
+|-------|---------|------|----------|---------------|------------|-------------|
+| [MLR003](vendor/micropelt/MLR003.md) | [1.0.0](vendor/micropelt/MLR003.be) | 2025-08-20 | 52/52 | MLR003 | [v2.3.3](vendor/micropelt/MLR003-REPORT.md) | [Thermostatic radiator valve with energy harvesting](vendor/micropelt/MLR003-REQ.md) |
 
 ### Watteco
-| Model | Version | Date | Channels | Test | | | Debug Mode | Model Version | Prompt Ver | Description |
-|-------|---------|------|----------|------|------|------|------------|---------------|------------|-------------|
-| | | | | Uplink | Downlink | Others | | | | |
-| BOB-ASSISTANT | 1.0.0 | 2025-08-20 | 68/68 | 🔲 None | 🔲 None | 🔲 None | 🔴 Inactive | Bob Assistant | v2.3.3 | Vibration sensor with ML anomaly detection & FFT |
+| Model | Version | Date | Channels | Model Version | Prompt Ver | Description |
+|-------|---------|------|----------|---------------|------------|-------------|
+| [BOB-ASSISTANT](vendor/watteco/BOB-ASSISTANT.md) | [1.0.0](vendor/watteco/BOB-ASSISTANT.be) | 2025-08-20 | 68/68 | Bob Assistant | [v2.3.3](vendor/watteco/BOB-ASSISTANT-REPORT.md) | [Vibration sensor with ML anomaly detection & FFT](vendor/watteco/BOB-ASSISTANT-REQ.md) |
 
 ## Coverage Statistics
 
@@ -100,39 +95,9 @@ This document maintains a comprehensive list of all AI-generated drivers for the
 **🔴 Major Upgrades Complete**: 0 drivers (0%)
 - ✅ All major upgrades completed!
 
-### Test Summary by Type
-- **Uplink Tests**: 
-  - 🔲 None: 16 drivers (94%)
-  - 🏃 Running: 1 driver (6%)
-  - Others: 0 drivers (0%)
-- **Downlink Tests**:
-  - 🔲 None: 17 drivers (100%)
-  - Others: 0 drivers (0%)
-- **Other Tests**:
-  - 🔲 None: 17 drivers (100%)
-  - Others: 0 drivers (0%)
 
-### Debug Mode Summary
-- **🔴 Inactive**: 17 drivers (100%) - All drivers are production-ready
 
-### Test Status Legend
-- 🔲 **None** - No test planned or requested
-- 📋 **Queued** - Test scheduled but not started
-- 🏃 **Running** - Test currently in progress
-- ✅ **Passed** - Test completed successfully
-- ⚠️ **Partial** - Test completed with some features working
-- ❌ **Failed** - Test completed with errors/failures
-- 🔄 **Retest** - Test needs to be repeated
-- 🚫 **Blocked** - Test cannot proceed (hardware unavailable)
-- 📊 **Analysis** - Test completed, results under review
-- ⏸️ **Paused** - Test temporarily suspended
 
-### Debug Mode Legend
-- 🟢 **Active** - Driver has `var debug_mode` property and enhanced logging enabled
-- 🔴 **Inactive** - Standard production driver without debug_mode variable
-- 🟠 **Partial** - Driver partially working (some features fail)
-- 🔵 **Debug** - Driver under active debugging for issues
-- ⚪ **Blocked** - Debugging blocked (dependencies missing)
 
 ## Technical Standards
 

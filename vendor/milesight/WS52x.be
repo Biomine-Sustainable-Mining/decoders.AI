@@ -1,14 +1,15 @@
 #
 # LoRaWAN AI-Generated Decoder for Milesight WS52x Prompted by ZioFabry 
 #
-# Generated: 2025-08-26 | Version: 1.5.0 | Revision: 5
+# Generated: 2025-08-26 | Version: 1.5.2 | Revision: 6
 #            by "LoRaWAN Decoder AI Generation Template", v2.4.0
 #
 # Homepage:  https://www.milesight.com/iot/product/lorawan-sensor/ws52x
 # Userguide: https://www.milesight.com/iot/product/lorawan-sensor/ws52x
 # Decoder:   https://github.com/Milesight-IoT/SensorDecoders/blob/master/WS_Series/WS52x/WS52x.js
 #
-# v1.5.0 (2025-08-26): Added comprehensive slideshow support with 4 slides
+# v1.5.2 (2025-08-26): Fixed slideshow string/numeric data type errors
+# v1.5.1 (2025-08-26): Added slide indicator in header for slideshow mode
 # v1.4.2 (2025-08-26): Fixed all ternary operators in f-strings and Berry syntax errors
 # v1.4.0 (2025-08-26): Regenerated with Framework v2.3.0, Slideshow support, enhanced error handling
 # v1.3.0 (2025-08-19): Updated for framework v2.2.4 with global storage recovery
@@ -436,6 +437,25 @@ class LwDecode_WS52x
                 
                 if data_to_show.contains('energy')
                     var energy = data_to_show['energy']
+                    
+                    # Ensure energy is numeric for scaling
+                    if type(energy) == 'string'
+                        # Try to extract numeric value from string like "1.5kWh"
+                        var energy_num = 0
+                        import string
+                        var digits = ""
+                        for i: 0..size(str(energy))-1
+                            var c = str(energy)[i]
+                            if (c >= '0' && c <= '9') || c == '.'
+                                digits += c
+                            else
+                                break
+                            end
+                        end
+                        energy_num = digits != "" ? real(digits) : 0
+                        energy = energy_num
+                    end
+                    
                     var energy_str = ""
                     var unit = ""
                     
@@ -709,8 +729,6 @@ class LwDecode_WS52x
         import global
         var slides = []
         
-        print("WS52x: build_slideshow_slides()")
-
         # Get current data for slideshow
         var data_to_show = self.last_data
         if size(data_to_show) == 0 && self.node != nil

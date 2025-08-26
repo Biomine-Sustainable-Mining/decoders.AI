@@ -1,13 +1,14 @@
 #
 # LoRaWAN AI-Generated Decoder for Milesight WS301
 #
-# Generated: 2025-08-20 | Version: 1.3.0 | Revision: 003
-#            by "LoRaWAN Decoder AI Generation Template", v2.2.6
+# Generated: 2025-08-26 | Version: 1.4.0 | Revision: 004
+#            by "LoRaWAN Decoder AI Generation Template", v2.3.6
 #
 # Homepage:  https://www.milesight-iot.com/lorawan/sensor/ws301/
 # Userguide: https://resource.milesight.com/milesight/iot/document/ws301-user-guide-en.pdf
 # Decoder:   https://github.com/Milesight-IoT/SensorDecoders
 # 
+# v1.4.0 (2025-08-26): Framework v2.2.9 + Template v2.3.6 upgrade - enhanced error handling
 # v1.3.0 (2025-08-20): Complete regeneration with framework v2.2.6
 # v1.2.0 (2025-08-20): Enhanced door state tracking and security features
 # v1.1.0 (2025-08-16): Added comprehensive test scenarios
@@ -38,7 +39,7 @@ class LwDecode_WS301
         end
     end
     
-    def decodeUplink(name, node, rssi, fport, payload, simulated)
+    def decodeUplink(name, node, rssi, fport, payload)
         import string
         import global
         var data = {}
@@ -54,7 +55,6 @@ class LwDecode_WS301
             self.node = node
             data['RSSI'] = rssi
             data['FPort'] = fport
-            data['simulated'] = simulated
             
             # Retrieve node history from global storage
             var node_data = global.WS301_nodes.find(node, {})
@@ -207,101 +207,118 @@ class LwDecode_WS301
     end
     
     def add_web_sensor()
-        import global
-        
-        # Try to use current instance data first
-        var data_to_show = self.last_data
-        var last_update = self.last_update
-        
-        # If no instance data, try to recover from global storage
-        if size(data_to_show) == 0 && self.node != nil
-            var node_data = global.WS301_nodes.find(self.node, {})
-            data_to_show = node_data.find('last_data', {})
-            last_update = node_data.find('last_update', 0)
-        end
-        
-        if size(data_to_show) == 0 return "" end
-        
-        import string
-        var msg = ""
-        var fmt = LwSensorFormatter_cls()
-        
-        # MANDATORY: Add header line with device info
-        var name = self.name
-        if name == nil || name == ""
-            name = string.format("WS301-%s", self.node)
-        end
-        var name_tooltip = "Milesight WS301"
-        var battery = data_to_show.find('battery_v', 1000)  # Use 1000 if no battery
-        var battery_last_seen = last_update
-        var rssi = data_to_show.find('RSSI', 1000)  # Use 1000 if no RSSI
-        var simulated = data_to_show.find('simulated', false) # Simulated payload indicator
-        
-        # Build display using emoji formatter
-        fmt.header(name, name_tooltip, battery, battery_last_seen, rssi, last_update, simulated)
-        
-        fmt.start_line()
-        
-        # Door state with appropriate emoji
-        if data_to_show.contains('door_open')
-            var door_emoji = data_to_show['door_open'] ? "🔓" : "🔒"
-            var door_text = data_to_show['door_open'] ? "Open" : "Closed"
-            fmt.add_sensor("string", door_text, "Door State", door_emoji)
-        end
-        
-        # Battery level
-        if data_to_show.contains('battery_level')
-            fmt.add_sensor("string", string.format("%d%%", data_to_show['battery_level']), "Battery", "🔋")
-        end
-        
-        # Environmental data if available
-        if data_to_show.contains('temperature')
-            fmt.add_sensor("string", string.format("%.1f°C", data_to_show['temperature']), "Temp", "🌡️")
-        end
-        
-        if data_to_show.contains('humidity')
-            fmt.add_sensor("string", string.format("%.0f%%", data_to_show['humidity']), "Humidity", "💧")
-        end
-        
-        fmt.next_line()
-        
-        # Installation and tamper status
-        if data_to_show.contains('device_installed')
-            var install_emoji = data_to_show['device_installed'] ? "✅" : "❌"
-            var install_text = data_to_show['device_installed'] ? "Installed" : "Tamper"
-            fmt.add_sensor("string", install_text, "Installation", install_emoji)
-        end
-        
-        # Device reset indicator
-        if data_to_show.contains('device_reset') && data_to_show['device_reset']
-            fmt.add_sensor("string", "Reset", "Device Event", "🔄")
-        end
-        
-        # Power on event indicator
-        if data_to_show.contains('power_on_event') && data_to_show['power_on_event']
-            fmt.add_sensor("string", "Power On", "Device Event", "⚡")
-        end
-        
-        # Device information display
-        if data_to_show.contains('hw_version')
-            fmt.add_sensor("string", data_to_show['hw_version'], "Hardware", "🔧")
-        end
-        
-        fmt.end_line()
-        
-        # Add last seen info if data is old
-        if last_update > 0
-            var age = tasmota.rtc()['local'] - last_update
-            if age > 3600  # Data older than 1 hour
-                fmt.start_line()
-                fmt.add_sensor("string", self.format_age(age), "Last Seen", "⏱️")
-                fmt.end_line()
+        try
+            import global
+            
+            # Try to use current instance data first
+            var data_to_show = self.last_data
+            var last_update = self.last_update
+            
+            # If no instance data, try to recover from global storage
+            if size(data_to_show) == 0 && self.node != nil
+                var node_data = global.WS301_nodes.find(self.node, {})
+                data_to_show = node_data.find('last_data', {})
+                last_update = node_data.find('last_update', 0)
             end
-        end
-        
-        msg += fmt.get_msg()
+            
+            # Fallback: find ANY stored node if no specific node
+            if size(data_to_show) == 0 && size(global.WS301_nodes) > 0
+                for node_id: global.WS301_nodes.keys()
+                    var node_data = global.WS301_nodes[node_id]
+                    data_to_show = node_data.find('last_data', {})
+                    self.node = node_id  # Update instance
+                    self.name = node_data.find('name', f"WS301-{node_id}")
+                    break  # Use first found
+                end
+            end
+            
+            if size(data_to_show) == 0 return "" end
+            
+            import string
+            var msg = ""
+            var fmt = LwSensorFormatter_cls()
+            
+            # MANDATORY: Add header line with device info
+            var name = self.name
+            if name == nil || name == ""
+                name = string.format("WS301-%s", self.node)
+            end
+            var name_tooltip = "Milesight WS301"
+            var battery = data_to_show.find('battery_v', 1000)  # Use 1000 if no battery
+            var battery_last_seen = last_update
+            var rssi = data_to_show.find('RSSI', 1000)  # Use 1000 if no RSSI
+            var simulated = data_to_show.find('simulated', false) # Simulated payload indicator
+            
+            # Build display using emoji formatter
+            fmt.header(name, name_tooltip, battery, battery_last_seen, rssi, last_update, simulated)
+            
+            fmt.start_line()
+            
+            # Door state with appropriate emoji
+            if data_to_show.contains('door_open')
+                var door_emoji = data_to_show['door_open'] ? "🔓" : "🔒"
+                var door_text = data_to_show['door_open'] ? "Open" : "Closed"
+                fmt.add_sensor("string", door_text, "Door State", door_emoji)
+            end
+            
+            # Battery level
+            if data_to_show.contains('battery_level')
+                fmt.add_sensor("string", string.format("%d%%", data_to_show['battery_level']), "Battery", "🔋")
+            end
+            
+            # Environmental data if available
+            if data_to_show.contains('temperature')
+                fmt.add_sensor("string", string.format("%.1f°C", data_to_show['temperature']), "Temp", "🌡️")
+            end
+            
+            if data_to_show.contains('humidity')
+                fmt.add_sensor("string", string.format("%.0f%%", data_to_show['humidity']), "Humidity", "💧")
+            end
+            
+            fmt.next_line()
+            
+            # Installation and tamper status
+            if data_to_show.contains('device_installed')
+                var install_emoji = data_to_show['device_installed'] ? "✅" : "❌"
+                var install_text = data_to_show['device_installed'] ? "Installed" : "Tamper"
+                fmt.add_sensor("string", install_text, "Installation", install_emoji)
+            end
+            
+            # Device reset indicator
+            if data_to_show.contains('device_reset') && data_to_show['device_reset']
+                fmt.add_sensor("string", "Reset", "Device Event", "🔄")
+            end
+            
+            # Power on event indicator
+            if data_to_show.contains('power_on_event') && data_to_show['power_on_event']
+                fmt.add_sensor("string", "Power On", "Device Event", "⚡")
+            end
+            
+            # Device information display
+            if data_to_show.contains('hw_version')
+                fmt.add_sensor("string", data_to_show['hw_version'], "Hardware", "🔧")
+            end
+            
+            fmt.end_line()
+            
+            # Add last seen info if data is old
+            if last_update > 0
+                var age = tasmota.rtc()['local'] - last_update
+                if age > 3600  # Data older than 1 hour
+                    fmt.start_line()
+                    fmt.add_sensor("string", self.format_age(age), "Last Seen", "⏱️")
+                    fmt.end_line()
+                end
+            end
+            
+            msg += fmt.get_msg()
 
-        return msg
+            return msg
+            
+        except .. as e, m
+            print(f"WS301: Display error - {e}: {m}")
+            return "📟 WS301 Error - Check Console"
+        end
     end
     
     def format_age(seconds)

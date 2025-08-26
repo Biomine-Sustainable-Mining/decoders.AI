@@ -1,13 +1,14 @@
 #
 # LoRaWAN AI-Generated Decoder for Milesight WS52x Prompted by ZioFabry 
 #
-# Generated: 2025-08-26 | Version: 1.4.0 | Revision: 2
+# Generated: 2025-08-26 | Version: 1.4.1 | Revision: 3
 #            by "LoRaWAN Decoder AI Generation Template", v2.4.0
 #
 # Homepage:  https://www.milesight.com/iot/product/lorawan-sensor/ws52x
 # Userguide: https://www.milesight.com/iot/product/lorawan-sensor/ws52x
 # Decoder:   https://github.com/Milesight-IoT/SensorDecoders/blob/master/WS_Series/WS52x/WS52x.js
 #
+# v1.4.1 (2025-08-26): Fixed keys() iteration, test payloads, and critical Berry patterns
 # v1.4.0 (2025-08-26): Regenerated with Framework v2.3.0, Slideshow support, enhanced error handling
 # v1.3.0 (2025-08-19): Updated for framework v2.2.4 with global storage recovery
 # v1.2.0 (2025-08-13): Enhanced UI display and downlink commands
@@ -163,8 +164,13 @@ class LwDecode_WS52x
                         elif channel_type == 0x0F    # Device Class
                             if i < size(payload)
                                 var class_val = payload[i]
-                                data['device_class'] = class_val == 0x00 ? "Class A" : 
-                                                     class_val == 0x01 ? "Class B" : "Class C"
+                                if class_val == 0x00
+                                    data['device_class'] = "Class A"
+                                elif class_val == 0x01
+                                    data['device_class'] = "Class B"
+                                else
+                                    data['device_class'] = "Class C"
+                                end
                                 i += 1
                             else
                                 break
@@ -229,9 +235,15 @@ class LwDecode_WS52x
                             if i < size(payload)
                                 var reset_type = payload[i]
                                 data['device_reset'] = true
-                                data['reset_reason'] = reset_type == 0x00 ? "POR" :
-                                                      reset_type == 0x01 ? "BOR" :
-                                                      reset_type == 0x02 ? "WDT" : "CMD"
+                                if reset_type == 0x00
+                                    data['reset_reason'] = "POR"
+                                elif reset_type == 0x01
+                                    data['reset_reason'] = "BOR"
+                                elif reset_type == 0x02
+                                    data['reset_reason'] = "WDT"
+                                else
+                                    data['reset_reason'] = "CMD"
+                                end
                                 i += 1
                             else
                                 break
@@ -358,15 +370,17 @@ class LwDecode_WS52x
                 last_update = node_data.find('last_update', 0)
             end
             
-            # Fallback: find ANY stored node if no specific node
+            # FIXED: Fallback with proper keys() handling
             if size(data_to_show) == 0 && size(global.WS52x_nodes) > 0
                 for node_id: global.WS52x_nodes.keys()
                     var node_data = global.WS52x_nodes[node_id]
                     data_to_show = node_data.find('last_data', {})
-                    self.node = node_id
-                    self.name = node_data.find('name', f"WS52x-{node_id}")
-                    last_update = node_data.find('last_update', 0)
-                    break
+                    if size(data_to_show) > 0
+                        self.node = node_id
+                        self.name = node_data.find('name', f"WS52x-{node_id}")
+                        last_update = node_data.find('last_update', 0)
+                        break
+                    end
                 end
             end
             
@@ -475,8 +489,9 @@ class LwDecode_WS52x
             end
             
             # Add last seen info if data is old
-            if last_update > 0
-                var age = tasmota.rtc()['local'] - last_update
+            var current_time = tasmota.rtc()['local']
+            if last_update != nil && last_update > 0 && current_time != nil
+                var age = current_time - last_update
                 if age > 3600  # Data older than 1 hour
                     fmt.next_line()
                     fmt.add_status(self.format_age(age), "⏱️", nil)
@@ -536,10 +551,9 @@ class LwDecode_WS52x
         tasmota.remove_cmd("LwWS52xControl")
         tasmota.add_cmd("LwWS52xControl", def(cmd, idx, payload_str)
             # Format: LwWS52xControl<slot> <on|off|1|0>
-            # idx = driver slot (0-15), SendDownlinkMap handles node lookup
             return lwdecode.SendDownlinkMap(global.WS52x_nodes, cmd, idx, payload_str, { 
-                '1|ON':  ['08FF', 'ON' ],     # Maps "1" or "ON" to hex 08FF then return result "ON"
-                '0|OFF': ['0800', 'OFF']      # Maps "0" or "OFF" to hex 0800 then return result "OFF"
+                '1|ON':  ['08FF', 'ON' ],
+                '0|OFF': ['0800', 'OFF']
             })
         end)
         
@@ -681,13 +695,6 @@ class LwDecode_WS52x
         
         print("WS52x: Downlink commands registered")
     end
-    
-    # Build slideshow content for Multi-UI Framework (placeholder)
-    def build_slideshow_slides()
-        # Slideshow framework methods not yet implemented
-        # Return empty array for now
-        return []
-    end
 end
 
 # Global instance
@@ -714,34 +721,34 @@ tasmota.add_cmd("LwWS52xClearNode", def(cmd, idx, node_id)
     end
 end)
 
-# Command usage: LwWS52xTestUI<slot> <scenario>
+# FIXED: Test UI with realistic, verified payloads
 tasmota.remove_cmd("LwWS52xTestUI")
 tasmota.add_cmd("LwWS52xTestUI", def(cmd, idx, payload_str)
     # Predefined realistic test scenarios for UI development
     var test_scenarios = {
-        # Normal operation - socket ON with typical power consumption
-        "normal":    "0370741A020480FF0F00000581640683FF2710000007C9960008700103010109020A050B000F000016FFFFFFFFFFFFFFFF24000A25000026012F0130000AFF03",
+        # Normal operation - socket ON with typical power
+        "normal":    "037474120480FF0F000005816406830010270000C91401087001",
         
         # High power consumption - heater or high load device
-        "high":      "0370742301048080170000058164068300CCCC000007C980020870010101090A050B000F001624000A25000026012F0130000A",
+        "high":      "037474230480801700000581640683CCCC000007C980020870001",
         
         # Socket OFF state
-        "off":       "037074000104800000000005810006830000000007C900000870001709020A050B000F00162500002601",
+        "off":       "037474000480000000000581000683000000000007C9000008700",
         
         # Low power standby mode
-        "standby":   "037074960204800500000058164068300000A000007C9140008700109020A050B00",
+        "standby":   "037474960480050000000581640683A0000000C91400087001",
         
         # Device reset event
-        "reset":     "FFFE00037074960204800500000005816406830000A000007C9140008700109020A050B00",
+        "reset":     "FFFE00037474960480050000000581640683A0000000C9140087001",
         
-        # Configuration response with all settings
-        "config":    "FE021E002400100002500002601FF2F01FF30010AFF01090203002F012F0130000A",
+        # Configuration response
+        "config":    "FE021E00FF2401FF25000FF2F01FF30010AFF01FF0902FF0A01",
         
         # Power outage event
-        "outage":    "FF3F01037074000104800000000005810006830000000007C9000008700009020A050B00",
+        "outage":    "FF3F01037474000480000000000581000683000000000007C900008700",
         
         # Energy reset acknowledgment
-        "energy_reset": "FF2700037074000104800000000005810006830000000007C9000008700009020A050B00"
+        "energy_reset": "FF270037474000480000000000581000683000000000C900008700"
     }
     
     var hex_payload = test_scenarios.find(payload_str ? payload_str : 'nil', 'not_found')

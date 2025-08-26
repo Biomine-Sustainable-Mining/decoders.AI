@@ -442,7 +442,6 @@ class LwDecode_WS52x
                     if type(energy) == 'string'
                         # Try to extract numeric value from string like "1.5kWh"
                         var energy_num = 0
-                        import string
                         var digits = ""
                         for i: 0..size(str(energy))-1
                             var c = str(energy)[i]

@@ -394,7 +394,8 @@ class LwDecode_WS52x
             # Main power measurements - single line preferred
             if data_to_show.contains('socket_state')
                 var state = data_to_show['socket_state']
-                fmt.add_sensor("string", state, nil, state == "ON" ? "🟢" : "🔴")
+                var state_icon = state == "ON" ? "🟢" : "🔴"
+                fmt.add_sensor("string", state, nil, state_icon)
             end
             
             if data_to_show.contains('voltage')

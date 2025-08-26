@@ -1,14 +1,14 @@
 #
 # LoRaWAN AI-Generated Decoder for Milesight WS52x Prompted by ZioFabry 
 #
-# Generated: 2025-08-26 | Version: 1.5.2 | Revision: 6
+# Generated: 2025-08-26 | Version: 1.5.3 | Revision: 7
 #            by "LoRaWAN Decoder AI Generation Template", v2.4.0
 #
 # Homepage:  https://www.milesight.com/iot/product/lorawan-sensor/ws52x
 # Userguide: https://www.milesight.com/iot/product/lorawan-sensor/ws52x
 # Decoder:   https://github.com/Milesight-IoT/SensorDecoders/blob/master/WS_Series/WS52x/WS52x.js
 #
-# v1.5.2 (2025-08-26): Fixed slideshow string/numeric data type errors
+# v1.5.3 (2025-08-26): Fixed slideshow empty slides for config-only payloads
 # v1.5.1 (2025-08-26): Added slide indicator in header for slideshow mode
 # v1.4.2 (2025-08-26): Fixed all ternary operators in f-strings and Berry syntax errors
 # v1.4.0 (2025-08-26): Regenerated with Framework v2.3.0, Slideshow support, enhanced error handling
@@ -746,35 +746,37 @@ class LwDecode_WS52x
         
         if size(data_to_show) == 0 return [] end
         
-        # Slide 1: Power Overview
-        var slide1 = {
-            'title': 'Power Status',
-            'content': []
-        }
-        
-        if data_to_show.contains('socket_state')
-            var state = data_to_show['socket_state']
-            var state_icon = state == "ON" ? "🟢" : "🔴"
-            slide1['content'].push({'type': 'status', 'label': 'Socket', 'value': state, 'icon': state_icon})
-        end
-        
-        if data_to_show.contains('voltage')
-            var voltage_str = f"{data_to_show['voltage']:.1f}V"
-            slide1['content'].push({'type': 'sensor', 'label': 'Voltage', 'value': voltage_str, 'icon': '⚡'})
-        end
-        
-        if data_to_show.contains('current')
-            var current_str = f"{data_to_show['current']}mA"
-            slide1['content'].push({'type': 'sensor', 'label': 'Current', 'value': current_str, 'icon': '🔌'})
-        end
-        
-        if data_to_show.contains('active_power')
-            var power_str = f"{data_to_show['active_power']}W"
-            slide1['content'].push({'type': 'sensor', 'label': 'Power', 'value': power_str, 'icon': '💡'})
-        end
-        
-        if size(slide1['content']) > 0
-            slides.push(slide1)
+        # Slide 1: Power Overview (only if power data available)
+        if data_to_show.contains('socket_state') || data_to_show.contains('voltage') || data_to_show.contains('current') || data_to_show.contains('active_power')
+            var slide1 = {
+                'title': 'Power Status',
+                'content': []
+            }
+            
+            if data_to_show.contains('socket_state')
+                var state = data_to_show['socket_state']
+                var state_icon = state == "ON" ? "🟢" : "🔴"
+                slide1['content'].push({'type': 'status', 'label': 'Socket', 'value': state, 'icon': state_icon})
+            end
+            
+            if data_to_show.contains('voltage')
+                var voltage_str = f"{data_to_show['voltage']:.1f}V"
+                slide1['content'].push({'type': 'sensor', 'label': 'Voltage', 'value': voltage_str, 'icon': '⚡'})
+            end
+            
+            if data_to_show.contains('current')
+                var current_str = f"{data_to_show['current']}mA"
+                slide1['content'].push({'type': 'sensor', 'label': 'Current', 'value': current_str, 'icon': '🔌'})
+            end
+            
+            if data_to_show.contains('active_power')
+                var power_str = f"{data_to_show['active_power']}W"
+                slide1['content'].push({'type': 'sensor', 'label': 'Power', 'value': power_str, 'icon': '💡'})
+            end
+            
+            if size(slide1['content']) > 0
+                slides.push(slide1)
+            end
         end
         
         # Slide 2: Energy & Efficiency

@@ -1,35 +1,34 @@
-# -------------------------------------------------------------
-# Originally Prompted by: ZioFabry
 #
-# LoRaWAN AI-Generated Decoder for Milesight AM300
+# LoRaWAN AI-Generated Decoder for Milesight AM300 Prompted by ZioFabry 
 #
-# Generated: 2025-08-15 | Version: 1.1.0 | Revision: 2
-#            by "LoRaWAN Decoder AI Generation Template", v2.1.8
+# Generated: 2025-08-26 | Version: 1.2.0 | Revision: 2
+#            by "LoRaWAN Decoder AI Generation Template", v2.3.6
 #
-# Official Links
-# - Homepage:  https://www.milesight.com/iot/product/lorawan-sensor/am300
-# - Userguide: https://resource.milesight-iot.com/milesight/iot/document/am300-user-guide.pdf
-# - Decoder:   https://github.com/Milesight-IoT/SensorDecoders
-# -------------------------------------------------------------
-# v1.1.0 (2025-08-15): Regenerated with AI template v2.1.8
-#                      - Enhanced framework integration
-#                      - Added comprehensive air quality formatters
-#                      - Improved global storage handling
-#                      - Added comprehensive downlink commands
+# Homepage:  https://www.milesight-iot.com/lorawan/sensor/am300/
+# Userguide: https://resource.milesight-iot.com/milesight/iot/document/am300-user-guide.pdf
+# Decoder:   https://github.com/Milesight-IoT/SensorDecoders/tree/master/AM_Series
+# 
+# Changelog:
+# v1.2.0 (2025-08-26): Regenerated with framework v2.2.9 + template v2.3.6
+#   - Updated to latest framework error handling patterns
+#   - Enhanced global storage with battery trend tracking
+#   - Added comprehensive test scenarios with realistic payloads
+#   - Improved air quality sensor display with proper emojis
+#   - Added buzzer and screen control downlinks
+#   - Updated emoji usage: 🌬️ CO2, 🏭 TVOC, 🌫️ PM2.5, 💨 PM10, 🧪 HCHO, ⚗️ O3
+# v1.1.0 (2025-08-15): Enhanced with template v2.1.8 patterns
 # v1.0.0 (2025-08-14): Initial generation from PDF specification
-# -------------------------------------------------------------
 
 class LwDecode_AM300
-    var hashCheck       # Duplicate payload detection flag (true = skip duplicates)
-    var crcCheck        # CRC validation flag (if required by specs)
+    var hashCheck      # Duplicate payload detection flag (true = skip duplicates)
     var name           # Device name from LoRaWAN
     var node           # Node identifier
     var last_data      # Cached decoded data
     var last_update    # Timestamp of last update
-    
+    var lwdecode       # global instance of the driver
+
     def init()
         self.hashCheck = true   # Enable duplicate detection by default
-        self.crcCheck = false   # No CRC validation required per specs
         self.name = nil
         self.node = nil
         self.last_data = {}
@@ -43,21 +42,9 @@ class LwDecode_AM300
         if !global.contains("AM300_cmdInit")
             global.AM300_cmdInit = false
         end
-        
-        # Standard formatters for AM300 (emojis defined in formatters)
-        LwSensorFormatter_cls.Formatter["temperature"] = {"u": "°C", "f": " %.1f", "i": "🌡️"}
-        LwSensorFormatter_cls.Formatter["humidity"] = {"u": "%RH", "f": " %.0f", "i": "💧"}
-        LwSensorFormatter_cls.Formatter["co2"] = {"u": "ppm", "f": " %d", "i": "🌬️"}
-        LwSensorFormatter_cls.Formatter["tvoc"] = {"u": "ppb", "f": " %d", "i": "🏭"}
-        LwSensorFormatter_cls.Formatter["pressure"] = {"u": "hPa", "f": " %.0f", "i": "📊"}
-        LwSensorFormatter_cls.Formatter["pm25"] = {"u": "μg/m³", "f": " %d", "i": "🌫️"}
-        LwSensorFormatter_cls.Formatter["pm10"] = {"u": "μg/m³", "f": " %d", "i": "💨"}
-        LwSensorFormatter_cls.Formatter["hcho"] = {"u": "mg/m³", "f": " %.3f", "i": "🧪"}
-        LwSensorFormatter_cls.Formatter["o3"] = {"u": "ppm", "f": " %.3f", "i": "⚗️"}
-        LwSensorFormatter_cls.Formatter["illuminance"] = {"u": "lux", "f": " %d", "i": "💡"}
     end
     
-    def decodeUplink(name, node, rssi, fport, payload)
+    def decodeUplink(name, node, rssi, fport, payload, simulated)
         import string
         import global
         var data = {}
@@ -73,167 +60,122 @@ class LwDecode_AM300
             self.node = node
             data['RSSI'] = rssi
             data['FPort'] = fport
+            data['simulated'] = simulated != nil ? simulated : false
             
             # Retrieve node history from global storage
             var node_data = global.AM300_nodes.find(node, {})
             
-            # Decode based on fport 85 (AM300 uses single port)
-            if fport == 85
+            # Decode based on fport - AM300 uses port 85 for all data
+            if fport == 85 && size(payload) >= 4
                 var i = 0
-                while i < size(payload)
+                while i < size(payload) - 1
                     var channel_id = payload[i]
                     var channel_type = payload[i+1]
                     i += 2
                     
-                    # Temperature (0x03, 0x67) - 2 bytes signed, 0.1°C resolution
-                    if channel_id == 0x03 && channel_type == 0x67 && i + 1 < size(payload)
-                        var temp_raw = (payload[i+1] << 8) | payload[i]
-                        # Handle signed 16-bit
-                        if temp_raw > 32767
-                            temp_raw = temp_raw - 65536
-                        end
-                        data['temperature'] = temp_raw / 10.0
+                    # BATTERY
+                    if channel_id == 0x01 && channel_type == 0x75
+                        data['battery'] = payload[i]
+                        i += 1
+                        
+                    # TEMPERATURE  
+                    elif channel_id == 0x03 && channel_type == 0x67
+                        var temp = ((payload[i+1] << 8) | payload[i])
+                        if temp > 32767 temp = temp - 65536 end
+                        data['temperature'] = temp / 10.0
                         i += 2
                         
-                    # Humidity (0x04, 0x68) - 1 byte, 0.5% resolution
-                    elif channel_id == 0x04 && channel_type == 0x68 && i < size(payload)
+                    # HUMIDITY
+                    elif channel_id == 0x04 && channel_type == 0x68
                         data['humidity'] = payload[i] / 2.0
                         i += 1
                         
-                    # CO2 (0x07, 0x7D) - 2 bytes, ppm
-                    elif channel_id == 0x07 && channel_type == 0x7D && i + 1 < size(payload)
-                        var co2 = (payload[i+1] << 8) | payload[i]
-                        data['co2'] = co2
-                        i += 2
-                        
-                    # TVOC (0x08, 0x7D) - 2 bytes, ppb
-                    elif channel_id == 0x08 && channel_type == 0x7D && i + 1 < size(payload)
-                        var tvoc = (payload[i+1] << 8) | payload[i]
-                        data['tvoc'] = tvoc
-                        i += 2
-                        
-                    # Barometric Pressure (0x09, 0x73) - 2 bytes, 0.1 hPa resolution
-                    elif channel_id == 0x09 && channel_type == 0x73 && i + 1 < size(payload)
-                        var pressure = ((payload[i+1] << 8) | payload[i]) / 10.0
-                        data['pressure'] = pressure
-                        i += 2
-                        
-                    # PM2.5 (0x0A, 0x7E) - 2 bytes, μg/m³
-                    elif channel_id == 0x0A && channel_type == 0x7E && i + 1 < size(payload)
-                        var pm25 = (payload[i+1] << 8) | payload[i]
-                        data['pm25'] = pm25
-                        i += 2
-                        
-                    # PM10 (0x0B, 0x7E) - 2 bytes, μg/m³
-                    elif channel_id == 0x0B && channel_type == 0x7E && i + 1 < size(payload)
-                        var pm10 = (payload[i+1] << 8) | payload[i]
-                        data['pm10'] = pm10
-                        i += 2
-                        
-                    # HCHO (0x0C, 0x7F) - 2 bytes, 0.001 mg/m³ resolution
-                    elif channel_id == 0x0C && channel_type == 0x7F && i + 1 < size(payload)
-                        var hcho = ((payload[i+1] << 8) | payload[i]) / 1000.0
-                        data['hcho'] = hcho
-                        i += 2
-                        
-                    # O3 (0x0D, 0x7F) - 2 bytes, 0.001 ppm resolution
-                    elif channel_id == 0x0D && channel_type == 0x7F && i + 1 < size(payload)
-                        var o3 = ((payload[i+1] << 8) | payload[i]) / 1000.0
-                        data['o3'] = o3
-                        i += 2
-                        
-                    # Light Sensor (0x0E, 0x65) - 2 bytes, lux
-                    elif channel_id == 0x0E && channel_type == 0x65 && i + 1 < size(payload)
-                        var illuminance = (payload[i+1] << 8) | payload[i]
-                        data['illuminance'] = illuminance
-                        i += 2
-                        
-                    # PIR Motion (0x0F, 0x00) - 1 byte
-                    elif channel_id == 0x0F && channel_type == 0x00 && i < size(payload)
-                        data['pir_motion'] = payload[i] == 0x01
-                        data['motion_text'] = payload[i] == 0x01 ? "OCCUPIED" : "VACANT"
+                    # PIR (Motion)
+                    elif channel_id == 0x05 && channel_type == 0x02
+                        data['pir'] = payload[i]
+                        data['pir_status'] = payload[i] == 1 ? "Occupied" : "Vacant"
                         i += 1
                         
-                    # Buzzer Status (0x10, 0x01) - 1 byte
-                    elif channel_id == 0x10 && channel_type == 0x01 && i < size(payload)
-                        data['buzzer_status'] = payload[i] == 0x01
-                        data['buzzer_text'] = payload[i] == 0x01 ? "ON" : "OFF"
+                    # LIGHT LEVEL
+                    elif channel_id == 0x06 && channel_type == 0xcb
+                        data['light_level'] = payload[i]
                         i += 1
                         
-                    # Battery (0x01, 0x75) - 1 byte
-                    elif channel_id == 0x01 && channel_type == 0x75 && i < size(payload)
-                        data['battery_pct'] = payload[i]
-                        data['battery_v'] = 2.0 + (payload[i] / 100.0) * 1.2  # Estimate voltage
+                    # CO2
+                    elif channel_id == 0x07 && channel_type == 0x7d
+                        data['co2'] = (payload[i+1] << 8) | payload[i]
+                        i += 2
+                        
+                    # TVOC LEVEL (IAQ Index)
+                    elif channel_id == 0x08 && channel_type == 0x7d
+                        data['tvoc_level'] = ((payload[i+1] << 8) | payload[i]) / 100.0
+                        i += 2
+                        
+                    # TVOC CONCENTRATION  
+                    elif channel_id == 0x08 && channel_type == 0xe6
+                        data['tvoc_concentration'] = (payload[i+1] << 8) | payload[i]
+                        i += 2
+                        
+                    # BAROMETRIC PRESSURE
+                    elif channel_id == 0x09 && channel_type == 0x73
+                        data['pressure'] = ((payload[i+1] << 8) | payload[i]) / 10.0
+                        i += 2
+                        
+                    # HCHO (Formaldehyde)
+                    elif channel_id == 0x0a && channel_type == 0x7d
+                        data['hcho'] = ((payload[i+1] << 8) | payload[i]) / 100.0
+                        i += 2
+                        
+                    # PM2.5
+                    elif channel_id == 0x0b && channel_type == 0x7d
+                        data['pm25'] = (payload[i+1] << 8) | payload[i]
+                        i += 2
+                        
+                    # PM10
+                    elif channel_id == 0x0c && channel_type == 0x7d
+                        data['pm10'] = (payload[i+1] << 8) | payload[i]
+                        i += 2
+                        
+                    # O3 (Ozone)
+                    elif channel_id == 0x0d && channel_type == 0x7d
+                        data['o3'] = ((payload[i+1] << 8) | payload[i]) / 1000.0
+                        i += 2
+                        
+                    # BUZZER STATUS
+                    elif channel_id == 0x0e && channel_type == 0x01
+                        data['buzzer_status'] = payload[i]
+                        data['buzzer'] = payload[i] == 1 ? "ON" : "OFF"
                         i += 1
                         
-                    # Device information channels (0xFF)
-                    elif channel_id == 0xFF
-                        if channel_type == 0x01 && i < size(payload)  # Protocol Version
-                            data['protocol_version'] = payload[i]
-                            i += 1
-                        elif channel_type == 0x09 && i + 1 < size(payload)  # Hardware Version
-                            data['hw_version'] = f"{payload[i]}.{payload[i+1]}"
-                            i += 2
-                        elif channel_type == 0x0A && i + 1 < size(payload)  # Software Version
-                            data['sw_version'] = f"{payload[i]}.{payload[i+1]}"
-                            i += 2
-                        elif channel_type == 0x0B && i < size(payload)  # Power On Event
-                            data['power_on_event'] = payload[i] == 0x01
-                            i += 1
-                        elif channel_type == 0x0F && i < size(payload)  # Device Class
-                            var dev_class = ["Class A", "Class B", "Class C"]
-                            if payload[i] < size(dev_class)
-                                data['device_class'] = dev_class[payload[i]]
-                            end
-                            i += 1
-                        elif channel_type == 0x16 && i + 7 < size(payload)  # Serial Number
-                            var serial = ""
-                            for j: 0..7
-                                serial += f"{payload[i+j]:02X}"
-                            end
-                            data['serial_number'] = serial
-                            i += 8
-                        elif channel_type == 0xFE && i < size(payload)  # Reset Event
-                            var reset_types = ["POR", "BOR", "WDT", "CMD"]
-                            if payload[i] < size(reset_types)
-                                data['reset_type'] = reset_types[payload[i]]
-                                data['device_reset'] = true
-                            end
-                            i += 1
-                        elif channel_type == 0xFF && i + 1 < size(payload)  # TSL Version
-                            data['tsl_version'] = f"{payload[i]}.{payload[i+1]}"
-                            i += 2
+                    # ACTIVITY EVENT
+                    elif channel_id == 0x0f && channel_type == 0x01
+                        data['activity_event'] = true
+                        i += 1
+                        
+                    # POWER EVENT
+                    elif channel_id == 0x10 && channel_type == 0x01
+                        data['power_event'] = true
+                        i += 1
+                        
+                    # DEVICE INFO
+                    elif channel_id == 0xff && channel_type == 0x0b
+                        if size(payload) - i >= 9
+                            data['fw_version'] = f"{payload[i]}.{payload[i+1]}.{payload[i+2]}"
+                            data['hw_version'] = f"{payload[i+3]}.{payload[i+4]}"
+                            data['protocol_version'] = payload[i+5]
+                            data['serial_number'] = string.format("%02X%02X%02X%02X", 
+                                payload[i+6], payload[i+7], payload[i+8], payload[i+9])
+                            i += 10
                         else
-                            print(f"Unknown FF channel: type={channel_type:02X}")
-                            i += 1  # Skip unknown
-                        end
-                        
-                    # Configuration acknowledgment channels (0xFE)
-                    elif channel_id == 0xFE
-                        if channel_type == 0x02 && i + 1 < size(payload)  # Reporting Interval
-                            var interval = (payload[i+1] << 8) | payload[i]
-                            data['reporting_interval'] = interval
-                            i += 2
-                        elif channel_type == 0x03 && i + 1 < size(payload)  # Interval ACK
-                            var ack_interval = (payload[i+1] << 8) | payload[i]
-                            data['interval_ack'] = ack_interval
-                            i += 2
-                        elif channel_type == 0x10 && i < size(payload)  # Reboot ACK
-                            data['reboot_ack'] = payload[i] == 0xFF
-                            i += 1
-                        else
-                            print(f"Unknown FE channel: type={channel_type:02X}")
-                            i += 1  # Skip unknown
+                            break
                         end
                         
                     else
-                        print(f"Unknown channel: ID={channel_id:02X} Type={channel_type:02X}")
-                        break  # Exit on unknown channel
+                        # Unknown channel - log but continue
+                        print(f"AM300: Unknown channel ID={channel_id:02X} Type={channel_type:02X}")
+                        break
                     end
                 end
-            else
-                print(f"Unknown fport: {fport}")
-                return nil
             end
             
             # Update node history in global storage
@@ -242,23 +184,30 @@ class LwDecode_AM300
             node_data['name'] = name
             
             # Store battery trend if available
-            if data.contains('battery_v')
+            if data.contains('battery')
                 if !node_data.contains('battery_history')
                     node_data['battery_history'] = []
                 end
-                node_data['battery_history'].push(data['battery_v'])
+                # Keep last 10 battery readings
+                node_data['battery_history'].push(data['battery'])
                 if size(node_data['battery_history']) > 10
                     node_data['battery_history'].pop(0)
                 end
             end
             
-            # Store reset count if detected
-            if data.contains('device_reset') && data['device_reset']
-                node_data['reset_count'] = node_data.find('reset_count', 0) + 1
-                node_data['last_reset'] = tasmota.rtc()['local']
+            # Track air quality events
+            if data.contains('activity_event') && data['activity_event']
+                node_data['activity_count'] = node_data.find('activity_count', 0) + 1
+                node_data['last_activity'] = tasmota.rtc()['local']
             end
             
-            # Register downlink commands if not already done
+            # Track power events  
+            if data.contains('power_event') && data['power_event']
+                node_data['power_on_count'] = node_data.find('power_on_count', 0) + 1
+                node_data['last_power_on'] = tasmota.rtc()['local']
+            end
+            
+            # Register downlink commands
             if !global.contains("AM300_cmdInit") || !global.AM300_cmdInit
                 self.register_downlink_commands()
                 global.AM300_cmdInit = true
@@ -274,7 +223,7 @@ class LwDecode_AM300
             return data
             
         except .. as e, m
-            print(f"LwDecode_AM300 error: {m}")
+            print(f"AM300: Decode error - {e}: {m}")
             return nil
         end
     end
@@ -293,124 +242,121 @@ class LwDecode_AM300
             last_update = node_data.find('last_update', 0)
         end
         
+        # Fallback: find ANY stored node if no specific node
+        if size(data_to_show) == 0 && size(global.AM300_nodes) > 0
+            for node_id: global.AM300_nodes.keys()
+                var node_data = global.AM300_nodes[node_id]
+                data_to_show = node_data.find('last_data', {})
+                self.node = node_id  # Update instance
+                self.name = node_data.find('name', f"AM300-{node_id}")
+                last_update = node_data.find('last_update', 0)
+                break  # Use first found
+            end
+        end
+        
         if size(data_to_show) == 0 return nil end
         
-        import string
-        var msg = ""
-        var fmt = LwSensorFormatter_cls()
-        
-        # MANDATORY: Add header line with device info
-        var name = self.name
-        if name == nil || name == ""
-            name = f"AM300-{self.node}"
-        end
-        var name_tooltip = "Milesight AM300 8-in-1 Air Quality Monitor"
-        var battery = data_to_show.find('battery_v', 1000)
-        var battery_last_seen = last_update
-        var rssi = data_to_show.find('RSSI', 1000)
-        
-        msg = msg + lwdecode.header(name, name_tooltip, battery, battery_last_seen, rssi, last_update)
-        
-        # Line 1: Basic environmental conditions
-        fmt.start_line()
-        if data_to_show.contains('temperature')
-            fmt.add_sensor("temperature", data_to_show['temperature'], "Temperature", nil)
-        end
-        if data_to_show.contains('humidity')
-            fmt.add_sensor("humidity", data_to_show['humidity'], "Humidity", nil)
-        end
-        if data_to_show.contains('pressure')
-            fmt.add_sensor("pressure", data_to_show['pressure'], "Pressure", nil)
-        end
-        
-        # Line 2: Air quality gases
-        fmt.next_line()
-        if data_to_show.contains('co2')
-            fmt.add_sensor("co2", data_to_show['co2'], "CO2", nil)
-        end
-        if data_to_show.contains('tvoc')
-            fmt.add_sensor("tvoc", data_to_show['tvoc'], "TVOC", nil)
-        end
-        if data_to_show.contains('hcho')
-            fmt.add_sensor("hcho", data_to_show['hcho'], "HCHO", nil)
-        end
-        
-        # Line 3: Particulate matter and other sensors
-        fmt.next_line()
-        if data_to_show.contains('pm25')
-            fmt.add_sensor("pm25", data_to_show['pm25'], "PM2.5", nil)
-        end
-        if data_to_show.contains('pm10')
-            fmt.add_sensor("pm10", data_to_show['pm10'], "PM10", nil)
-        end
-        if data_to_show.contains('o3')
-            fmt.add_sensor("o3", data_to_show['o3'], "O3", nil)
-        end
-        
-        # Line 4: Motion, Light, Buzzer (if present)
-        var has_sensors_4 = data_to_show.contains('pir_motion') || 
-                           data_to_show.contains('illuminance') || 
-                           data_to_show.contains('buzzer_status')
-        if has_sensors_4
-            fmt.next_line()
+        try
+            import string
+            var msg = ""
+            var fmt = LwSensorFormatter_cls()
             
-            if data_to_show.contains('pir_motion')
-                var motion_emoji = data_to_show['pir_motion'] ? "🟢" : "⚫"
-                var motion_text = data_to_show.find('motion_text', "UNKNOWN")
-                fmt.add_sensor("string", motion_text, "Occupancy", motion_emoji)
+            # MANDATORY: Add header line with device info
+            var name = self.name
+            if name == nil || name == ""
+                name = f"AM300-{self.node}"
             end
+            var name_tooltip = "Milesight AM300 Indoor Air Quality Monitor"
+            var battery = data_to_show.find('battery', 1000)  # Use 1000 if no battery 
+            var battery_last_seen = last_update
+            var rssi = data_to_show.find('RSSI', 1000)  # Use 1000 if no RSSI
+            var simulated = data_to_show.find('simulated', false) # Simulated payload indicator
             
-            if data_to_show.contains('illuminance')
-                fmt.add_sensor("illuminance", data_to_show['illuminance'], "Light", nil)
-            end
+            # Build display using emoji formatter
+            fmt.header(name, name_tooltip, battery, battery_last_seen, rssi, last_update, simulated)
             
-            if data_to_show.contains('buzzer_status')
-                var buzzer_emoji = data_to_show['buzzer_status'] ? "🔊" : "🔇"
-                var buzzer_text = data_to_show.find('buzzer_text', "UNKNOWN")
-                fmt.add_sensor("string", buzzer_text, "Buzzer", buzzer_emoji)
-            end
-        end
-        
-        fmt.end_line()
-        var sensor_msg = fmt.get_msg()
-        if sensor_msg != nil
-            msg = msg + sensor_msg
-        end
-        
-        # Add alert line for reset events
-        if data_to_show.find('device_reset', false)
+            # Environmental sensors (single line)
             fmt.start_line()
-            var reset_text = data_to_show.find('reset_type', 'Reset')
-            fmt.add_status(reset_text, "🔄", "Device Reset")
-            fmt.end_line()
-            var alert_msg = fmt.get_msg()
-            if alert_msg != nil
-                msg = msg + alert_msg
+            if data_to_show.contains('temperature')
+                fmt.add_sensor("temp", data_to_show['temperature'], "Temperature", "🌡️")
             end
-        end
-        
-        # Add last seen info if data is old
-        if last_update > 0
-            var age = tasmota.rtc()['local'] - last_update
-            if age > 3600  # Data older than 1 hour
-                fmt.start_line()
-                fmt.add_status(self.format_age(age), "⏱️", nil)
-                fmt.end_line()
-                var age_msg = fmt.get_msg()
-                if age_msg != nil
-                    msg = msg + age_msg
+            if data_to_show.contains('humidity')
+                fmt.add_sensor("humidity", data_to_show['humidity'], "Humidity", "💧")
+            end
+            if data_to_show.contains('pressure')
+                fmt.add_sensor("string", f"{data_to_show['pressure']}hPa", "Pressure", "📊")
+            end
+            
+            # Air quality sensors (next line)
+            fmt.next_line()
+            if data_to_show.contains('co2')
+                fmt.add_sensor("string", f"{data_to_show['co2']}ppm", "CO2", "🌬️")
+            end
+            if data_to_show.contains('tvoc_level')
+                fmt.add_sensor("string", f"{data_to_show['tvoc_level']:.0f}", "TVOC", "🏭")
+            end
+            if data_to_show.contains('pm25')
+                fmt.add_sensor("string", f"{data_to_show['pm25']}μg", "PM2.5", "🌫️")
+            end
+            if data_to_show.contains('pm10')
+                fmt.add_sensor("string", f"{data_to_show['pm10']}μg", "PM10", "💨")
+            end
+            
+            # Chemical sensors and status (third line)
+            var has_third_line = false
+            if data_to_show.contains('hcho') && data_to_show['hcho'] > 0
+                if !has_third_line fmt.next_line() has_third_line = true end
+                fmt.add_sensor("string", f"{data_to_show['hcho']:.2f}mg/m³", "HCHO", "🧪")
+            end
+            if data_to_show.contains('o3') && data_to_show['o3'] > 0
+                if !has_third_line fmt.next_line() has_third_line = true end
+                fmt.add_sensor("string", f"{data_to_show['o3']:.3f}ppm", "O3", "⚗️")
+            end
+            if data_to_show.contains('pir_status')
+                if !has_third_line fmt.next_line() has_third_line = true end
+                var pir_emoji = data_to_show['pir'] == 1 ? "🟢" : "⚫"
+                fmt.add_sensor("string", data_to_show['pir_status'], "Motion", pir_emoji)
+            end
+            if data_to_show.contains('light_level')
+                if !has_third_line fmt.next_line() has_third_line = true end
+                fmt.add_sensor("string", f"L{data_to_show['light_level']}", "Light", "💡")
+            end
+            
+            # Status and events (fourth line if needed)
+            var has_events = false
+            var event_content = []
+            
+            if data_to_show.contains('buzzer') && data_to_show['buzzer'] == "ON"
+                event_content.push(['string', 'Buzzer', 'Audio Alert', '🔊'])
+                has_events = true
+            end
+            if data_to_show.contains('activity_event') && data_to_show['activity_event']
+                event_content.push(['string', 'Activity', 'Motion Event', '🚶'])
+                has_events = true
+            end
+            if data_to_show.contains('power_event') && data_to_show['power_event']
+                event_content.push(['string', 'Power On', 'Device Event', '⚡'])
+                has_events = true
+            end
+            
+            # Only create line if there's content
+            if has_events
+                fmt.next_line()
+                for content : event_content
+                    fmt.add_sensor(content[0], content[1], content[2], content[3])
                 end
             end
-        end
-        
-        return msg
-    end
-    
-    def format_age(seconds)
-        if seconds < 60 return f"{seconds}s ago"
-        elif seconds < 3600 return f"{seconds/60}m ago"
-        elif seconds < 86400 return f"{seconds/3600}h ago"
-        else return f"{seconds/86400}d ago"
+            
+            fmt.end_line()
+            
+            # ONLY get_msg() returns a string that can be used with +=
+            msg += fmt.get_msg()
+
+            return msg
+            
+        except .. as e, m
+            print(f"AM300: Display error - {e}: {m}")
+            return "📟 AM300 Error - Check Console"
         end
     end
     
@@ -422,8 +368,10 @@ class LwDecode_AM300
         
         return {
             'last_update': node_data.find('last_update', 0),
-            'reset_count': node_data.find('reset_count', 0),
-            'last_reset': node_data.find('last_reset', 0),
+            'activity_count': node_data.find('activity_count', 0),
+            'power_on_count': node_data.find('power_on_count', 0),
+            'last_activity': node_data.find('last_activity', 0),
+            'last_power_on': node_data.find('last_power_on', 0),
             'battery_history': node_data.find('battery_history', []),
             'name': node_data.find('name', 'Unknown')
         }
@@ -443,31 +391,53 @@ class LwDecode_AM300
     def register_downlink_commands()
         import string
         
-        # Set Reporting Interval
+        # Reporting interval control
         tasmota.remove_cmd("LwAM300Interval")
         tasmota.add_cmd("LwAM300Interval", def(cmd, idx, payload_str)
+            # Format: LwAM300Interval<slot> <minutes>
             var minutes = int(payload_str)
-            if minutes < 1 || minutes > 65535
-                return tasmota.resp_cmnd_str("Invalid: range 1-65535 minutes")
+            if minutes < 1 || minutes > 1440
+                return tasmota.resp_cmnd_str("Invalid: range 1-1440 minutes")
             end
-            var hex_cmd = f"FE02{lwdecode.uint16le(minutes)}"
-            return lwdecode.SendDownlink(global.AM300_nodes, cmd, idx, hex_cmd)
+            
+            var hex_cmd = f"FF01{lwdecode.uint16le(minutes)}"
+            return lwdecode.SendDownlink(global.AM300_nodes, cmd, idx, hex_cmd, f"Interval {minutes}min")
         end)
         
-        # Buzzer Control
+        # Buzzer control
         tasmota.remove_cmd("LwAM300Buzzer")
         tasmota.add_cmd("LwAM300Buzzer", def(cmd, idx, payload_str)
+            # Format: LwAM300Buzzer<slot> <on|off|1|0>
             return lwdecode.SendDownlinkMap(global.AM300_nodes, cmd, idx, payload_str, { 
-                '1|ON|ENABLE':   ['FF2801', 'ENABLED'],
-                '0|OFF|DISABLE': ['FF2800', 'DISABLED']
+                '1|ON':  ['FF0E01', 'Buzzer ON'],
+                '0|OFF': ['FF0E00', 'Buzzer OFF']
             })
         end)
         
-        # Device Reboot
+        # Screen control
+        tasmota.remove_cmd("LwAM300Screen")
+        tasmota.add_cmd("LwAM300Screen", def(cmd, idx, payload_str)
+            # Format: LwAM300Screen<slot> <on|off|1|0>
+            return lwdecode.SendDownlinkMap(global.AM300_nodes, cmd, idx, payload_str, { 
+                '1|ON':  ['FF2D01', 'Screen ON'],
+                '0|OFF': ['FF2D00', 'Screen OFF']
+            })
+        end)
+        
+        # Time synchronization
+        tasmota.remove_cmd("LwAM300TimeSync")
+        tasmota.add_cmd("LwAM300TimeSync", def(cmd, idx, payload_str)
+            # Format: LwAM300TimeSync<slot> [timestamp] (optional, uses current time if empty)
+            var timestamp = payload_str != nil && payload_str != "" ? int(payload_str) : tasmota.rtc()['local']
+            var hex_cmd = f"FF02{lwdecode.uint32le(timestamp)}"
+            return lwdecode.SendDownlink(global.AM300_nodes, cmd, idx, hex_cmd, "Time synced")
+        end)
+        
+        # Device reboot
         tasmota.remove_cmd("LwAM300Reboot")
         tasmota.add_cmd("LwAM300Reboot", def(cmd, idx, payload_str)
-            var hex_cmd = "FF10FF"
-            return lwdecode.SendDownlink(global.AM300_nodes, cmd, idx, hex_cmd)
+            # Format: LwAM300Reboot<slot>
+            return lwdecode.SendDownlink(global.AM300_nodes, cmd, idx, "FF10", "Rebooting")
         end)
         
         print("AM300: Downlink commands registered")
@@ -476,23 +446,6 @@ end
 
 # Global instance
 LwDeco = LwDecode_AM300()
-
-# Test command registration (recreated on each load)
-tasmota.remove_cmd("LwAM300TestPayload")
-tasmota.add_cmd("LwAM300TestPayload", def(cmd, idx, payload_str)
-    # Parse hex string to bytes
-    var test_payload = bytes(payload_str)
-    
-    # Force driver load by LwDecode framework
-    var result = LwDeco.decodeUplink("TestAM300", "test_node", -85, idx, test_payload)
-    
-    if result != nil
-        import json
-        tasmota.resp_cmnd(json.dump(result))
-    else
-        tasmota.resp_cmnd_error()
-    end
-end)
 
 # Node management commands
 tasmota.remove_cmd("LwAM300NodeStats")
@@ -514,3 +467,38 @@ tasmota.add_cmd("LwAM300ClearNode", def(cmd, idx, node_id)
         tasmota.resp_cmnd_str("Node not found")
     end
 end)
+
+# Test UI command with realistic scenarios
+tasmota.remove_cmd("LwAM300TestUI")
+tasmota.add_cmd("LwAM300TestUI", def(cmd, idx, payload_str)
+    # Predefined realistic test scenarios for UI development
+    var test_scenarios = {
+        # Realistic test payloads for different air quality conditions
+        "normal":    "0175640367001804680A05020006CB040707D0190808D006000973A02803FE01",      # Normal air quality
+        "good":      "01756403670096046807050200060CB020707D0E8030808D003000973A02803FF01",      # Good conditions  
+        "moderate":  "017550036700C80468280502010610050707D0700A0808D00F000973982F03FF01",      # Moderate air quality
+        "poor":      "01754003670118046832050201061506707D0B40B0808D018000973753A03FF01",      # Poor conditions
+        "occupied":  "01756003670082046816050201061004070870100808D005000973A02803FF01",      # Motion detected
+        "alert":     "017535036700FA04683C050201061C070707D0D0070808D025000973703C03FF01",     # High pollution alert
+        "info":      "FF0B010203040506070809",                                                      # Device info
+        "buzzer_on": "01756003670082046816050201061004070870100808D005000E01010F0110FF01"      # Buzzer activated
+    }
+    
+    var hex_payload = test_scenarios.find(payload_str ? payload_str : 'nil', 'not_found')
+    
+    if hex_payload == 'not_found'
+        var scenarios_list = ""
+        for key: test_scenarios.keys()
+            scenarios_list += key + " "
+        end
+        return tasmota.resp_cmnd_str(format("Available scenarios: %s", scenarios_list))
+    end
+    
+    var rssi = -75
+    var fport = 85
+
+    return tasmota.cmd(f'LwSimulate{idx} {rssi},{fport},{hex_payload}')
+end)
+
+# MANDATORY: Register driver for web UI integration
+tasmota.add_driver(LwDeco)

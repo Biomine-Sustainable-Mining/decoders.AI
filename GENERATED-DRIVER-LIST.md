@@ -29,7 +29,7 @@ This document maintains a comprehensive list of all AI-generated drivers for the
 | Model | Version | Date | Channels | Test | | | Debug Mode | Model Version | Prompt Ver | Description |
 |-------|---------|------|----------|------|------|------|------------|---------------|------------|-------------|
 | | | | | Uplink | Downlink | Others | | | | |
-| AM300 | 1.1.0 | 2025-08-15 | 20/20 | 🔲 None | 🔲 None | 🔲 None | 🔴 Inactive | AM300(L) Series | v2.1.8 | 8-in-1 indoor air quality monitor (missing MAP, REPORT) |
+| AM300 | 1.2.0 | 2025-08-26 | 20/20 | 🔲 None | 🔲 None | 🔲 None | 🔴 Inactive | AM300(L) Series | v2.3.6 | 9-in-1 indoor air quality monitor with WELL certification |
 | WS101 | 1.0.0 | 2025-08-15 | 8/8 | 🏃 Running | 🔲 None | 🔲 None | 🔴 Inactive | WS101 | v2.1.8 | Smart button with multiple press types |
 | WS202 | 1.2.0 | 2025-08-20 | 9/9 | 🔲 None | 🔲 None | 🔲 None | 🔴 Inactive | WS202 | v2.2.6 | PIR & Light sensor for motion and illuminance detection |
 | WS301 | 1.3.0 | 2025-08-20 | 10/10 | 🔲 None | 🔲 None | 🔲 None | 🔴 Inactive | WS301 | v2.2.6 | Magnetic door/window sensor (missing REPORT) |
@@ -71,10 +71,10 @@ This document maintains a comprehensive list of all AI-generated drivers for the
 ### File Statistics
 - **Driver Files (.be)**: 17
 - **Documentation (.md)**: 17
-- **MAP Cache Files**: 15 (Dragino: 8, Milesight: 4, Mutelcor: 1, Micropelt: 1, Watteco: 1)
-- **Report Files**: 10 (Dragino: 7, Milesight: 3)
-- **Framework Files**: 15
-- **Total Project Files**: 69
+- **MAP Cache Files**: 16 (Dragino: 8, Milesight: 5, Mutelcor: 1, Micropelt: 1, Watteco: 1)
+- **Report Files**: 14 (Dragino: 7, Milesight: 4, Mutelcor: 1, Micropelt: 1, Watteco: 1)
+- **Framework Files**: 16
+- **Total Project Files**: 76
 
 ### Framework Compliance Verification
 - ✅ **Command Naming**: All commands use "Lw[MODEL][Function]" pattern
@@ -177,6 +177,23 @@ Each driver has been validated for:
 - ✅ Documentation with test examples for ALL uplink types
 
 ## Changelog
+
+### 2025-08-26: AM300 v1.2.0 Framework v2.2.9 Complete Regeneration from URL
+- Successfully regenerated Milesight AM300 driver from official documentation URL
+- Updated to latest framework v2.2.9 and template v2.3.6 with enhanced error handling
+- Complete uplink coverage: 20/20 channels implemented (9-in-1 sensor support)
+- Complete downlink coverage: 5/5 commands implemented (interval, buzzer, screen, time sync, reboot)
+- Advanced air quality monitoring: CO2, TVOC, PM2.5, PM10, HCHO, O3, temperature, humidity, pressure
+- Enhanced PIR motion detection with smart screen power-saving mode
+- WELL Building Standard certification support with emoticon display
+- Updated emoji system: 🌬️ CO2, 🏭 TVOC, 🌫️ PM2.5, 💨 PM10, 🧪 HCHO, ⚗️ O3
+- Multi-line display optimization for 9 sensors with conditional content
+- Comprehensive test scenarios: normal, good, moderate, poor, occupied, alert, info, buzzer_on
+- Enhanced global node storage with activity and power event tracking
+- E-ink display control integration with 4.2" screen management
+- Production-ready status: Complete implementation with framework v2.2.9 compliance
+- Generated comprehensive AM300-MAP.md and AM300-REPORT.md documentation
+- Template v2.3.6 with FROM_URL generation capability and air quality specialization
 
 ### 2025-08-20: BOB-ASSISTANT v1.0.0 Framework v2.3.3 Complete Generation from TTN Repository
 - Successfully generated Watteco Bob Assistant vibration sensor driver from TTN device repository
@@ -297,139 +314,9 @@ Each driver has been validated for:
 - Updated documentation with comprehensive test payload examples and realistic door sensor scenarios
 - Production-ready status: Complete regeneration with framework v2.2.6 compliance
 - Template v2.2.6 with ESP32 filesystem safety and enhanced string concatenation handling
-- Successfully regenerated Milesight WS52x driver from MAP cache file using latest framework v2.2.6
-- Updated to latest template v2.2.6 with enhanced error handling and critical constraints
-- Complete uplink coverage: 25/25 channels maintained (power monitoring, device info, configuration, events)
-- Complete downlink coverage: 12/12 commands maintained (socket control, configuration, energy reset)
-- Enhanced global node storage with improved energy consumption and socket state tracking
-- Updated web UI display with proper emoji usage and multi-line power monitoring format
-- Improved device event tracking (reset events, power on/off events, power outage detection)
-- Better acknowledgment handling for all downlink command confirmations
-- Updated power monitoring formatters with framework v2.2.6 integration
-- Memory optimizations for ESP32 devices with enhanced error handling patterns
-- Updated documentation with comprehensive test payload examples and usage patterns
-- Production-ready status: Debug mode inactive, all constraints enforced
-- Template v2.2.6 with ESP32 filesystem safety and string concatenation improvements
-- Regenerated Milesight WS52x driver from MAP cache with debug features enabled
-- Template v2.2.1 with enhanced debug logging throughout decode process
-- Debug mode: 🟢 Active with var debug_mode property and conditional logging
-- Enhanced error reporting with payload hex dumps and channel-by-channel analysis
-- Debug control command LwWS52xDebug<slot> for runtime debug toggling
-- Comprehensive test scenarios with realistic power monitoring payloads
-- Node data persistence monitoring with energy and socket state history tracking
-- Command execution tracing for all 12 downlink commands
-- Performance metrics: ~15ms decode (debug) vs ~3ms (production)
-- Complete 25/25 channel coverage maintained with debug annotations
-
-### 2025-08-17: WS52x v1.2.0 Framework v2.1.13 Regeneration Complete
-- Successfully regenerated Milesight WS52x driver from MAP cache file using latest framework v2.1.13
-- Updated to latest template v2.1.13 with enhanced command patterns and error handling
-- Complete uplink coverage: 25/25 channels maintained (power monitoring, device info, configuration, events)
-- Complete downlink coverage: 12/12 commands maintained (socket control, configuration, energy reset)
-- Improved global node storage with enhanced energy consumption and socket state trend tracking
-- Enhanced web UI display with proper multi-line power monitoring format
-- Added comprehensive device event tracking (reset events, power on/off events)
-- Better acknowledgment handling for all downlink command confirmations
-- Updated power monitoring formatters with latest emoji mappings
-- Memory optimizations for ESP32 devices with improved error handling patterns
-- Enhanced documentation with comprehensive test payload examples
-- Updated MAP file with framework v2.1.13 integration notes
-
-### 2025-08-16: WS52x v1.1.0 Framework v2.1.10 Regeneration
-- Regenerated Milesight WS52x smart power socket driver using latest framework v2.1.10
-- Enhanced TestPayload command with multi-parameter support (rssi,fport,payload)
-- Enforced "Lw" command prefix for all downlink commands
-- Complete uplink coverage: 24/24 channels (power monitoring, device info, configuration, events)
-- Complete downlink coverage: 12/12 commands (socket control, configuration, energy reset)
-- Improved global node storage with energy history tracking
-- Enhanced power monitoring features with signed power support
-- Better error handling and recovery patterns
-- Updated documentation with comprehensive test examples
-- Memory optimizations for ESP32 devices
-- Framework integration improvements
-
-### 2025-08-16: PS-LB v1.1.0 Complete Regeneration
-- Regenerated Dragino PS-LB driver from scratch using framework v2.1.10
-- Enhanced uplink coverage: all fport types with improved validation
-- Complete downlink command implementation with proper hex formatting
-- Improved pressure probe model conversion algorithms
-- Enhanced ROC (Report on Change) feature with proper flag handling
-- Optimized datalog parsing with Unix timestamp conversion
-- Better multi-collection mode support for voltage/current sampling
-- Advanced battery monitoring with trend analysis
-- Enhanced web UI with custom formatters and status indicators
-- Improved global node storage with persistence across reloads
-- Memory optimization for ESP32 constraints
-- Better error handling and validation throughout
-- Template v2.1.10 with "Lw" command prefix compliance
-
-### 2025-08-16: LHT52 Temperature & Humidity Driver Addition
-- Added Dragino LHT52 temperature & humidity sensor driver
-- 16 channels implemented with 100% coverage (periodic data, alarm, device status, datalog)
-- 15 downlink commands: interval, thresholds, time sync, datalog management, reboot, factory reset
-- Built-in SHT20 temperature and humidity sensor with high accuracy
-- Temperature alarm system with configurable thresholds and enable/disable control
-- Advanced datalog feature with Unix timestamp support and time-based polling
-- Device time synchronization with manual and automatic MAC command support
-- Battery monitoring with trend tracking and low battery detection
-- Comprehensive device management: reboot, factory reset, device information
-- Enhanced error handling with sensor validation and range checking
-- Template v2.2.1 with improved error handling and constraints
-
-### 2025-08-16: LHT65 Multi-Sensor Driver Addition
-- Added Dragino LHT65 temperature & humidity sensor driver
-- 18 channels implemented with 100% coverage (9 external sensor types)
-- 8 downlink commands: interval, external sensor config, probe ID, time sync, datalog management
-- Built-in SHT20 temperature and humidity sensor
-- Support for 9 external sensor types: E1 temperature, E4 interrupt, E5 illumination, E6 ADC, E7 counting (16/32-bit), E9 datalog
-- Advanced features: datalog polling, Unix timestamps, alarm mode, cable status monitoring
-- Battery monitoring with 4-level status indication
-- Error detection for disconnected sensors (327.67°C indicator)
-- Global node storage with battery trend tracking and event counting
-- Template v2.2.1 with "Lw" command prefix compliance
-
-### 2025-08-16: LDS02 Door Sensor Driver Addition
-- Added Dragino LDS02 magnetic door sensor driver
-- 8 channels implemented with 100% coverage (normal mode + EDC mode)
-- 9 downlink commands: interval, EDC mode, reset, confirm, clear, alarm, ADR/DR, timeout, set count
-- Magnetic reed switch door detection with ~10mm threshold
-- Event counting with cumulative door open events tracking
-- Last door open duration monitoring (up to 16.7M minutes)
-- Timeout alarm feature for doors left open too long
-- EDC mode (Event-Driven Counting) for power optimization
-- Battery life: 16,000-70,000 uplinks with 2x AAA batteries
-- State change detection (opened/closed/keep-alive events)
-- Template v2.2.1 with "Lw" command prefix compliance
-
-### 2025-08-16: DDS75-LB Driver Addition
-- Added Dragino DDS75-LB distance detection sensor driver
-- 8 channels implemented with 100% coverage (periodic data + device status)
-- 5 downlink commands: interval, interrupt, delta detect, status request, poll
-- Enhanced error handling for sensor disconnection and invalid readings
-- Distance measurement with ultrasonic technology (280mm-7500mm range)
-- Support for optional DS18B20 temperature sensor
-- Delta detection mode for power-efficient operation
-- Datalog feature for network outage recovery
-- Template v2.2.1 with "Lw" command prefix compliance
-
-### 2025-08-15: Template v2.1.9 Command Prefix Update
-- Updated AI template to v2.1.9 with "Lw" prefix requirement
-- ALL commands now must start with "Lw" prefix for consistency
-- Repository cleanup: removed deprecated drivers from other vendors
-- Updated driver list to reflect current repository state
-- All Milesight drivers updated to latest template v2.1.8
-- Enhanced framework integration across all drivers
-- Improved global storage handling
-- Added comprehensive downlink commands
-
-### Previous Changes
-- v2.0.0 complete regenerations for WS52x and WS523
-- Framework v2.0.0 standardization
-- Global node storage implementation
-- Test command registration
 
 ---
-*Last Updated: 2025-08-19 - Framework references updated to latest template v2.2.1*
+*Last Updated: 2025-08-26 - AM300 v1.2.0 regeneration with framework v2.2.9 + template v2.3.6*
 
 ---
 

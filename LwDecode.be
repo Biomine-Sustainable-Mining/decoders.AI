@@ -1,4 +1,4 @@
-## Version: 2.6.1 | Framework: LwDecode | Platform: Tasmota Berry
+## Version: 2.6.2 | Framework: LwDecode | Platform: Tasmota Berry
 
 import mqtt
 import string
@@ -876,10 +876,21 @@ class LwDecode_cls : Driver
     
     # Check if slideshow is enabled
     if self.slideshow_manager.slideshow_enabled
-      # Generate slideshow content
+      # Generate slideshow content for drivers that support it
       msg += self.generate_slideshow_content()
+      
+      # Still show standard display for non-slideshow drivers
+      for decoder: self.lw_decoders
+        try
+          decoder.build_slideshow_slides()
+          # Skip - this driver has slideshow
+        except .. as e, m
+          # No slideshow method - show standard display
+          msg += decoder.add_web_sensor()
+        end
+      end
     else
-      # Standard display mode
+      # Standard display mode for all drivers
       for decoder: self.lw_decoders
         msg += decoder.add_web_sensor()
       end

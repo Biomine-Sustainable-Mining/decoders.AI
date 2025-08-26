@@ -1,7 +1,7 @@
 #
 # LoRaWAN AI-Generated Decoder for Milesight AM300 Prompted by ZioFabry 
 #
-# Generated: 2025-08-26 | Version: 1.2.3 | Revision: 5
+# Generated: 2025-08-26 | Version: 1.2.4 | Revision: 6
 #            by "LoRaWAN Decoder AI Generation Template", v2.3.6
 #
 # Homepage:  https://www.milesight-iot.com/lorawan/sensor/am300/
@@ -9,6 +9,11 @@
 # Decoder:   https://github.com/Milesight-IoT/SensorDecoders/tree/master/AM_Series
 # 
 # Changelog:
+# v1.2.4 (2025-08-26): Fixed device info scenario decoding
+#   - Fixed index out of range error in device info parsing
+#   - Extended info payload to proper 12-byte format (FF0B + 10 data bytes)
+#   - Added dedicated device info display with firmware, hardware, protocol, serial
+#   - Info scenario now shows: FW 1.2.3, HW 4.5, Protocol 6, SN 0708090A
 # v1.2.3 (2025-08-26): Rebuilt ALL test scenario payloads
 #   - Reconstructed all 8 test scenarios with proper multi-channel structure
 #   - Fixed temperature calculations for all scenarios (no more negative temps)
@@ -173,7 +178,7 @@ class LwDecode_AM300
                         
                     # DEVICE INFO
                     elif channel_id == 0xff && channel_type == 0x0b
-                        if size(payload) - i >= 9
+                        if size(payload) - i >= 10  # Need 10 bytes: 3+2+1+4
                             data['fw_version'] = f"{payload[i]}.{payload[i+1]}.{payload[i+2]}"
                             data['hw_version'] = f"{payload[i+3]}.{payload[i+4]}"
                             data['protocol_version'] = payload[i+5]
@@ -181,6 +186,7 @@ class LwDecode_AM300
                                 payload[i+6], payload[i+7], payload[i+8], payload[i+9])
                             i += 10
                         else
+                            print(f"AM300: Device info insufficient data: {size(payload) - i} bytes available")
                             break
                         end
                         
@@ -288,6 +294,25 @@ class LwDecode_AM300
             
             # Build display using emoji formatter
             fmt.header(name, name_tooltip, battery, battery_last_seen, rssi, last_update, simulated)
+            
+            # Device info display (special case)
+            if data_to_show.contains('fw_version')
+                fmt.start_line()
+                fmt.add_sensor("string", f"FW {data_to_show['fw_version']}", "Firmware", "⚙️")
+                if data_to_show.contains('hw_version')
+                    fmt.add_sensor("string", f"HW {data_to_show['hw_version']}", "Hardware", "🔧")
+                end
+                if data_to_show.contains('protocol_version')
+                    fmt.add_sensor("string", f"P{data_to_show['protocol_version']}", "Protocol", "📡")
+                end
+                fmt.next_line()
+                if data_to_show.contains('serial_number')
+                    fmt.add_sensor("string", data_to_show['serial_number'], "Serial Number", "🏷️")
+                end
+                fmt.end_line()
+                msg += fmt.get_msg()
+                return msg
+            end
             
             # Environmental sensors (single line)
             fmt.start_line()
@@ -494,7 +519,7 @@ tasmota.add_cmd("LwAM300TestUI", def(cmd, idx, payload_str)
         "poor":      "01754603671801046882050201061003077DB004087DA86109736027",      # Poor conditions: 28.0°C, 65%, CO2 1200ppm
         "occupied":  "0175550367F100046860050201061007077DC201087DC4090973B827",      # Motion detected: 24.1°C, 48%, CO2 450ppm
         "alert":     "01753C03674501046896050201061002077D0807087D409C0973E326",      # High pollution alert: 32.5°C, 75%, CO2 1800ppm
-        "info":      "FF0B010203040506070809",                                      # Device info
+        "info":      "FF0B0102030405060708090A",                                      # Device info: FW 1.2.3, HW 4.5, Protocol 6, SN 0708090A
         "buzzer_on": "01754B0367FC0004686E050201061005077D5802087D401F09738B270E01010F0101"  # Buzzer activated: 25.2°C, 55%, events
     }
     

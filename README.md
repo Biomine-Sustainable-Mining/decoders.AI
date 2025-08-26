@@ -370,6 +370,7 @@ All 17 drivers now have complete documentation sets:
 ### Core Documentation
 - **[DEVELOPER-PROMPT.md](DEVELOPER-PROMPT.md)** - Complete AI generation template (v2.3.6)
 - **[FRAMEWORK.md](FRAMEWORK.md)** - Implementation details and API reference (v2.3.0)
+- **[LwDecode.be](LwDecode.be)** - Core framework with error handling (v2.2.9)
 - **[BERRY-CUSTOM-LANGUAGE-REFERENCE.md](BERRY-CUSTOM-LANGUAGE-REFERENCE.md)** - Berry syntax constraints (v1.2.0)
 - **[GENERATED-DRIVER-LIST.md](GENERATED-DRIVER-LIST.md)** - AI-maintained driver catalog
 - **[emoji-reference.md](emoji-reference.md)** - Emoji standardization guide (v1.08)
@@ -384,6 +385,12 @@ All 17 drivers now have complete documentation sets:
 - **[AUTO-UPDATE-SETUP.md](AUTO-UPDATE-SETUP.md)** - Automated maintenance guide
 - **[PR-DESCRIPTION.md](PR-DESCRIPTION.md)** - Pull request template (v1.1.0)
 
+### Automation Tools
+- **[auto_update.py](auto_update.py)** - Automatic documentation updater
+- **[file_watcher.py](file_watcher.py)** - Real-time file monitoring
+- **[update_versions.py](update_versions.py)** - Version synchronization tool
+- **[requirements.txt](requirements.txt)** - Python dependencies
+
 ## 🎯 Getting Started
 
 ### Option 1: Quick Start
@@ -397,7 +404,30 @@ Generate driver for [VENDOR] [MODEL] sensor.
 Use the structured **[GENERATION-REQUEST.md](GENERATION-REQUEST.md)** form for complex requirements and custom features.
 
 ### Option 3: Browse Examples
-Explore `vendor/` directories to see production drivers and learn from generated code patterns.
+Explore driver documentation and code:
+
+#### Dragino Drivers (8 total)
+- **[D2x](vendor/dragino/D2x.md)** - Multi-probe temperature sensor
+- **[DDS75-LB](vendor/dragino/DDS75-LB.md)** - Ultrasonic distance sensor  
+- **[LDS02](vendor/dragino/LDS02.md)** - Magnetic door sensor
+- **[LHT52](vendor/dragino/LHT52.md)** - Temperature/humidity with datalog
+- **[LHT65](vendor/dragino/LHT65.md)** - Multi-sensor with external probes
+- **[PS-LB](vendor/dragino/PS-LB.md)** - Pressure/water level sensor
+- **[SE01-LB](vendor/dragino/SE01-LB.md)** - Soil moisture & EC sensor
+- **[SN50v3-LB](vendor/dragino/SN50v3-LB.md)** - Generic sensor node (12 modes)
+
+#### Milesight Drivers (6 total)
+- **[AM300](vendor/milesight/AM300.md)** - Indoor air quality monitor
+- **[WS101](vendor/milesight/WS101.md)** - Smart button with multiple press types
+- **[WS202](vendor/milesight/WS202.md)** - PIR & light sensor
+- **[WS301](vendor/milesight/WS301.md)** - Magnetic door/window sensor
+- **[WS523](vendor/milesight/WS523.md)** - Portable smart socket
+- **[WS52x](vendor/milesight/WS52x.md)** - Smart socket series with power monitoring
+
+#### Other Vendors (3 drivers)
+- **[MTC-AQ01](vendor/mutelcor/MTC-AQ01.md)** - Mutelcor air quality sensor
+- **[MLR003](vendor/micropelt/MLR003.md)** - Micropelt thermostatic radiator valve
+- **[BOB-ASSISTANT](vendor/watteco/BOB-ASSISTANT.md)** - Watteco vibration sensor with ML
 
 ---
 

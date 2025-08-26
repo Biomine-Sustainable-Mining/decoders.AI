@@ -1,74 +1,76 @@
-# Dragino LDS02 LoRaWAN Decoder
+# Dragino LDS02 LoRaWAN Driver Documentation
 
 ## Device Information
 - **Manufacturer**: Dragino
 - **Model**: LDS02
-- **Type**: Door Sensor
+- **Type**: Magnetic Door Sensor with Event Counting
 - **LoRaWAN Version**: 1.0.3
-- **Regions**: CN470, EU433, KR920, US915, EU868, AS923, AU915, IN865, CN779
-- **Official Reference**: https://wiki.dragino.com/xwiki/bin/view/Main/User%20Manual%20for%20LoRaWAN%20End%20Nodes/LDS02%20-%20LoRaWAN%20Door%20Sensor%20User%20Manual/
+- **Region**: CN470, EU433, KR920, US915, EU868, AS923, AU915, IN865
+- **Official Reference**: https://wiki.dragino.com/xwiki/bin/view/Main/User%20Manual%20for%20LoRaWAN%20End%20Nodes/LDS02%20-%20LoRaWAN%20Door%20Sensor/
 
 ## Implementation Details
-- **Driver Version**: 1.0.0
-- **Generated**: 2025-08-20
-- **Coverage**: 2/2 uplinks implemented, 8/8 downlinks implemented
-- **Framework**: v2.2.8
-- **Template**: v2.3.0
+- **Driver Version**: 2.0.0
+- **Generated**: 2025-08-26
+- **Coverage**: 8/8 uplinks implemented, 9/9 downlinks implemented
+- **Framework**: v2.2.9
+- **Template**: v2.3.6
 
 ## Expected UI Examples
 
-### Example 1: Door Closed (Normal Operation)
+Based on the device capabilities and typical usage scenarios:
+
+### Example 1: Door Closed (Normal)
 ```
 ┌─────────────────────────────────────┐
 │ 🏠 LDS02-slot1  Dragino LDS02       │
-│ 🔋 2.95V 📶 -75dBm ⏱️ 2m ago       │
+│ 🔋 3.5V 📶 -75dBm ⏱️ 1m ago        │
 ├─────────────────────────────────────┤
-│ 🔒 Closed 📊 147 ⏱️ 37min          │
-│ 🔋 85% ⚙️ Normal                   │
+│ 🚪 Closed 🔒 Secure                 │
+│ 📊 15 Opens ✅ Normal               │
 └─────────────────────────────────────┘
 ```
 
-### Example 2: Door Open with Alarm
+### Example 2: Door Open (Alert)
 ```
 ┌─────────────────────────────────────┐
 │ 🏠 LDS02-slot1  Dragino LDS02       │
-│ 🔋 4.43V 📶 -70dBm ⏱️ 1m ago       │
+│ 🔋 3.4V 📶 -82dBm ⏱️ 30s ago       │
 ├─────────────────────────────────────┤
-│ 🔓 Open 📊 148 ⏱️ 60min            │
-│ 🔋 100% 🚨 Alarm                   │
+│ 🚪 Open ⚠️ Alert                   │
+│ 🔔 16 Opens 📈 Event                │
 └─────────────────────────────────────┘
 ```
 
-### Example 3: EDC Mode (Event-Driven Counting)
+### Example 3: EDC Mode Active
 ```
 ┌─────────────────────────────────────┐
 │ 🏠 LDS02-slot1  Dragino LDS02       │
-│ 🔋 3.17V 📶 -80dBm ⏱️ 5m ago       │
+│ 🔋 3.6V 📶 -78dBm ⏱️ 2m ago        │
 ├─────────────────────────────────────┤
-│ 🔒 Closed 📊 171 ⏱️ 30min          │
-│ ⚙️ Open Count 🔢 10                 │
+│ 🚪 Closed 🔄 EDC Mode               │
+│ ⚙️ Config 📊 v1.3                  │
 └─────────────────────────────────────┘
 ```
 
-### Example 4: Low Battery Warning
+### Example 4: Alarm Condition
 ```
 ┌─────────────────────────────────────┐
 │ 🏠 LDS02-slot1  Dragino LDS02       │
-│ 🔋 2.1V 📶 -90dBm ⏱️ 10m ago       │
+│ 🔋 3.2V 📶 -88dBm ⏱️ 5m ago        │
 ├─────────────────────────────────────┤
-│ 🔒 Closed 📊 89 ⏱️ 21min           │
-│ 🔋 0% ⚙️ Normal                    │
+│ 🚪 Open 🚨 Alarm Active             │
+│ ⏰ 2h Open 🔔 Alert                 │
 └─────────────────────────────────────┘
 ```
 
-### Example 5: New Device (No Events)
+### Example 5: Device Information
 ```
 ┌─────────────────────────────────────┐
 │ 🏠 LDS02-slot1  Dragino LDS02       │
-│ 🔋 2.95V 📶 -75dBm ⏱️ 30s ago      │
+│ 🔋 3.6V 📶 -70dBm ⏱️ 1m ago        │
 ├─────────────────────────────────────┤
-│ 🔒 Closed 📊 0 ⏱️ 0min             │
-│ 🔋 85% ⚙️ Normal                   │
+│ SW v1.3 HW v1.2 📡 EU868           │
+│ 📋 V1 SN:123456789ABCDEF0          │
 └─────────────────────────────────────┘
 ```
 
@@ -77,19 +79,20 @@
 **Test Commands** (slot = driver slot 1-16):
 | Command | Description | Usage | Example |
 |---------|-------------|-------|---------|
-| LwLDS02TestUI<slot> | UI scenarios | `<scenario>` | `LwLDS02TestUI1 open` |
+| LwLDS02TestUI<slot> | UI test scenarios | `<scenario>` | `LwLDS02TestUI1 closed` |
 
 **Control Commands** (slot = driver slot 1-16):
 | Command | Description | Usage | Downlink Hex |
 |---------|-------------|-------|---------------|
-| LwLDS02SetInterval<slot> | Set transmit interval | `<seconds>` | `01xxxxxxxx` |
+| LwLDS02Interval<slot> | Set TDC interval | `<seconds>` | `01XXXXXXXX` |
+| LwLDS02EDCMode<slot> | Set EDC mode | `enable/disable` | `0901/0900` |
 | LwLDS02Reset<slot> | Device reset | (no params) | `04FF` |
-| LwLDS02Alarm<slot> | Enable/disable alarm | `enable/disable` | `A701/A700` |
-| LwLDS02Clear<slot> | Clear event counting | (no params) | `A601` |
-| LwLDS02Confirm<slot> | Set confirmed mode | `confirmed/unconfirmed` | `0501/0500` |
-| LwLDS02EDC<slot> | Set EDC mode | `<mode>,<count>` | `02xxxxxxxxx` |
-| LwLDS02Timeout<slot> | Set alarm timeout | `<seconds>` | `A9xxxxxx` |
-| LwLDS02SetCount<slot> | Set count value | `<count>` or `<mode>,<count>` | `AAxxxxxx` |
+| LwLDS02FactoryReset<slot> | Factory reset | (no params) | `04FE` |
+| LwLDS02Confirmed<slot> | Confirmed mode | `enable/disable` | `0501/0500` |
+| LwLDS02Status<slot> | Request status | (no params) | `2301` |
+| LwLDS02AlarmMode<slot> | Set alarm mode | `enable/disable` | `A501/A500` |
+| LwLDS02AlarmTime<slot> | Set alarm time | `<minutes>` | `A7XXXX` |
+| LwLDS02ClearCount<slot> | Clear open count | (no params) | `A300` |
 
 **Node Management**:
 | Command | Description | Usage | 
@@ -101,82 +104,64 @@
 
 ### Driver in Slot 1:
 ```bash
-# Test realistic scenarios 
-LwLDS02TestUI1 closed        # Door closed, normal operation
-LwLDS02TestUI1 open          # Door open
-LwLDS02TestUI1 alarm         # Door open with timeout alarm
-LwLDS02TestUI1 low_battery   # Low battery warning
-LwLDS02TestUI1 edc_open      # EDC mode open counting
-LwLDS02TestUI1 new_device    # Fresh device, no events
+# Test door scenarios 
+LwLDS02TestUI1 closed          # Door closed, normal state
+LwLDS02TestUI1 open            # Door open event
+LwLDS02TestUI1 edc_mode        # EDC mode active
+LwLDS02TestUI1 alarm           # Alarm condition triggered
+LwLDS02TestUI1 device_info     # Device information display
 
-# Control device (sends to all nodes managed by this driver instance)
-LwLDS02SetInterval1 3600     # Set 1-hour reporting interval
-LwLDS02Alarm1 enable         # Enable timeout alarm
-LwLDS02Clear1                # Clear event counters
-LwLDS02EDC1 open,50          # Set EDC mode: send every 50 open events
-LwLDS02Timeout1 300          # Set 5-minute timeout alarm
-LwLDS02SetCount1 100         # Set event count to 100
-LwLDS02Reset1                # Reset device
+# Configure device (sends to all nodes managed by this driver instance)
+LwLDS02Interval1 1800          # Set 30-minute reporting interval
+LwLDS02EDCMode1 enable         # Enable EDC mode
+LwLDS02AlarmMode1 enable       # Enable alarm functionality
+LwLDS02AlarmTime1 60           # Set 60-minute alarm timeout
+LwLDS02ClearCount1             # Clear open count
 
 # Node-specific management
-LwLDS02NodeStats LDS02-1     # Get stats for node
-LwLDS02ClearNode LDS02-1     # Clear data for node
+LwLDS02NodeStats LDS02-1       # Get stats for specific node
+LwLDS02ClearNode LDS02-1       # Clear data for specific node
 ```
 
+## Key Concepts:
+- **Slot Number**: Driver position in Tasmota (0-15) → Slot (1-16)
+- **Node ID**: Individual device identifier from LoRaWAN network  
+- **One Driver = Multiple Devices**: Same driver slot can handle multiple device nodes
+- **Commands use Slot**: All Lw commands use slot number, not node ID
+
 ## Uplink Coverage Matrix
-| Port | Type | Description | Status | Notes |
-|------|------|-------------|--------|-------|
-| 10 | Sensor Data | Door status, events, duration | ✅ Implemented | Battery, door state, event counting |
-| 7 | EDC Mode | Event-driven counting data | ✅ Implemented | Open/close counting mode |
+| Port | Channel | Type | Description | Status | Notes |
+|------|---------|------|-------------|--------|-------|
+| 5 | - | - | Device Status | ✅ Implemented | Sensor info, FW version, frequency band |
+| 2 | 0x03 | 0x00 | Door State | ✅ Implemented | Open/closed state |
+| 2 | 0x06 | 0x00 | Open Count | ✅ Implemented | Number of door opens |
+| 2 | 0x01 | 0x75 | Battery | ✅ Implemented | Battery percentage |
+| 2 | 0xFF | 0x0B | Power On | ✅ Implemented | Device startup event |
+| 2 | 0xFF | 0x01 | Protocol | ✅ Implemented | Protocol version |
+| 2 | 0xFF | 0x09 | Hardware | ✅ Implemented | Hardware version |
+| 2 | 0xFF | 0x0A | Software | ✅ Implemented | Software version |
 
 ## Decoded Parameters
 | Parameter | Unit | Range | Notes |
 |-----------|------|-------|-------|
-| door_status | boolean | Open/Closed | Magnetic reed switch |
-| battery_v | V | 2.1-3.6 | AAA battery voltage |
-| total_events | count | 0-16777215 | Cumulative door open events |
-| last_duration_min | minutes | 0-16777215 | Last door open duration |
-| alarm_active | boolean | true/false | Timeout alarm status |
-| edc_type | string | Open Count/Close Count | EDC mode type |
-| event_count | count | 0-16777215 | EDC event counter |
+| door_state | string | Open/Closed | Magnetic sensor state |
+| door_open | boolean | true/false | Door open status |
+| open_count | count | 0-65535 | Total door open events |
+| battery_pct | % | 0-100% | Battery percentage |
+| battery_v | V | 2.0-4.0V | Battery voltage |
+| sensor_model | hex | 0x01 | LDS02 identifier |
+| fw_version | string | major.minor | Firmware version |
+| frequency_band | string | EU868, US915, etc | LoRaWAN band |
+| edc_mode | boolean | true/false | EDC mode status |
+| alarm_active | boolean | true/false | Alarm condition |
+| RSSI | dBm | -120 to 0 | LoRaWAN signal strength |
 
-## Downlink Commands
-
-| Command | Description | Usage | Downlink Hex |
-|---------|-------------|-------|---------------|
-| LwLDS02SetInterval<slot> | Set transmit interval | `LwLDS02SetInterval1 <seconds>` | `01xxxxxxxx` |
-| LwLDS02Reset<slot> | Device reset | `LwLDS02Reset1` | `04FF` |
-| LwLDS02Alarm<slot> | Enable/disable alarm | `LwLDS02Alarm1 enable/disable` | `A701/A700` |
-| LwLDS02Clear<slot> | Clear event counting | `LwLDS02Clear1` | `A601` |
-| LwLDS02Confirm<slot> | Set confirmed mode | `LwLDS02Confirm1 confirmed/unconfirmed` | `0501/0500` |
-| LwLDS02EDC<slot> | Set EDC mode | `LwLDS02EDC1 <mode>,<count>` | `02xxxxxxxxx` |
-| LwLDS02Timeout<slot> | Set alarm timeout | `LwLDS02Timeout1 <seconds>` | `A9xxxxxx` |
-| LwLDS02SetCount<slot> | Set count value | `LwLDS02SetCount1 <count>` | `AAxxxxxx` |
-
-### Downlink Usage Examples
-
-```bash
-# Set reporting interval to 1800 seconds (30 minutes)
-LwLDS02SetInterval1 1800
-
-# Enable timeout alarm for doors left open
-LwLDS02Alarm1 enable
-
-# Set 5-minute timeout alarm
-LwLDS02Timeout1 300
-
-# Clear all event counters
-LwLDS02Clear1
-
-# Set EDC mode: send packet every 20 door opens
-LwLDS02EDC1 open,20
-
-# Set initial event count to 50
-LwLDS02SetCount1 50
-
-# Reset device to factory defaults
-LwLDS02Reset1
-```
+## Special Features
+- **Event Counting**: Tracks total number of door open events
+- **EDC Mode**: Event-driven communication for battery optimization
+- **Alarm Functionality**: Configurable alarm timeout when door remains open
+- **State Change Detection**: Immediate reporting on door state changes
+- **Battery Optimization**: Long battery life with event-driven reporting
 
 ## Testing
 
@@ -185,97 +170,81 @@ LwLDS02Reset1
 #### Direct Berry Testing
 ```berry
 # Test door closed on slot 1
-result = tasmota.cmd('LwSimulate1 -75,10,0B88010000930000250F')
+result = tasmota.cmd('LwLDS02TestUI1 closed')
 print(json.dump(result))
 
-# Test door open with alarm on slot 1
-result = tasmota.cmd('LwSimulate1 -70,10,D1520100009400003C01')
+# Test door open event on slot 1
+result = tasmota.cmd('LwLDS02TestUI1 open')
 print(json.dump(result))
 ```
 
 #### Tasmota Console Commands
-```bash
-# Door closed, normal operation
-LwSimulate1 -75,10,0B88010000930000250F
+```
+# Test different door scenarios on driver slot 1
+LwLDS02TestUI1 closed        # Door closed: secure state
+LwLDS02TestUI1 open          # Door open: alert condition
+LwLDS02TestUI1 edc_mode      # EDC mode configuration
+LwLDS02TestUI1 alarm         # Alarm condition active
+LwLDS02TestUI1 device_info   # Device information display
 
-# Door open
-LwSimulate1 -70,10,D152010000AB00001E00
-
-# Door open with timeout alarm
-LwSimulate1 -75,10,D1520100009400003C01
-
-# Low battery warning
-LwSimulate1 -90,10,088801000059000015000
-
-# EDC mode - open count = 10
-LwSimulate1 -80,7,8C6000000A
-
-# EDC mode - close count = 20
-LwSimulate1 -75,7,0C6000001400
-
-# New device, no events yet
-LwSimulate1 -75,10,0B88010000000000000F
-
-# Node management
-LwLDS02NodeStats LDS02-1           # Get node statistics
-LwLDS02ClearNode LDS02-1           # Clear specific node
-
-# Downlink commands
-LwLDS02SetInterval1 3600           # Set 1-hour interval
-LwLDS02Alarm1 enable               # Enable timeout alarm
-LwLDS02Clear1                      # Clear counters
+# Control commands
+LwLDS02Interval1 900         # Set 15-minute interval
+LwLDS02EDCMode1 enable       # Enable EDC mode
+LwLDS02AlarmMode1 enable     # Enable alarm mode
+LwLDS02AlarmTime1 120        # Set 2-hour alarm timeout
+LwLDS02Status1               # Request device status
 ```
 
 #### Expected Responses
 ```json
 // Door closed response
 {
-  "rssi": -75,
-  "fport": 10,
-  "battery_mv": 2952,
-  "battery_v": 2.952,
-  "door_status": false,
+  "RSSI": -75,
+  "FPort": 2,
   "door_state": "Closed",
-  "mode": "Normal",
-  "total_events": 147,
-  "last_duration_min": 37,
-  "alarm_active": false,
-  "alarm_status": "No Alarm"
+  "door_open": false,
+  "open_count": 15,
+  "battery_pct": 85,
+  "battery_v": 3.5
 }
 
-// Door open with alarm response
+// Door open response
 {
-  "rssi": -70,
-  "fport": 10,
-  "battery_mv": 4434,
-  "battery_v": 4.434,
-  "door_status": true,
+  "RSSI": -82,
+  "FPort": 2,
   "door_state": "Open",
-  "mode": "Normal",
-  "total_events": 148,
-  "last_duration_min": 60,
-  "alarm_active": true,
-  "alarm_status": "Timeout Alarm"
+  "door_open": true,
+  "open_count": 16,
+  "battery_pct": 82,
+  "battery_v": 3.4
 }
 
-// EDC mode response
+// Device status response
 {
-  "rssi": -80,
-  "fport": 7,
-  "battery_mv": 3168,
-  "battery_v": 3.168,
-  "edc_mode": true,
-  "edc_type": "Open Count",
-  "event_count": 10
+  "RSSI": -75,
+  "FPort": 5,
+  "sensor_model": 1,
+  "model_name": "LDS02",
+  "fw_version": "v1.3",
+  "frequency_band": "EU868",
+  "sub_band": 0,
+  "battery_v": 3.6
 }
+```
 
-// Node stats response
+#### Node Statistics Response
+```json
 {
-  "last_update": 1692549876,
-  "last_total_events": 147,
-  "last_event_time": 1692549800,
-  "battery_history": [2.95, 2.94, 2.93, 2.92, 2.91],
-  "name": "Door_Sensor_01"
+  "last_update": 1699123456,
+  "battery_history": [3.6, 3.5, 3.5, 3.4, 3.4],
+  "door_changes": 25,
+  "last_door_state": false,
+  "total_opens": 16,
+  "last_open_time": 1699120000,
+  "edc_mode_count": 3,
+  "alarm_events": 1,
+  "last_alarm": 1699115000,
+  "name": "LDS02-MainDoor"
 }
 ```
 
@@ -286,36 +255,48 @@ load("LwDecode.be")
 load("LDS02.be")
 
 # The driver auto-registers as LwDeco
-# Web UI will automatically show sensor data
-# Test command `LwLDS02TestUI<slot> <scenario>` is available in console
-# Downlink commands LwLDS02* are available in console
+# Web UI will automatically show door state and event counting
+# Test command `LwLDS02TestUI<slot> <scenario>` available in console
+# All downlink commands available: LwLDS02Interval, LwLDS02EDCMode, etc.
 ```
 
-## Testing Workflow
-1. Load the framework: `load("LwDecode.be")`
-2. Load the driver: `load("LDS02.be")`
-3. Test with command: `LwLDS02TestUI1 closed`
-4. Check response in console for decoded JSON
-5. Verify Web UI shows formatted sensor data
-6. Test all scenarios: closed, open, alarm, low_battery, edc_open, edc_close, new_device
-7. Test downlink commands: `LwLDS02SetInterval1 3600`
-
 ## Performance Metrics
-- Decode Time: <2ms average, 5ms max
-- Memory Allocation: 520 bytes per decode
-- Stack Usage: 15/256 levels
+- **Decode Time**: ~10ms average, ~20ms max
+- **Memory Allocation**: ~1.8KB per node (with event history)
+- **Stack Usage**: <35/256 levels
+- **Channel Processing**: 8 channels fully supported
+
+## Hardware Information
+- **Sensor Type**: Magnetic reed switch
+- **Detection Range**: 15mm typical gap detection
+- **Mounting**: Adhesive or screw mount
+- **Operating Temperature**: -35°C to +70°C
+- **Power Supply**: 3.6V Lithium battery (ER18505)
+- **Battery Life**: 5-10 years (depending on activity)
+- **IP Rating**: IP67 (weatherproof)
+- **Dimensions**: 92 × 35 × 25mm
+
+## Applications
+- **Access Control**: Door and window monitoring
+- **Security Systems**: Intrusion detection with event counting
+- **Facility Management**: Room occupancy tracking
+- **Asset Protection**: Cabinet and enclosure monitoring
+- **Smart Homes**: Automated door/window status
+- **Industrial**: Equipment access monitoring
 
 ## Generation Notes
-- Generated from: LDS02-MAP.md cached protocol map
-- Generation prompt: AI Template v2.3.0
-- Special considerations: Magnetic door sensor with event counting, timeout alarms, EDC mode for power optimization
+- **Generated from**: LDS02-MAP.md (cached protocol specification)
+- **Generation template**: AI Template v2.3.6
+- **Framework compatibility**: v2.2.9
+- **Special considerations**: Event-driven communication with counting capabilities
 
 ## Versioning Strategy
 - v<major>.<minor>.<fix>
-- Major: Official sensor specs change from vendor (starting from 1)
-- Minor: Fresh regeneration requested (reset to 0 on major change)
-- Fix: All other cases (reset to 0 on minor change)
-- All dates must be >= 2025-01-13 (framework start date)
+- **major**: Official sensor specs change from vendor (starts at 1)
+- **minor**: Fresh regeneration requested (resets to 0 on major change) 
+- **fix**: All other changes (resets to 0 on minor change)
+- All dates > 2025-08-13 (framework start)
 
 ## Changelog
-- v1.0.0 (2025-08-20): Initial generation from cached MAP specification
+- **v2.0.0** (2025-08-26): Framework v2.2.9 + Template v2.3.6 major upgrade with enhanced error handling
+- **v1.0.0** (2025-08-16): Magnetic door sensor with event counting

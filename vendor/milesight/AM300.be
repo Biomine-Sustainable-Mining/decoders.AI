@@ -1,7 +1,7 @@
 #
 # LoRaWAN AI-Generated Decoder for Milesight AM300 Prompted by ZioFabry 
 #
-# Generated: 2025-08-26 | Version: 1.2.0 | Revision: 2
+# Generated: 2025-08-26 | Version: 1.2.1 | Revision: 3
 #            by "LoRaWAN Decoder AI Generation Template", v2.3.6
 #
 # Homepage:  https://www.milesight-iot.com/lorawan/sensor/am300/
@@ -9,6 +9,10 @@
 # Decoder:   https://github.com/Milesight-IoT/SensorDecoders/tree/master/AM_Series
 # 
 # Changelog:
+# v1.2.1 (2025-08-26): Fixed light level channel type handling
+#   - Added support for light level channel type 0x10 (alternative format)
+#   - Updated MAP documentation to include both 0xcb and 0x10 formats
+#   - Fixed "moderate" test scenario decoding issue
 # v1.2.0 (2025-08-26): Regenerated with framework v2.2.9 + template v2.3.6
 #   - Updated to latest framework error handling patterns
 #   - Enhanced global storage with battery trend tracking
@@ -96,8 +100,8 @@ class LwDecode_AM300
                         data['pir_status'] = payload[i] == 1 ? "Occupied" : "Vacant"
                         i += 1
                         
-                    # LIGHT LEVEL
-                    elif channel_id == 0x06 && channel_type == 0xcb
+                    # LIGHT LEVEL (multiple formats)
+                    elif channel_id == 0x06 && (channel_type == 0xcb || channel_type == 0x10)
                         data['light_level'] = payload[i]
                         i += 1
                         

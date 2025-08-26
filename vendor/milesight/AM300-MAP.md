@@ -70,6 +70,14 @@ uplinks:
         range: [0, 10]
         description: "Illumination level (0-10 scale)"
         
+      - id: 0x06  
+        type: 0x10
+        name: "Light Level (Alt)"
+        size: 1
+        unit: "level"
+        range: [0, 10]
+        description: "Alternative light level format"
+        
       - id: 0x07
         type: 0x7d
         name: "CO2"

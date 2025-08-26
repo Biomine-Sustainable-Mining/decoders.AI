@@ -1,14 +1,15 @@
 #
 # LoRaWAN AI-Generated Decoder for Milesight WS52x Prompted by ZioFabry 
 #
-# Generated: 2025-08-26 | Version: 1.4.1 | Revision: 3
+# Generated: 2025-08-26 | Version: 1.5.0 | Revision: 5
 #            by "LoRaWAN Decoder AI Generation Template", v2.4.0
 #
 # Homepage:  https://www.milesight.com/iot/product/lorawan-sensor/ws52x
 # Userguide: https://www.milesight.com/iot/product/lorawan-sensor/ws52x
 # Decoder:   https://github.com/Milesight-IoT/SensorDecoders/blob/master/WS_Series/WS52x/WS52x.js
 #
-# v1.4.1 (2025-08-26): Fixed keys() iteration, test payloads, and critical Berry patterns
+# v1.5.0 (2025-08-26): Added comprehensive slideshow support with 4 slides
+# v1.4.2 (2025-08-26): Fixed all ternary operators in f-strings and Berry syntax errors
 # v1.4.0 (2025-08-26): Regenerated with Framework v2.3.0, Slideshow support, enhanced error handling
 # v1.3.0 (2025-08-19): Updated for framework v2.2.4 with global storage recovery
 # v1.2.0 (2025-08-13): Enhanced UI display and downlink commands
@@ -303,7 +304,6 @@ class LwDecode_WS52x
                         end
                         
                     else
-                        # Log unknown but don't skip indefinitely
                         print(f"WS52x: Unknown channel: ID={channel_id:02X} Type={channel_type:02X}")
                         # Conservative advancement to prevent infinite loops
                         i += 1
@@ -587,7 +587,8 @@ class LwDecode_WS52x
                 return tasmota.resp_cmnd_str("Invalid threshold: range 1-30 A")
             end
             
-            var hex_cmd = f"FF24{enabled ? '01' : '00'}{threshold:02X}"
+            var enabled_hex = enabled ? "01" : "00"
+            var hex_cmd = f"FF24{enabled_hex}{threshold:02X}"
             return lwdecode.SendDownlink(global.WS52x_nodes, cmd, idx, hex_cmd)
         end)
         
@@ -607,7 +608,8 @@ class LwDecode_WS52x
                 return tasmota.resp_cmnd_str("Invalid threshold: range 1-30 A")
             end
             
-            var hex_cmd = f"FF30{enabled ? '01' : '00'}{threshold:02X}"
+            var enabled_hex = enabled ? "01" : "00"
+            var hex_cmd = f"FF30{enabled_hex}{threshold:02X}"
             return lwdecode.SendDownlink(global.WS52x_nodes, cmd, idx, hex_cmd)
         end)
         
@@ -695,6 +697,189 @@ class LwDecode_WS52x
         
         print("WS52x: Downlink commands registered")
     end
+    
+    # Build slideshow content for Multi-UI Framework
+    def build_slideshow_slides()
+        import global
+        var slides = []
+        
+        print("WS52x: build_slideshow_slides()")
+
+        # Get current data for slideshow
+        var data_to_show = self.last_data
+        if size(data_to_show) == 0 && self.node != nil
+            var node_data = global.WS52x_nodes.find(self.node, {})
+            data_to_show = node_data.find('last_data', {})
+        end
+        
+        # Fallback to any available data
+        if size(data_to_show) == 0 && size(global.WS52x_nodes) > 0
+            for node_id: global.WS52x_nodes.keys()
+                var node_data = global.WS52x_nodes[node_id]
+                data_to_show = node_data.find('last_data', {})
+                if size(data_to_show) > 0 break end
+            end
+        end
+        
+        if size(data_to_show) == 0 return [] end
+        
+        # Slide 1: Power Overview
+        var slide1 = {
+            'title': 'Power Status',
+            'content': []
+        }
+        
+        if data_to_show.contains('socket_state')
+            var state = data_to_show['socket_state']
+            var state_icon = state == "ON" ? "🟢" : "🔴"
+            slide1['content'].push({'type': 'status', 'label': 'Socket', 'value': state, 'icon': state_icon})
+        end
+        
+        if data_to_show.contains('voltage')
+            var voltage_str = f"{data_to_show['voltage']:.1f}V"
+            slide1['content'].push({'type': 'sensor', 'label': 'Voltage', 'value': voltage_str, 'icon': '⚡'})
+        end
+        
+        if data_to_show.contains('current')
+            var current_str = f"{data_to_show['current']}mA"
+            slide1['content'].push({'type': 'sensor', 'label': 'Current', 'value': current_str, 'icon': '🔌'})
+        end
+        
+        if data_to_show.contains('active_power')
+            var power_str = f"{data_to_show['active_power']}W"
+            slide1['content'].push({'type': 'sensor', 'label': 'Power', 'value': power_str, 'icon': '💡'})
+        end
+        
+        if size(slide1['content']) > 0
+            slides.push(slide1)
+        end
+        
+        # Slide 2: Energy & Efficiency
+        var slide2 = {
+            'title': 'Energy & Efficiency',
+            'content': []
+        }
+        
+        if data_to_show.contains('energy')
+            var energy = data_to_show['energy']
+            var energy_display = ""
+            if energy >= 1000000
+                var energy_val = energy / 1000000
+                energy_display = f"{energy_val:.1f}MWh"
+            elif energy >= 1000
+                var energy_val = energy / 1000
+                energy_display = f"{energy_val:.1f}kWh"
+            else
+                energy_display = f"{energy}Wh"
+            end
+            slide2['content'].push({'type': 'sensor', 'label': 'Energy', 'value': energy_display, 'icon': '🏠'})
+        end
+        
+        if data_to_show.contains('power_factor')
+            var pf_str = f"{data_to_show['power_factor']}%"
+            slide2['content'].push({'type': 'sensor', 'label': 'Power Factor', 'value': pf_str, 'icon': '📊'})
+        end
+        
+        # Add energy history trend if available
+        if self.node != nil
+            var node_data = global.WS52x_nodes.find(self.node, {})
+            if node_data != nil && node_data.contains('energy_history')
+                var history = node_data['energy_history']
+                if size(history) >= 2
+                    var trend = history[-1] - history[-2]
+                    var trend_icon = trend > 0 ? "📈" : trend < 0 ? "📉" : "➡️"
+                    var trend_str = f"{trend}Wh"
+                    slide2['content'].push({'type': 'trend', 'label': 'Energy Trend', 'value': trend_str, 'icon': trend_icon})
+                end
+            end
+        end
+        
+        if size(slide2['content']) > 0
+            slides.push(slide2)
+        end
+        
+        # Slide 3: Device Status & Events
+        var slide3 = {
+            'title': 'Device Status',
+            'content': []
+        }
+        
+        if data_to_show.contains('device_reset') && data_to_show['device_reset']
+            var reason = data_to_show.find('reset_reason', 'Unknown')
+            slide3['content'].push({'type': 'alert', 'label': 'Reset Event', 'value': reason, 'icon': '🔄'})
+        end
+        
+        if data_to_show.contains('power_on_event') && data_to_show['power_on_event']
+            slide3['content'].push({'type': 'event', 'label': 'Power On', 'value': 'Detected', 'icon': '⚡'})
+        end
+        
+        if data_to_show.contains('power_outage_event') && data_to_show['power_outage_event']
+            slide3['content'].push({'type': 'alert', 'label': 'Power Outage', 'value': 'Detected', 'icon': '🚨'})
+        end
+        
+        if data_to_show.contains('button_locked') && data_to_show['button_locked']
+            slide3['content'].push({'type': 'status', 'label': 'Button Lock', 'value': 'Locked', 'icon': '🔒'})
+        end
+        
+        if data_to_show.contains('hw_version')
+            var hw_str = f"v{data_to_show['hw_version']}"
+            slide3['content'].push({'type': 'info', 'label': 'Hardware', 'value': hw_str, 'icon': '🔧'})
+        end
+        
+        if data_to_show.contains('sw_version')
+            var sw_str = f"v{data_to_show['sw_version']}"
+            slide3['content'].push({'type': 'info', 'label': 'Software', 'value': sw_str, 'icon': '💾'})
+        end
+        
+        if size(slide3['content']) > 0
+            slides.push(slide3)
+        end
+        
+        # Slide 4: Configuration & Settings
+        var slide4 = {
+            'title': 'Configuration',
+            'content': []
+        }
+        
+        if data_to_show.contains('interval_minutes')
+            var interval_str = f"{data_to_show['interval_minutes']}min"
+            slide4['content'].push({'type': 'config', 'label': 'Report Interval', 'value': interval_str, 'icon': '⏰'})
+        end
+        
+        if data_to_show.contains('oc_alarm_enabled')
+            var oc_status = data_to_show['oc_alarm_enabled'] ? "Enabled" : "Disabled"
+            if data_to_show.contains('oc_alarm_threshold')
+                var threshold_str = f"({data_to_show['oc_alarm_threshold']}A)"
+                oc_status += f" {threshold_str}"
+            end
+            slide4['content'].push({'type': 'config', 'label': 'OC Alarm', 'value': oc_status, 'icon': '⚠️'})
+        end
+        
+        if data_to_show.contains('oc_protection_enabled')
+            var protect_status = data_to_show['oc_protection_enabled'] ? "Enabled" : "Disabled"
+            if data_to_show.contains('oc_protection_threshold')
+                var threshold_str = f"({data_to_show['oc_protection_threshold']}A)"
+                protect_status += f" {threshold_str}"
+            end
+            slide4['content'].push({'type': 'config', 'label': 'OC Protection', 'value': protect_status, 'icon': '🛡️'})
+        end
+        
+        if data_to_show.contains('led_enabled')
+            var led_status = data_to_show['led_enabled'] ? "On" : "Off"
+            slide4['content'].push({'type': 'config', 'label': 'LED Indicator', 'value': led_status, 'icon': '💡'})
+        end
+        
+        if data_to_show.contains('power_recording')
+            var record_status = data_to_show['power_recording'] ? "Enabled" : "Disabled"
+            slide4['content'].push({'type': 'config', 'label': 'Power Recording', 'value': record_status, 'icon': '📊'})
+        end
+        
+        if size(slide4['content']) > 0
+            slides.push(slide4)
+        end
+        
+        return slides
+    end
 end
 
 # Global instance
@@ -719,6 +904,18 @@ tasmota.add_cmd("LwWS52xClearNode", def(cmd, idx, node_id)
     else
         tasmota.resp_cmnd_str("Node not found")
     end
+end)
+
+# Slideshow test command
+tasmota.remove_cmd("LwWS52xSlideshow")
+tasmota.add_cmd("LwWS52xSlideshow", def(cmd, idx, payload_str)
+    var slides = LwDeco.build_slideshow_slides()
+    import json
+    var result = {
+        'slides_count': size(slides),
+        'slides': slides
+    }
+    tasmota.resp_cmnd(json.dump(result))
 end)
 
 # FIXED: Test UI with realistic, verified payloads

@@ -1,4 +1,4 @@
-## Version: 2.3.0 | Framework: LwDecode | Platform: Tasmota Berry
+## Version: 2.4.0 | Framework: LwDecode | Platform: Tasmota Berry
 
 import mqtt
 import string
@@ -854,8 +854,16 @@ class LwDecode_cls : Driver
     end
 
     var msg = ""
-    for decoder: self.lw_decoders
-      msg += decoder.add_web_sensor()
+    
+    # Check if slideshow is enabled
+    if LwSlideshowManager.slideshow_enabled
+      # Generate slideshow content
+      msg += self.generate_slideshow_content()
+    else
+      # Standard display mode
+      for decoder: self.lw_decoders
+        msg += decoder.add_web_sensor()
+      end
     end
 
     if msg
@@ -866,6 +874,15 @@ class LwDecode_cls : Driver
         ".ltd td:last-child{width:45px}"
         ".ltd .bt{margin-right:10px;}"                        # Margin right should be half of the not-first width
         ".htr{line-height:20px}"
+        # Slideshow CSS
+        ".slide-container{border:1px solid var(--c_frm);border-radius:5px;margin:5px 0;padding:10px;background:var(--c_bg);}"
+        ".slide-title{font-weight:bold;margin-bottom:8px;color:var(--c_txt);border-bottom:1px solid var(--c_frm);padding-bottom:4px;}"
+        ".slide-content{display:flex;flex-wrap:wrap;gap:8px;}"
+        ".slide-item{display:flex;align-items:center;padding:4px 8px;background:var(--c_frm);border-radius:3px;min-width:120px;}"
+        ".slide-item .icon{margin-right:6px;font-size:16px;}"
+        ".slide-item .label{font-weight:500;margin-right:4px;color:var(--c_txt);}"
+        ".slide-item .value{color:var(--c_txt);}"
+        ".slide-indicator{text-align:center;padding:5px;font-size:12px;color:var(--c_txt);opacity:0.7;}"
         # Signal Strength Indicator
         ".si{display:inline-flex;align-items:flex-end;height:15px;padding:0}"
         ".si i{width:3px;margin-right:1px;border-radius:3px;background-color:var(--c_txt)}" # WebColor(COL_TEXT)
@@ -875,9 +892,63 @@ class LwDecode_cls : Driver
         msg)
 
       self.web_msg_cache = full_msg
-      self.cache_timeout = current_time + 5000
+      self.cache_timeout = current_time + 2000  # Shorter cache for slideshow updates
       tasmota.web_send_decimal(full_msg)
     end
+  end
+  
+  def generate_slideshow_content()
+    var msg = ""
+    var current_slide_index = LwSlideshowManager.get_current_slide_index()
+    var slide_count = 0
+    var slides_generated = []
+    
+    # Collect slides from all decoders
+    for decoder: self.lw_decoders
+      if decoder.find('build_slideshow_slides')
+        try
+          var decoder_slides = decoder.build_slideshow_slides()
+          for slide : decoder_slides
+            slides_generated.push(slide)
+          end
+        except .. as e, m
+          self.log_error("SLIDESHOW", e, m, "Failed to generate slides")
+        end
+      end
+    end
+    
+    if size(slides_generated) == 0
+      # Fallback to standard display if no slides available
+      LwSlideshowManager.set_slideshow(false)
+      for decoder: self.lw_decoders
+        msg += decoder.add_web_sensor()
+      end
+      return msg
+    end
+    
+    # Show current slide
+    var slide_to_show = current_slide_index % size(slides_generated)
+    var current_slide = slides_generated[slide_to_show]
+    
+    msg += "<div class='slide-container'>"
+    msg += f"<div class='slide-title'>{current_slide['title']}</div>"
+    msg += "<div class='slide-content'>"
+    
+    for item : current_slide['content']
+      msg += "<div class='slide-item'>"
+      msg += f"<span class='icon'>{item.find('icon', '')}</span>"
+      if item.contains('label')
+        msg += f"<span class='label'>{item['label']}:</span>"
+      end
+      msg += f"<span class='value'>{item['value']}</span>"
+      msg += "</div>"
+    end
+    
+    msg += "</div>"
+    msg += f"<div class='slide-indicator'>Slide {slide_to_show + 1} of {size(slides_generated)}</div>"
+    msg += "</div>"
+    
+    return msg
   end
 end
 

@@ -1,4 +1,4 @@
-## Version: 2.6.0 | Framework: LwDecode | Platform: Tasmota Berry
+## Version: 2.6.1 | Framework: LwDecode | Platform: Tasmota Berry
 
 import mqtt
 import string
@@ -962,8 +962,14 @@ class LwDecode_cls : Driver
     
     # Convert slide content to sensor data format
     for item : slide['content']
-      var key = string.tolower(string.replace(item['label'], ' ', '_'))
-      sensor_data[key] = item['value']
+      var label = item.find('label', '')
+      var value = item.find('value', '')
+      
+      # Ensure we have valid strings
+      if label != nil && label != '' && value != nil
+        var key = string.tolower(string.replace(str(label), ' ', '_'))
+        sensor_data[key] = str(value)
+      end
     end
     
     return sensor_data

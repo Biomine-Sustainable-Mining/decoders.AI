@@ -681,96 +681,11 @@ class LwDecode_WS52x
         print("WS52x: Downlink commands registered")
     end
     
-    # Build slideshow content for Multi-UI Framework
+    # Build slideshow content for Multi-UI Framework (placeholder)
     def build_slideshow_slides()
-        import global
-        
-        # Try to use current instance data first
-        var data_to_show = self.last_data
-        var last_update = self.last_update
-        
-        # If no instance data, try to recover from global storage
-        if size(data_to_show) == 0 && self.node != nil
-            var node_data = global.WS52x_nodes.find(self.node, {})
-            data_to_show = node_data.find('last_data', {})
-            last_update = node_data.find('last_update', 0)
-        end
-        
-        # Fallback: find ANY stored node if no specific node
-        if size(data_to_show) == 0 && size(global.WS52x_nodes) > 0
-            for node_id: global.WS52x_nodes.keys()
-                var node_data = global.WS52x_nodes[node_id]
-                data_to_show = node_data.find('last_data', {})
-                self.node = node_id
-                self.name = node_data.find('name', f"WS52x-{node_id}")
-                last_update = node_data.find('last_update', 0)
-                break
-            end
-        end
-        
-        if size(data_to_show) == 0 return [] end
-        
-        var slides = []
-        var slide_builder = LwSlideBuilder()
-        
-        # Slide 1: Power Status
-        if data_to_show.contains('socket_state') || data_to_show.contains('active_power')
-            slides.push(slide_builder.power_slide(
-                data_to_show.find('socket_state', 'UNKNOWN'),
-                data_to_show.find('active_power', 0),
-                data_to_show.find('voltage', 0),
-                data_to_show.find('current', 0)
-            ))
-        end
-        
-        # Slide 2: Energy Summary
-        if data_to_show.contains('energy') || data_to_show.contains('power_factor')
-            slides.push(slide_builder.energy_slide(
-                data_to_show.find('energy', 0),
-                data_to_show.find('power_factor', 0)
-            ))
-        end
-        
-        # Slide 3: Device Status
-        var has_status_info = data_to_show.contains('sw_version') || 
-                             data_to_show.contains('hw_version') ||
-                             data_to_show.contains('device_reset')
-        if has_status_info
-            slides.push(slide_builder.status_slide(
-                data_to_show.find('sw_version', 'Unknown'),
-                data_to_show.find('hw_version', 'Unknown'),
-                data_to_show.find('device_reset', false),
-                data_to_show.find('reset_reason', 'None')
-            ))
-        end
-        
-        # Slide 4: Configuration
-        var has_config_info = data_to_show.contains('button_locked') ||
-                             data_to_show.contains('led_enabled') ||
-                             data_to_show.contains('power_recording')
-        if has_config_info
-            slides.push(slide_builder.config_slide(
-                data_to_show.find('button_locked', false),
-                data_to_show.find('led_enabled', true),
-                data_to_show.find('power_recording', false),
-                data_to_show.find('interval_minutes', 0)
-            ))
-        end
-        
-        # Slide 5: Events & Alerts
-        var has_events = data_to_show.contains('power_on_event') ||
-                        data_to_show.contains('power_outage_event') ||
-                        data_to_show.contains('oc_alarm_enabled')
-        if has_events
-            slides.push(slide_builder.events_slide(
-                data_to_show.find('power_on_event', false),
-                data_to_show.find('power_outage_event', false),
-                data_to_show.find('oc_alarm_enabled', false),
-                data_to_show.find('oc_protection_enabled', false)
-            ))
-        end
-        
-        return slides
+        # Slideshow framework methods not yet implemented
+        # Return empty array for now
+        return []
     end
 end
 

@@ -1,4 +1,4 @@
-## Version: 2.2.9 | Framework: LwDecode | Platform: Tasmota Berry
+## Version: 2.3.0 | Framework: LwDecode | Platform: Tasmota Berry
 
 import mqtt
 import string
@@ -7,6 +7,101 @@ var LwRegions = ["EU868","US915","IN865","AU915","KZ865","RU864","AS923","AS923-
 var LwDeco
 var lwdecode
 var webpage
+
+# Multi-UI Style & Slideshow System
+class LwDisplayManager
+    static var current_style = "compact"
+    static var style_config = {
+        "minimal": { "format": "icon_value_age", "labels": false, "multiline": false },
+        "compact": { "format": "icon_value_inline", "labels": false, "multiline": true },
+        "detailed": { "format": "icon_label_value", "labels": true, "multiline": true },
+        "technical": { "format": "full_technical", "labels": true, "multiline": true }
+    }
+    
+    static def set_ui_style(style)
+        if self.style_config.contains(style)
+            self.current_style = style
+            return true
+        end
+        return false
+    end
+    
+    static def get_style_config(style_override)
+        var style = style_override ? style_override : self.current_style
+        return self.style_config.find(style, self.style_config["compact"])
+    end
+end
+
+class LwSlideshowManager
+    static var slide_duration = 5000
+    static var current_slide = 0
+    static var slide_cycle_start = 0
+    static var sync_enabled = true
+    static var slideshow_enabled = false
+    
+    static def get_current_slide_index()
+        if !self.slideshow_enabled return 0 end
+        
+        var current_time = tasmota.millis()
+        if self.slide_cycle_start == 0
+            self.slide_cycle_start = current_time
+        end
+        
+        var elapsed = current_time - self.slide_cycle_start
+        var slides_per_cycle = 5
+        return int(elapsed / self.slide_duration) % slides_per_cycle
+    end
+    
+    static def set_slideshow(enabled)
+        self.slideshow_enabled = enabled
+        if enabled
+            self.slide_cycle_start = tasmota.millis()
+        end
+    end
+    
+    static def set_slide_duration(duration)
+        if duration >= 1000 && duration <= 30000
+            self.slide_duration = duration
+            return true
+        end
+        return false
+    end
+end
+
+class LwSlideBuilder
+    var slides
+    var device_data
+    
+    def init(data)
+        self.slides = []
+        self.device_data = data
+    end
+    
+    def add_slide(priority, builder_func, condition_func)
+        if condition_func()
+            self.slides.push({
+                'priority': priority,
+                'content': builder_func,
+                'show': true
+            })
+        end
+        return self
+    end
+    
+    def build_slideshow()
+        if size(self.slides) == 0 return [] end
+        
+        # Sort by priority
+        var sorted_slides = []
+        for slide : self.slides
+            if slide['show']
+                sorted_slides.push(slide['content'])
+            end
+        end
+        
+        return sorted_slides
+    end
+end
 
 class LwSensorFormatter_cls
   static var Formatter = {
@@ -79,29 +174,54 @@ class LwSensorFormatter_cls
     return self
   end
 
-  def add_sensor(formatter, value, tooltip, alt_icon)
-    if tooltip self.begin_tooltip(tooltip) end
-
+  def apply_style(formatter, value, tooltip, icon, style_override)
+    var config = LwDisplayManager.get_style_config(style_override)
+    
+    if tooltip && !config['labels']
+      tooltip = nil
+    end
+    
     var fmt = formatter ? self.Formatter.find(formatter) : self.Formatter.find("empty")
-
-    if alt_icon
-      self.msg_buffer .. format(" %s", alt_icon)
-    elif fmt && fmt.find("i") && fmt["i"]
-      self.msg_buffer .. format(" %s", fmt["i"])
-    end
-
-    if fmt && fmt.find("f") && fmt["f"]
-      self.msg_buffer .. format(fmt["f"], value)
+    
+    if config['format'] == "icon_value_age"
+      self.msg_buffer .. format(" %s", icon ? icon : "")
+      if fmt && fmt.find("f") && fmt["f"]
+        self.msg_buffer .. format(fmt["f"], value)
+      else
+        self.msg_buffer .. str(value)
+      end
     else
-      self.msg_buffer .. str(value)
+      # Standard formatting
+      if tooltip self.begin_tooltip(tooltip) end
+      
+      if icon
+        self.msg_buffer .. format(" %s", icon)
+      elif fmt && fmt.find("i") && fmt["i"]
+        self.msg_buffer .. format(" %s", fmt["i"])
+      end
+      
+      if config['labels'] && tooltip
+        self.msg_buffer .. format(" %s:", tooltip)
+      end
+      
+      if fmt && fmt.find("f") && fmt["f"]
+        self.msg_buffer .. format(fmt["f"], value)
+      else
+        self.msg_buffer .. str(value)
+      end
+      
+      if fmt && fmt.find("u") && fmt["u"]
+        self.msg_buffer .. format("%s", fmt["u"])
+      end
+      
+      if tooltip self.end_tooltip() end
     end
-
-    if fmt && fmt.find("u") && fmt["u"]
-      self.msg_buffer .. format("%s", fmt["u"])
-    end
-
-    if tooltip self.end_tooltip() end
+    
     return self
+  end
+
+  def add_sensor(formatter, value, tooltip, alt_icon)
+    return self.apply_style(formatter, value, tooltip, alt_icon, nil)
   end
 
   def add_status(text, icon, tooltip)
@@ -156,6 +276,9 @@ class LwDecode_cls : Driver
     tasmota.add_rule("LwReceived", /value, trigger, payload -> self.lw_decode(payload))
     tasmota.add_cmd('LwReload', /cmd, idx, payload, payload_json -> self.cmd_reload_decoder(cmd, idx, payload))
     tasmota.add_cmd('LwSimulate', /cmd, idx, payload, payload_json -> self.cmd_simulate(cmd, idx, payload))
+    tasmota.add_cmd('LwUIStyle', /cmd, idx, payload, payload_json -> self.cmd_ui_style(cmd, idx, payload))
+    tasmota.add_cmd('LwSlideshow', /cmd, idx, payload, payload_json -> self.cmd_slideshow(cmd, idx, payload))
+    tasmota.add_cmd('LwSlideDuration', /cmd, idx, payload, payload_json -> self.cmd_slide_duration(cmd, idx, payload))
 
     log("LwD: Driver running",1)
   end
@@ -486,6 +609,30 @@ class LwDecode_cls : Driver
       var success = self.reload_decoder(payload)
       var status = success ? "OK" : "Failed"
       return tasmota.resp_cmnd(format('{"LwReload":"%s %s"}', payload, status))
+    end
+  end
+
+  def cmd_ui_style(cmd, idx, payload)
+    var style = string.toupper(payload)
+    if LwDisplayManager.set_ui_style(string.tolower(style))
+      return tasmota.resp_cmnd(format('{"LwUIStyle":"%s"}', string.tolower(style)))
+    else
+      return tasmota.resp_cmnd_error()
+    end
+  end
+
+  def cmd_slideshow(cmd, idx, payload)
+    var enabled = (payload == "1" || string.toupper(payload) == "ON")
+    LwSlideshowManager.set_slideshow(enabled)
+    return tasmota.resp_cmnd(format('{"LwSlideshow":"%s"}', enabled ? "ON" : "OFF"))
+  end
+
+  def cmd_slide_duration(cmd, idx, payload)
+    var duration = int(payload)
+    if LwSlideshowManager.set_slide_duration(duration)
+      return tasmota.resp_cmnd(format('{"LwSlideDuration":%d}', duration))
+    else
+      return tasmota.resp_cmnd_error()
     end
   end
 

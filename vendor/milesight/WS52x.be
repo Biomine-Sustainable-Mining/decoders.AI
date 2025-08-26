@@ -395,6 +395,12 @@ class LwDecode_WS52x
             if name == nil || name == ""
                 name = f"WS52x-{self.node}"
             end
+            
+            # Add slide indicator to name if present
+            if data_to_show.contains('slide_info')
+                name += f" ({data_to_show['slide_info']})"
+            end
+            
             var name_tooltip = "Milesight WS52x Smart Socket"
             var battery = 1000  # Mains powered - hide battery
             var battery_last_seen = last_update

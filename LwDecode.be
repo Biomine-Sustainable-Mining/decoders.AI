@@ -1,4 +1,4 @@
-## Version: 2.5.1 | Framework: LwDecode | Platform: Tasmota Berry
+## Version: 2.6.0 | Framework: LwDecode | Platform: Tasmota Berry
 
 import mqtt
 import string
@@ -893,15 +893,6 @@ class LwDecode_cls : Driver
         ".ltd td:last-child{width:45px}"
         ".ltd .bt{margin-right:10px;}"                        # Margin right should be half of the not-first width
         ".htr{line-height:20px}"
-        # Slideshow CSS
-        ".slide-container{border:1px solid var(--c_frm);border-radius:5px;margin:5px 0;padding:10px;background:var(--c_bg);}"
-        ".slide-title{font-weight:bold;margin-bottom:8px;color:var(--c_txt);border-bottom:1px solid var(--c_frm);padding-bottom:4px;}"
-        ".slide-content{display:flex;flex-wrap:wrap;gap:8px;}"
-        ".slide-item{display:flex;align-items:center;padding:4px 8px;background:var(--c_frm);border-radius:3px;min-width:120px;}"
-        ".slide-item .icon{margin-right:6px;font-size:16px;}"
-        ".slide-item .label{font-weight:500;margin-right:4px;color:var(--c_txt);}"
-        ".slide-item .value{color:var(--c_txt);}"
-        ".slide-indicator{text-align:center;padding:5px;font-size:12px;color:var(--c_txt);opacity:0.7;}"
         # Signal Strength Indicator
         ".si{display:inline-flex;align-items:flex-end;height:15px;padding:0}"
         ".si i{width:3px;margin-right:1px;border-radius:3px;background-color:var(--c_txt)}" # WebColor(COL_TEXT)
@@ -919,16 +910,14 @@ class LwDecode_cls : Driver
   def generate_slideshow_content()
     var msg = ""
     var current_slide_index = self.slideshow_manager.get_current_slide_index()
-    var slide_count = 0
     var slides_generated = []
     
     # Collect slides from all decoders
     for decoder: self.lw_decoders
-      # Check if decoder has slideshow capability using try/catch
       try
         var decoder_slides = decoder.build_slideshow_slides()
         for slide : decoder_slides
-          slides_generated.push(slide)
+          slides_generated.push({'decoder': decoder, 'slide': slide})
         end
       except .. as e, m
         # Method doesn't exist or failed - skip this decoder
@@ -944,29 +933,40 @@ class LwDecode_cls : Driver
       return msg
     end
     
-    # Show current slide
+    # Show current slide using standard driver display with slide data
     var slide_to_show = current_slide_index % size(slides_generated)
-    var current_slide = slides_generated[slide_to_show]
+    var current_slide_data = slides_generated[slide_to_show]
+    var decoder = current_slide_data['decoder']
+    var slide = current_slide_data['slide']
     
-    msg += "<div class='slide-container'>"
-    msg += f"<div class='slide-title'>{current_slide['title']}</div>"
-    msg += "<div class='slide-content'>"
+    # Temporarily replace decoder's last_data with slide content formatted as sensor data
+    var original_data = decoder.last_data
+    var slide_data = self.convert_slide_to_sensor_data(slide)
     
-    for item : current_slide['content']
-      msg += "<div class='slide-item'>"
-      msg += f"<span class='icon'>{item.find('icon', '')}</span>"
-      if item.contains('label')
-        msg += f"<span class='label'>{item['label']}:</span>"
-      end
-      msg += f"<span class='value'>{item['value']}</span>"
-      msg += "</div>"
-    end
+    # Add slide indicator to the data
+    slide_data['slide_info'] = f"Slide {slide_to_show + 1}/{size(slides_generated)}"
     
-    msg += "</div>"
-    msg += f"<div class='slide-indicator'>Slide {slide_to_show + 1} of {size(slides_generated)}</div>"
-    msg += "</div>"
+    decoder.last_data = slide_data
+    
+    # Generate display using standard driver method
+    msg += decoder.add_web_sensor()
+    
+    # Restore original data
+    decoder.last_data = original_data
     
     return msg
+  end
+  
+  def convert_slide_to_sensor_data(slide)
+    var sensor_data = {}
+    
+    # Convert slide content to sensor data format
+    for item : slide['content']
+      var key = string.tolower(string.replace(item['label'], ' ', '_'))
+      sensor_data[key] = item['value']
+    end
+    
+    return sensor_data
   end
 end
 

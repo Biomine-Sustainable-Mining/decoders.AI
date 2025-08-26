@@ -1,4 +1,4 @@
-## Version: 2.4.2 | Framework: LwDecode | Platform: Tasmota Berry
+## Version: 2.5.0 | Framework: LwDecode | Platform: Tasmota Berry
 
 import mqtt
 import string
@@ -9,59 +9,72 @@ var lwdecode
 var webpage
 
 # Multi-UI Style & Slideshow System
-class LwDisplayManager
-    static var current_style = "compact"
-    static var style_config = {
-        "minimal": { "format": "icon_value_age", "labels": false, "multiline": false },
-        "compact": { "format": "icon_value_inline", "labels": false, "multiline": true },
-        "detailed": { "format": "icon_label_value", "labels": true, "multiline": true },
-        "technical": { "format": "full_technical", "labels": true, "multiline": true }
-    }
+class LwDisplayManager_cls
+    var current_style
+    var style_config
     
-    static def set_ui_style(style)
-        if LwDisplayManager.style_config.contains(style)
-            LwDisplayManager.current_style = style
+    def init()
+        self.current_style = "compact"
+        self.style_config = {
+            "minimal": { "format": "icon_value_age", "labels": false, "multiline": false },
+            "compact": { "format": "icon_value_inline", "labels": false, "multiline": true },
+            "detailed": { "format": "icon_label_value", "labels": true, "multiline": true },
+            "technical": { "format": "full_technical", "labels": true, "multiline": true }
+        }
+    end
+    
+    def set_ui_style(style)
+        if self.style_config.contains(style)
+            self.current_style = style
             return true
         end
         return false
     end
     
-    static def get_style_config(style_override)
-        var style = style_override ? style_override : LwDisplayManager.current_style
-        return LwDisplayManager.style_config.find(style, LwDisplayManager.style_config["compact"])
+    def get_style_config(style_override)
+        var style = style_override ? style_override : self.current_style
+        return self.style_config.find(style, self.style_config["compact"])
     end
 end
 
-class LwSlideshowManager
-    static var slide_duration = 5000
-    static var current_slide = 0
-    static var slide_cycle_start = 0
-    static var sync_enabled = true
-    static var slideshow_enabled = false
+class LwSlideshowManager_cls
+    var slide_duration
+    var current_slide
+    var slide_cycle_start
+    var sync_enabled
+    var slideshow_enabled
     
-    static def get_current_slide_index()
-        if !LwSlideshowManager.slideshow_enabled return 0 end
+    def init()
+        self.slide_duration = 5000
+        self.current_slide = 0
+        self.slide_cycle_start = 0
+        self.sync_enabled = true
+        self.slideshow_enabled = false
+    end
+    
+    def get_current_slide_index()
+        if !self.slideshow_enabled return 0 end
         
         var current_time = tasmota.millis()
-        if LwSlideshowManager.slide_cycle_start == 0
-            LwSlideshowManager.slide_cycle_start = current_time
+        if self.slide_cycle_start == 0
+            self.slide_cycle_start = current_time
         end
         
-        var elapsed = current_time - LwSlideshowManager.slide_cycle_start
+        var elapsed = current_time - self.slide_cycle_start
         var slides_per_cycle = 5
-        return int(elapsed / LwSlideshowManager.slide_duration) % slides_per_cycle
+        return int(elapsed / self.slide_duration) % slides_per_cycle
     end
     
-    static def set_slideshow(enabled)
-        LwSlideshowManager.slideshow_enabled = enabled
+    def set_slideshow(enabled)
+        self.slideshow_enabled = enabled
         if enabled
-            LwSlideshowManager.slide_cycle_start = tasmota.millis()
+            self.slide_cycle_start = tasmota.millis()
         end
     end
     
-    static def set_slide_duration(duration)
+    def set_slide_duration(duration)
         if duration >= 1000 && duration <= 30000
-            LwSlideshowManager.slide_duration = duration
+            self.slide_duration = duration
             return true
         end
         return false
@@ -175,7 +188,9 @@ class LwSensorFormatter_cls
   end
 
   def apply_style(formatter, value, tooltip, icon, style_override)
-    var config = LwDisplayManager.get_style_config(style_override)
+    # Note: This would need access to display_manager instance
+    # For now, use default compact style
+    var config = { "format": "icon_value_inline", "labels": false, "multiline": true }
     
     if tooltip && !config['labels']
       tooltip = nil
@@ -259,6 +274,8 @@ class LwDecode_cls : Driver
   var web_msg_cache
   var cache_timeout
   var decoder_timestamps
+  var display_manager
+  var slideshow_manager
 
   def init()
     self.lw_decoders = {}
@@ -266,6 +283,8 @@ class LwDecode_cls : Driver
     self.web_msg_cache = ""
     self.cache_timeout = 0
     self.decoder_timestamps = {}
+    self.display_manager = LwDisplayManager_cls()
+    self.slideshow_manager = LwSlideshowManager_cls()
 
     self._cache_topic()
 
@@ -614,7 +633,7 @@ class LwDecode_cls : Driver
 
   def cmd_ui_style(cmd, idx, payload)
     var style = string.toupper(payload)
-    if LwDisplayManager.set_ui_style(string.tolower(style))
+    if self.display_manager.set_ui_style(string.tolower(style))
       return tasmota.resp_cmnd(format('{"LwUIStyle":"%s"}', string.tolower(style)))
     else
       return tasmota.resp_cmnd_error()
@@ -623,13 +642,13 @@ class LwDecode_cls : Driver
 
   def cmd_slideshow(cmd, idx, payload)
     var enabled = (payload == "1" || string.toupper(payload) == "ON")
-    LwSlideshowManager.set_slideshow(enabled)
+    self.slideshow_manager.set_slideshow(enabled)
     return tasmota.resp_cmnd(format('{"LwSlideshow":"%s"}', enabled ? "ON" : "OFF"))
   end
 
   def cmd_slide_duration(cmd, idx, payload)
     var duration = int(payload)
-    if LwSlideshowManager.set_slide_duration(duration)
+    if self.slideshow_manager.set_slide_duration(duration)
       return tasmota.resp_cmnd(format('{"LwSlideDuration":%d}', duration))
     else
       return tasmota.resp_cmnd_error()
@@ -856,7 +875,7 @@ class LwDecode_cls : Driver
     var msg = ""
     
     # Check if slideshow is enabled
-    if LwSlideshowManager.slideshow_enabled
+    if self.slideshow_manager.slideshow_enabled
       # Generate slideshow content
       msg += self.generate_slideshow_content()
     else
@@ -899,7 +918,7 @@ class LwDecode_cls : Driver
   
   def generate_slideshow_content()
     var msg = ""
-    var current_slide_index = LwSlideshowManager.get_current_slide_index()
+    var current_slide_index = self.slideshow_manager.get_current_slide_index()
     var slide_count = 0
     var slides_generated = []
     
@@ -921,7 +940,7 @@ class LwDecode_cls : Driver
     
     if size(slides_generated) == 0
       # Fallback to standard display if no slides available
-      LwSlideshowManager.set_slideshow(false)
+      self.slideshow_manager.set_slideshow(false)
       for decoder: self.lw_decoders
         msg += decoder.add_web_sensor()
       end

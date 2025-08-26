@@ -1,13 +1,18 @@
 #
 # LoRaWAN AI-Generated Decoder for Dragino SE01-LB Prompted by User Request
 #
-# Generated: 2025-08-20 | Version: 1.0.0 | Revision: 1
-#            by "LoRaWAN Decoder AI Generation Template", v2.3.3
+# Generated: 2025-08-26 | Version: 1.1.0 | Revision: 1
+#            by "LoRaWAN Decoder AI Generation Template", v2.3.6
 #
 # Homepage:  https://www.dragino.com/products/agriculture-weather-station/item/277-se01-lb.html
 # Userguide: https://wiki.dragino.com/xwiki/bin/view/Main/User%20Manual%20for%20LoRaWAN%20End%20Nodes/SE01-LB_LoRaWAN_Soil%20Moisture%26EC_Sensor_User_Manual/
 # Decoder:   https://github.com/dragino/dragino-end-node-decoder/tree/main/
 # 
+# v1.1.0 (2025-08-26): Framework v2.2.9 + Template v2.3.6 upgrade
+#   - Enhanced error handling with try/catch blocks in display functions
+#   - Global storage recovery patterns after driver reload
+#   - RSSI/FPort uppercase compatibility and simulated parameter support
+#   - Display error protection prevents UI crashes
 # v1.0.0 (2025-08-20): Initial generation from wiki specification
 
 class LwDecode_SE01LB
@@ -35,7 +40,7 @@ class LwDecode_SE01LB
         end
     end
     
-    def decodeUplink(name, node, rssi, fport, payload)
+    def decodeUplink(name, node, RSSI, FPort, payload)
         import string
         import global
         var data = {}
@@ -49,14 +54,14 @@ class LwDecode_SE01LB
             # Store device info
             self.name = name
             self.node = node
-            data['rssi'] = rssi
-            data['fport'] = fport
+            data['RSSI'] = RSSI
+            data['FPort'] = FPort
             
             # Retrieve node history from global storage
             var node_data = global.SE01LB_nodes.find(node, {})
             
-            # Decode based on fport
-            if fport == 2
+            # Decode based on FPort
+            if FPort == 2
                 # Main sensor data - multiple modes possible
                 if size(payload) == 11
                     # 11-byte payload: interrupt mode (MOD=0 or MOD=1)
@@ -65,11 +70,11 @@ class LwDecode_SE01LB
                     # 15-byte payload: counting mode (MOD=0 or MOD=1)
                     data = self.decode_15_byte_payload(payload, data)
                 else
-                    print(f"SE01LB: Unexpected payload size {size(payload)} for fport 2")
+                    print(f"SE01LB: Unexpected payload size {size(payload)} for FPort 2")
                     return nil
                 end
                 
-            elif fport == 5
+            elif FPort == 5
                 # Device status
                 if size(payload) >= 7
                     data = self.decode_device_status(payload, data)
@@ -78,12 +83,12 @@ class LwDecode_SE01LB
                     return nil
                 end
                 
-            elif fport == 3
+            elif FPort == 3
                 # Datalog data
                 data = self.decode_datalog(payload, data)
                 
             else
-                print(f"SE01LB: Unknown fport: {fport}")
+                print(f"SE01LB: Unknown FPort: {FPort}")
                 return nil
             end
             
@@ -301,126 +306,147 @@ class LwDecode_SE01LB
     end
     
     def add_web_sensor()
-        import global
-        
-        # Try to use current instance data first
-        var data_to_show = self.last_data
-        var last_update = self.last_update
-        
-        # If no instance data, try to recover from global storage
-        if size(data_to_show) == 0 && self.node != nil
-            var node_data = global.SE01LB_nodes.find(self.node, {})
-            data_to_show = node_data.find('last_data', {})
-            last_update = node_data.find('last_update', 0)
-        end
-        
-        if size(data_to_show) == 0 return nil end
-        
-        import string
-        var msg = ""
-        var fmt = LwSensorFormatter_cls()
-        
-        # MANDATORY: Add header line with device info
-        var name = self.name
-        if name == nil || name == ""
-            name = f"SE01LB-{self.node}"
-        end
-        var name_tooltip = "Dragino SE01-LB Soil Moisture & EC Sensor"
-        var battery = data_to_show.find('battery_v', 1000)  # Use 1000 if no battery
-        var battery_last_seen = last_update
-        var rssi = data_to_show.find('rssi', 1000)  # Use 1000 if no RSSI
-        var simulated = data_to_show.find('simulated', false) # Simulated payload indicator
-        
-        # Build display using emoji formatter
-        fmt.header(name, name_tooltip, battery, battery_last_seen, rssi, last_update, simulated)
-        fmt.start_line()
-        
-        # Primary soil measurements
-        if data_to_show.contains('soil_moisture')
-            fmt.add_sensor("humidity", data_to_show['soil_moisture'], "Soil Moisture", "💧")
-        end
-        
-        if data_to_show.contains('soil_temperature')
-            fmt.add_sensor("temp", data_to_show['soil_temperature'], "Soil Temp", "🌡️")
-        end
-        
-        if data_to_show.contains('soil_conductivity')
-            fmt.add_sensor("conductivity", data_to_show['soil_conductivity'], "EC", "⚡")
-        end
-        
-        # External temperature sensor
-        if data_to_show.contains('ds18b20_temperature')
-            fmt.next_line()
-            fmt.add_sensor("temp", data_to_show['ds18b20_temperature'], "Ext Temp", "🌡️")
-        end
-        
-        # Sensor status and mode info
-        if data_to_show.contains('working_mode')
-            var mode_str = data_to_show['working_mode'] == 0 ? "Cal" : "Raw"
-            fmt.add_sensor("string", mode_str, "Mode", "⚙️")
-        end
-        
-        if data_to_show.contains('counting_mode') && data_to_show['counting_mode']
-            if data_to_show.contains('count_value')
-                fmt.add_sensor("string", f"{data_to_show['count_value']}", "Count", "🔢")
-            end
-        end
-        
-        # Device events and status
-        var has_events = false
-        if data_to_show.contains('ds18b20_disconnected') && data_to_show['ds18b20_disconnected']
-            fmt.next_line()
-            fmt.add_sensor("string", "DS18B20 Disc", "Sensor Status", "⚠️")
-            has_events = true
-        end
-        
-        if data_to_show.contains('interrupt_triggered') && data_to_show['interrupt_triggered']
-            if !has_events
-                fmt.next_line()
-                has_events = true
-            end
-            fmt.add_sensor("string", "Triggered", "Interrupt", "📶")
-        end
-        
-        if data_to_show.contains('sensor_identified') && !data_to_show['sensor_identified']
-            if !has_events
-                fmt.next_line()
-                has_events = true
-            end
-            fmt.add_sensor("string", "No Sensor", "Status", "❌")
-        end
-        
-        # Device info (firmware, band) if available
-        if data_to_show.contains('firmware_version')
-            fmt.next_line()
-            fmt.add_sensor("string", data_to_show['firmware_version'], "Firmware", "💾")
+        try
+            import global
             
-            if data_to_show.contains('frequency_band')
-                fmt.add_sensor("string", data_to_show['frequency_band'], "Band", "📡")
+            # Try to use current instance data first
+            var data_to_show = self.last_data
+            var last_update = self.last_update
+            
+            # If no instance data, try to recover from global storage
+            if size(data_to_show) == 0 && self.node != nil
+                var node_data = global.SE01LB_nodes.find(self.node, {})
+                data_to_show = node_data.find('last_data', {})
+                last_update = node_data.find('last_update', 0)
             end
-        end
-        
-        # Datalog info
-        if data_to_show.contains('datalog_count') && data_to_show['datalog_count'] > 0
-            fmt.next_line()
-            fmt.add_sensor("string", f"{data_to_show['datalog_count']} entries", "Datalog", "📊")
-        end
-        
-        # Add last seen info if data is old
-        if last_update > 0
-            var age = tasmota.rtc()['local'] - last_update
-            if age > 3600  # Data older than 1 hour
+            
+            # Fallback: find ANY stored node if no specific node
+            if size(data_to_show) == 0 && size(global.SE01LB_nodes) > 0
+                for node_id: global.SE01LB_nodes.keys()
+                    var node_data = global.SE01LB_nodes[node_id]
+                    data_to_show = node_data.find('last_data', {})
+                    last_update = node_data.find('last_update', 0)
+                    self.node = node_id  # Update instance
+                    self.name = node_data.find('name', f"SE01LB-{node_id}")
+                    break  # Use first found
+                end
+            end
+            
+            if size(data_to_show) == 0 return nil
+            
+            import string
+            var msg = ""
+            var fmt = LwSensorFormatter_cls()
+            
+            # MANDATORY: Add header line with device info
+            var name = self.name
+            if name == nil || name == ""
+                name = f"SE01LB-{self.node}"
+            end
+            var name_tooltip = "Dragino SE01-LB Soil Moisture & EC Sensor"
+            var battery = data_to_show.find('battery_v', 1000)  # Use 1000 if no battery
+            var battery_last_seen = last_update
+            var rssi = data_to_show.find('RSSI', 1000)  # Use 1000 if no RSSI
+            var simulated = data_to_show.find('simulated', false) # Simulated payload indicator
+            
+            # Build display using emoji formatter
+            fmt.header(name, name_tooltip, battery, battery_last_seen, rssi, last_update, simulated)
+            fmt.start_line()
+            
+            # Primary soil measurements
+            if data_to_show.contains('soil_moisture')
+                fmt.add_sensor("humidity", data_to_show['soil_moisture'], "Soil Moisture", "💧")
+            end
+            
+            if data_to_show.contains('soil_temperature')
+                fmt.add_sensor("temp", data_to_show['soil_temperature'], "Soil Temp", "🌡️")
+            end
+            
+            if data_to_show.contains('soil_conductivity')
+                fmt.add_sensor("conductivity", data_to_show['soil_conductivity'], "EC", "⚡")
+            end
+            
+            # External temperature sensor
+            if data_to_show.contains('ds18b20_temperature')
                 fmt.next_line()
-                fmt.add_sensor("string", self.format_age(age), "Last Seen", "⏱️")
+                fmt.add_sensor("temp", data_to_show['ds18b20_temperature'], "Ext Temp", "🌡️")
             end
-        end
-        
-        fmt.end_line()
-        
-        # ONLY get_msg() return a string that can be used with +=
-        msg += fmt.get_msg()
+            
+            # Sensor status and mode info
+            if data_to_show.contains('working_mode')
+                var mode_str = data_to_show['working_mode'] == 0 ? "Cal" : "Raw"
+                fmt.add_sensor("string", mode_str, "Mode", "⚙️")
+            end
+            
+            if data_to_show.contains('counting_mode') && data_to_show['counting_mode']
+                if data_to_show.contains('count_value')
+                    fmt.add_sensor("string", f"{data_to_show['count_value']}", "Count", "🔢")
+                end
+            end
+            
+            # Device events and status
+            var has_events = false
+            if data_to_show.contains('ds18b20_disconnected') && data_to_show['ds18b20_disconnected']
+                fmt.next_line()
+                fmt.add_sensor("string", "DS18B20 Disc", "Sensor Status", "⚠️")
+                has_events = true
+            end
+            
+            if data_to_show.contains('interrupt_triggered') && data_to_show['interrupt_triggered']
+                if !has_events
+                    fmt.next_line()
+                    has_events = true
+                end
+                fmt.add_sensor("string", "Triggered", "Interrupt", "📶")
+            end
+            
+            if data_to_show.contains('sensor_identified') && !data_to_show['sensor_identified']
+                if !has_events
+                    fmt.next_line()
+                    has_events = true
+                end
+                fmt.add_sensor("string", "No Sensor", "Status", "❌")
+            end
+            
+            # Device info (firmware, band) if available
+            if data_to_show.contains('firmware_version')
+                fmt.next_line()
+                fmt.add_sensor("string", data_to_show['firmware_version'], "Firmware", "💾")
+                
+                if data_to_show.contains('frequency_band')
+                    fmt.add_sensor("string", data_to_show['frequency_band'], "Band", "📡")
+                end
+            end
+            
+            # Datalog info
+            if data_to_show.contains('datalog_count') && data_to_show['datalog_count'] > 0
+                fmt.next_line()
+                fmt.add_sensor("string", f"{data_to_show['datalog_count']} entries", "Datalog", "📊")
+            end
+            
+            # Add last seen info if data is old
+            if last_update != nil && last_update > 0
+                var current_time = tasmota.rtc()['local']
+                if current_time != nil
+                    var age = current_time - last_update
+                    if age > 3600  # Data older than 1 hour
+                        fmt.next_line()
+                        fmt.add_sensor("string", self.format_age(age), "Last Seen", "⏱️")
+                    end
+                end
+            end
+            
+            fmt.end_line()
+            
+            # ONLY get_msg() return a string that can be used with +=
+            msg = fmt.get_msg()
 
-        return msg
+            return msg
+            
+        except .. as e, m
+            print(f"SE01LB: Display error - {e}: {m}")
+            return "📟 SE01LB Error - Check Console"
+        end
     end
     
     def format_age(seconds)
@@ -624,7 +650,7 @@ tasmota.add_cmd("LwSE01LBTestUI", def(cmd, idx, payload_str)
         "counting":  "D604E4036E19BD0CAF0C1AE8030000", # Normal + counting mode + count 1000
         # Raw mode values (MOD=1)
         "raw":       "000045671234ABCDAF0CDA",      # Raw ADC values, MOD=1
-        # Device status response (fport=5)
+        # Device status response (FPort=5)
         "status":    "260200010C00AF0C",            # Model 0x26, FW v2.0.0, CN470, subband 0, 3.247V
         # External sensor disconnected
         "disconn":   "CC0CE4036E19BD0CAF0C5A"       # DS18B20 shows 327.6°C (disconnected)

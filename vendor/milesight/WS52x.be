@@ -1,4 +1,540 @@
-off|1|0>
+#
+# LoRaWAN AI-Generated Decoder for Milesight WS52x Prompted by ZioFabry 
+#
+# Generated: 2025-08-26 | Version: 1.4.0 | Revision: 2
+#            by "LoRaWAN Decoder AI Generation Template", v2.4.0
+#
+# Homepage:  https://www.milesight.com/iot/product/lorawan-sensor/ws52x
+# Userguide: https://www.milesight.com/iot/product/lorawan-sensor/ws52x
+# Decoder:   https://github.com/Milesight-IoT/SensorDecoders/blob/master/WS_Series/WS52x/WS52x.js
+#
+# v1.4.0 (2025-08-26): Regenerated with Framework v2.3.0, Slideshow support, enhanced error handling
+# v1.3.0 (2025-08-19): Updated for framework v2.2.4 with global storage recovery
+# v1.2.0 (2025-08-13): Enhanced UI display and downlink commands
+# v1.1.0 (2025-08-12): Added all device configuration and control commands
+# v1.0.0 (2025-08-11): Initial generation from PDF specification
+
+class LwDecode_WS52x
+    var hashCheck      # Duplicate payload detection flag (true = skip duplicates)
+    var name           # Device name from LoRaWAN
+    var node           # Node identifier
+    var last_data      # Cached decoded data
+    var last_update    # Timestamp of last update
+    var lwdecode       # global instance of the driver
+
+    def init()
+        self.hashCheck = true   # Enable duplicate detection by default
+        self.name = nil
+        self.node = nil
+        self.last_data = {}
+        self.last_update = 0
+        
+        # Initialize global node storage (survives decoder reload)
+        import global
+        if !global.contains("WS52x_nodes")
+            global.WS52x_nodes = {}
+        end
+        if !global.contains("WS52x_cmdInit")
+            global.WS52x_cmdInit = false
+        end
+    end
+    
+    def decodeUplink(name, node, rssi, fport, payload)
+        import string
+        import global
+        var data = {}
+        
+        # Validate inputs
+        if payload == nil || size(payload) < 1
+            return nil
+        end
+        
+        try
+            # Store device info
+            self.name = name
+            self.node = node
+            data['RSSI'] = rssi
+            data['FPort'] = fport
+            
+            # Retrieve node history from global storage
+            var node_data = global.WS52x_nodes.find(node, {})
+            
+            # Decode based on fport
+            if fport == 85
+                var i = 0
+                while i < size(payload)
+                    if i + 1 >= size(payload) break end
+                    
+                    var channel_id = payload[i]
+                    var channel_type = payload[i + 1]
+                    i += 2
+                    
+                    # Voltage (Channel 0x03, Type 0x74)
+                    if channel_id == 0x03 && channel_type == 0x74
+                        if i + 1 < size(payload)
+                            var voltage = ((payload[i + 1] << 8) | payload[i]) / 10.0
+                            data['voltage'] = voltage
+                            i += 2
+                        else
+                            break
+                        end
+                        
+                    # Active Power (Channel 0x04, Type 0x80) - Signed
+                    elif channel_id == 0x04 && channel_type == 0x80
+                        if i + 3 < size(payload)
+                            var power = (payload[i + 3] << 24) | (payload[i + 2] << 16) | (payload[i + 1] << 8) | payload[i]
+                            if power > 2147483647
+                                power = power - 4294967296
+                            end
+                            data['active_power'] = power
+                            i += 4
+                        else
+                            break
+                        end
+                        
+                    # Power Factor (Channel 0x05, Type 0x81)
+                    elif channel_id == 0x05 && channel_type == 0x81
+                        if i < size(payload)
+                            data['power_factor'] = payload[i]
+                            i += 1
+                        else
+                            break
+                        end
+                        
+                    # Energy (Channel 0x06, Type 0x83)
+                    elif channel_id == 0x06 && channel_type == 0x83
+                        if i + 3 < size(payload)
+                            var energy = (payload[i + 3] << 24) | (payload[i + 2] << 16) | (payload[i + 1] << 8) | payload[i]
+                            data['energy'] = energy
+                            i += 4
+                        else
+                            break
+                        end
+                        
+                    # Current (Channel 0x07, Type 0xC9)
+                    elif channel_id == 0x07 && channel_type == 0xC9
+                        if i + 1 < size(payload)
+                            var current = (payload[i + 1] << 8) | payload[i]
+                            data['current'] = current
+                            i += 2
+                        else
+                            break
+                        end
+                        
+                    # Socket State (Channel 0x08, Type 0x70)
+                    elif channel_id == 0x08 && channel_type == 0x70
+                        if i < size(payload)
+                            data['socket_state'] = payload[i] == 0x01 ? "ON" : "OFF"
+                            i += 1
+                        else
+                            break
+                        end
+                        
+                    # Device info and configuration channels (0xFF)
+                    elif channel_id == 0xFF
+                        if channel_type == 0x01      # Protocol Version
+                            if i < size(payload)
+                                data['protocol_version'] = payload[i]
+                                i += 1
+                            else
+                                break
+                            end
+                        elif channel_type == 0x09    # Hardware Version
+                            if i + 1 < size(payload)
+                                data['hw_version'] = f"{payload[i]}.{payload[i+1]}"
+                                i += 2
+                            else
+                                break
+                            end
+                        elif channel_type == 0x0A    # Software Version
+                            if i + 1 < size(payload)
+                                data['sw_version'] = f"{payload[i]}.{payload[i+1]}"
+                                i += 2
+                            else
+                                break
+                            end
+                        elif channel_type == 0x0B    # Power On Event
+                            if i < size(payload)
+                                data['power_on_event'] = payload[i] == 0x01
+                                i += 1
+                            else
+                                break
+                            end
+                        elif channel_type == 0x0F    # Device Class
+                            if i < size(payload)
+                                var class_val = payload[i]
+                                data['device_class'] = class_val == 0x00 ? "Class A" : 
+                                                     class_val == 0x01 ? "Class B" : "Class C"
+                                i += 1
+                            else
+                                break
+                            end
+                        elif channel_type == 0x16    # Serial Number
+                            if i + 7 < size(payload)
+                                var serial = ""
+                                for j: i..(i+7)
+                                    serial += f"{payload[j]:02X}"
+                                end
+                                data['serial_number'] = serial
+                                i += 8
+                            else
+                                break
+                            end
+                        elif channel_type == 0x24    # OC Alarm Config
+                            if i + 1 < size(payload)
+                                data['oc_alarm_enabled'] = payload[i] == 0x01
+                                data['oc_alarm_threshold'] = payload[i+1]
+                                i += 2
+                            else
+                                break
+                            end
+                        elif channel_type == 0x25    # Button Lock Config
+                            if i + 1 < size(payload)
+                                var lock_val = (payload[i+1] << 8) | payload[i]
+                                data['button_locked'] = lock_val == 0x8000
+                                i += 2
+                            else
+                                break
+                            end
+                        elif channel_type == 0x26    # Power Recording Config
+                            if i < size(payload)
+                                data['power_recording'] = payload[i] == 0x01
+                                i += 1
+                            else
+                                break
+                            end
+                        elif channel_type == 0x2F    # LED Config
+                            if i < size(payload)
+                                data['led_enabled'] = payload[i] == 0x01
+                                i += 1
+                            else
+                                break
+                            end
+                        elif channel_type == 0x30    # OC Protection Config
+                            if i + 1 < size(payload)
+                                data['oc_protection_enabled'] = payload[i] == 0x01
+                                data['oc_protection_threshold'] = payload[i+1]
+                                i += 2
+                            else
+                                break
+                            end
+                        elif channel_type == 0x3F    # Power Outage Event
+                            if i < size(payload)
+                                data['power_outage_event'] = payload[i] == 0x01
+                                i += 1
+                            else
+                                break
+                            end
+                        elif channel_type == 0xFE    # Reset Event
+                            if i < size(payload)
+                                var reset_type = payload[i]
+                                data['device_reset'] = true
+                                data['reset_reason'] = reset_type == 0x00 ? "POR" :
+                                                      reset_type == 0x01 ? "BOR" :
+                                                      reset_type == 0x02 ? "WDT" : "CMD"
+                                i += 1
+                            else
+                                break
+                            end
+                        elif channel_type == 0xFF    # TSL Version
+                            if i + 1 < size(payload)
+                                data['tsl_version'] = f"{payload[i]}.{payload[i+1]}"
+                                i += 2
+                            else
+                                break
+                            end
+                        else
+                            # Skip unknown 0xFF types with single byte
+                            i += 1
+                        end
+                        
+                    # Acknowledgment and configuration channels (0xFE)
+                    elif channel_id == 0xFE
+                        if channel_type == 0x02      # Reporting Interval
+                            if i + 1 < size(payload)
+                                data['interval_minutes'] = (payload[i + 1] << 8) | payload[i]
+                                i += 2
+                            else
+                                break
+                            end
+                        elif channel_type == 0x03    # Interval ACK
+                            if i + 1 < size(payload)
+                                data['interval_ack'] = (payload[i + 1] << 8) | payload[i]
+                                i += 2
+                            else
+                                break
+                            end
+                        elif channel_type == 0x10    # Reboot ACK
+                            if i < size(payload)
+                                data['reboot_ack'] = payload[i] == 0xFF
+                                i += 1
+                            else
+                                break
+                            end
+                        elif channel_type == 0x22    # Delay Task ACK
+                            if i + 3 < size(payload)
+                                data['delay_task_ack'] = (payload[i + 3] << 24) | (payload[i + 2] << 16) | (payload[i + 1] << 8) | payload[i]
+                                i += 4
+                            else
+                                break
+                            end
+                        elif channel_type == 0x23    # Delete Task ACK
+                            if i + 1 < size(payload)
+                                data['delete_task_ack'] = (payload[i + 1] << 8) | payload[i]
+                                i += 2
+                            else
+                                break
+                            end
+                        else
+                            # Skip unknown 0xFE types with minimal advancement
+                            i += 1
+                        end
+                        
+                    else
+                        # Log unknown but don't skip indefinitely
+                        print(f"WS52x: Unknown channel: ID={channel_id:02X} Type={channel_type:02X}")
+                        # Conservative advancement to prevent infinite loops
+                        i += 1
+                        if i >= size(payload) - 2 break end
+                    end
+                end
+            end
+            
+            # Update node history in global storage
+            node_data['last_data'] = data
+            node_data['last_update'] = tasmota.rtc()['local']
+            node_data['name'] = name
+            
+            # Track power consumption trend
+            if data.contains('energy')
+                if !node_data.contains('energy_history')
+                    node_data['energy_history'] = []
+                end
+                node_data['energy_history'].push(data['energy'])
+                if size(node_data['energy_history']) > 10
+                    node_data['energy_history'].pop(0)
+                end
+            end
+            
+            # Store reset count if detected
+            if data.contains('device_reset') && data['device_reset']
+                node_data['reset_count'] = node_data.find('reset_count', 0) + 1
+                node_data['last_reset'] = tasmota.rtc()['local']
+            end
+            
+            # Register downlink commands
+            if !global.contains("WS52x_cmdInit") || !global.WS52x_cmdInit
+                self.register_downlink_commands()
+                global.WS52x_cmdInit = true
+            end
+
+            # Save back to global storage
+            global.WS52x_nodes[node] = node_data
+            
+            # Update instance cache
+            self.last_data = data
+            self.last_update = node_data['last_update']
+            
+            return data
+            
+        except .. as e, m
+            print(f"WS52x: Decode error - {e}: {m}")
+            return nil
+        end
+    end
+    
+    def add_web_sensor()
+        try
+            import global
+            
+            # Try to use current instance data first
+            var data_to_show = self.last_data
+            var last_update = self.last_update
+            
+            # If no instance data, try to recover from global storage
+            if size(data_to_show) == 0 && self.node != nil
+                var node_data = global.WS52x_nodes.find(self.node, {})
+                data_to_show = node_data.find('last_data', {})
+                last_update = node_data.find('last_update', 0)
+            end
+            
+            # Fallback: find ANY stored node if no specific node
+            if size(data_to_show) == 0 && size(global.WS52x_nodes) > 0
+                for node_id: global.WS52x_nodes.keys()
+                    var node_data = global.WS52x_nodes[node_id]
+                    data_to_show = node_data.find('last_data', {})
+                    self.node = node_id
+                    self.name = node_data.find('name', f"WS52x-{node_id}")
+                    last_update = node_data.find('last_update', 0)
+                    break
+                end
+            end
+            
+            if size(data_to_show) == 0 return nil end
+            
+            import string
+            var msg = ""
+            var fmt = LwSensorFormatter_cls()
+            
+            # MANDATORY: Add header line with device info
+            var name = self.name
+            if name == nil || name == ""
+                name = f"WS52x-{self.node}"
+            end
+            var name_tooltip = "Milesight WS52x Smart Socket"
+            var battery = 1000  # Mains powered - hide battery
+            var battery_last_seen = last_update
+            var rssi = data_to_show.find('RSSI', 1000)
+            var simulated = data_to_show.find('simulated', false)
+            
+            # Build display using emoji formatter
+            fmt.header(name, name_tooltip, battery, battery_last_seen, rssi, last_update, simulated)
+            fmt.start_line()
+            
+            # Main power measurements - single line preferred
+            if data_to_show.contains('socket_state')
+                var state = data_to_show['socket_state']
+                fmt.add_sensor("string", state, nil, state == "ON" ? "🟢" : "🔴")
+            end
+            
+            if data_to_show.contains('voltage')
+                fmt.add_sensor("volt", data_to_show['voltage'], "Voltage", "⚡")
+            end
+            
+            if data_to_show.contains('current')
+                fmt.add_sensor("milliamp", data_to_show['current'], "Current", "🔌")
+            end
+            
+            if data_to_show.contains('active_power')
+                fmt.add_sensor("power", data_to_show['active_power'], "Power", "💡")
+            end
+            
+            # Second line for energy and power factor
+            if data_to_show.contains('energy') || data_to_show.contains('power_factor')
+                fmt.next_line()
+                
+                if data_to_show.contains('energy')
+                    var energy = data_to_show['energy']
+                    var energy_str = ""
+                    var unit = ""
+                    
+                    # Smart scaling for energy display
+                    if energy >= 1000000000  # >= 1 GWh
+                        energy_str = f"{energy / 1000000000:.1f}"
+                        unit = "GWh"
+                    elif energy >= 1000000  # >= 1 MWh
+                        energy_str = f"{energy / 1000000:.1f}"
+                        unit = "MWh"
+                    elif energy >= 1000  # >= 1 kWh
+                        energy_str = f"{energy / 1000:.1f}"
+                        unit = "kWh"
+                    else
+                        energy_str = f"{energy}"
+                        unit = "Wh"
+                    end
+                    
+                    fmt.add_sensor("string", f"{energy_str}{unit}", "Energy", "🏠")
+                end
+                
+                if data_to_show.contains('power_factor')
+                    fmt.add_sensor("power_factor%", data_to_show['power_factor'], "Power Factor", "📊")
+                end
+            end
+            
+            # Device events and configuration - conditional line
+            var has_events = false
+            var event_content = []
+            
+            if data_to_show.contains('device_reset') && data_to_show['device_reset']
+                event_content.push(['string', 'Reset', 'Device Event', '🔄'])
+                has_events = true
+            end
+            
+            if data_to_show.contains('power_on_event') && data_to_show['power_on_event']
+                event_content.push(['string', 'Power On', 'Device Event', '⚡'])
+                has_events = true
+            end
+            
+            if data_to_show.contains('power_outage_event') && data_to_show['power_outage_event']
+                event_content.push(['string', 'Outage', 'Power Event', '🚨'])
+                has_events = true
+            end
+            
+            if data_to_show.contains('button_locked') && data_to_show['button_locked']
+                event_content.push(['string', 'Locked', 'Button State', '🔒'])
+                has_events = true
+            end
+            
+            # Only create line if there's content
+            if has_events
+                fmt.next_line()
+                for content : event_content
+                    fmt.add_sensor(content[0], content[1], content[2], content[3])
+                end
+            end
+            
+            # Add last seen info if data is old
+            if last_update > 0
+                var age = tasmota.rtc()['local'] - last_update
+                if age > 3600  # Data older than 1 hour
+                    fmt.next_line()
+                    fmt.add_status(self.format_age(age), "⏱️", nil)
+                end
+            end
+            
+            fmt.end_line()
+            
+            msg += fmt.get_msg()
+
+            return msg
+            
+        except .. as e, m
+            print(f"WS52x: Display error - {e}: {m}")
+            return "📟 WS52x Error - Check Console"
+        end
+    end
+    
+    def format_age(seconds)
+        if seconds < 60 return f"{seconds}s ago"
+        elif seconds < 3600 return f"{seconds/60}m ago"
+        elif seconds < 86400 return f"{seconds/3600}h ago"
+        else return f"{seconds/86400}d ago"
+        end
+    end
+    
+    # Get node statistics
+    def get_node_stats(node_id)
+        import global
+        var node_data = global.WS52x_nodes.find(node_id, nil)
+        if node_data == nil return nil end
+        
+        return {
+            'last_update': node_data.find('last_update', 0),
+            'reset_count': node_data.find('reset_count', 0),
+            'last_reset': node_data.find('last_reset', 0),
+            'energy_history': node_data.find('energy_history', []),
+            'name': node_data.find('name', 'Unknown')
+        }
+    end
+    
+    # Clear node data (for maintenance)
+    def clear_node_data(node_id)
+        import global
+        if global.WS52x_nodes.contains(node_id)
+            global.WS52x_nodes.remove(node_id)
+            return true
+        end
+        return false
+    end
+    
+    # Register downlink commands for device control
+    def register_downlink_commands()
+        import string
+        
+        # Socket Control (ON/OFF) using SendDownlinkMap
+        tasmota.remove_cmd("LwWS52xControl")
+        tasmota.add_cmd("LwWS52xControl", def(cmd, idx, payload_str)
+            # Format: LwWS52xControl<slot> <on|off|1|0>
             # idx = driver slot (0-15), SendDownlinkMap handles node lookup
             return lwdecode.SendDownlinkMap(global.WS52x_nodes, cmd, idx, payload_str, { 
                 '1|ON':  ['08FF', 'ON' ],     # Maps "1" or "ON" to hex 08FF then return result "ON"

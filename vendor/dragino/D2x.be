@@ -1,13 +1,14 @@
 #
 # LoRaWAN AI-Generated Decoder for Dragino D2x Prompted by ZioFabry 
 #
-# Generated: 2025-08-20 | Version: 1.0.0 | Revision: 1
-#            by "LoRaWAN Decoder AI Generation Template", v2.2.8
+# Generated: 2025-08-26 | Version: 1.1.0 | Revision: 2
+#            by "LoRaWAN Decoder AI Generation Template", v2.3.6
 #
 # Homepage:  http://wiki.dragino.com/xwiki/bin/view/Main/User Manual for LoRaWAN End Nodes/D20-LBD22-LBD23-LB_LoRaWAN_Temperature_Sensor_User_Manual/
 # Userguide: http://wiki.dragino.com/xwiki/bin/view/Main/User Manual for LoRaWAN End Nodes/D20-LBD22-LBD23-LB_LoRaWAN_Temperature_Sensor_User_Manual/
 # Decoder:   Official Dragino documentation
 # 
+# v1.1.0 (2025-08-26): Framework v2.2.9 + Template v2.3.6 upgrade - enhanced error handling
 # v1.0.0 (2025-08-20): Initial generation from MAP specification
 
 class LwDecode_D2x
@@ -208,110 +209,127 @@ class LwDecode_D2x
     end
     
     def add_web_sensor()
-        import global
-        
-        # Try to use current instance data first
-        var data_to_show = self.last_data
-        var last_update = self.last_update
-        
-        # If no instance data, try to recover from global storage
-        if size(data_to_show) == 0 && self.node != nil
-            var node_data = global.D2x_nodes.find(self.node, {})
-            data_to_show = node_data.find('last_data', {})
-            last_update = node_data.find('last_update', 0)
-        end
-        
-        if size(data_to_show) == 0 return nil end
-        
-        import string
-        var msg = ""
-        var fmt = LwSensorFormatter_cls()
-        
-        # MANDATORY: Add header line with device info
-        var name = self.name
-        if name == nil || name == ""
-            name = f"D2x-{self.node}"
-        end
-        var name_tooltip = "Dragino D2x Temperature Sensor"
-        var battery = data_to_show.find('battery_v', 1000)  # Use 1000 if no battery
-        var battery_last_seen = last_update
-        var rssi = data_to_show.find('RSSI', 1000)  # Use 1000 if no RSSI
-        var simulated = data_to_show.find('simulated', false) # Simulated payload indicator
-        
-        # Build display using emoji formatter
-        fmt.header(name, name_tooltip, battery, battery_last_seen, rssi, last_update, simulated)
-        fmt.start_line()
-        
-        # Temperature readings
-        if data_to_show.contains('temp_red_white')
-            fmt.add_sensor("string", f"{data_to_show['temp_red_white']:.1f}°C", "Red/White Probe", "🌡️")
-        end
-        
-        if data_to_show.contains('temp_white')
-            fmt.add_sensor("string", f"{data_to_show['temp_white']:.1f}°C", "White Probe", "🌡️")
-        end
-        
-        if data_to_show.contains('temp_black')
-            fmt.add_sensor("string", f"{data_to_show['temp_black']:.1f}°C", "Black Probe", "⚫")
-        end
-        
-        # Battery voltage
-        if data_to_show.contains('battery_v')
-            fmt.add_sensor("volt", data_to_show['battery_v'], "Battery", "🔋")
-        end
-        
-        # Status indicators
-        var has_status = false
-        if data_to_show.contains('alarm_flag') && data_to_show['alarm_flag']
-            fmt.next_line()
-            fmt.add_status("Alarm", "⚠️", "Temperature alarm triggered")
-            has_status = true
-        end
-        
-        if data_to_show.contains('datalog') && data_to_show['datalog']
-            if !has_status
+        try
+            import global
+            
+            # Try to use current instance data first
+            var data_to_show = self.last_data
+            var last_update = self.last_update
+            
+            # If no instance data, try to recover from global storage
+            if size(data_to_show) == 0 && self.node != nil
+                var node_data = global.D2x_nodes.find(self.node, {})
+                data_to_show = node_data.find('last_data', {})
+                last_update = node_data.find('last_update', 0)
+            end
+            
+            # Fallback: find ANY stored node if no specific node
+            if size(data_to_show) == 0 && size(global.D2x_nodes) > 0
+                for node_id: global.D2x_nodes.keys()
+                    var node_data = global.D2x_nodes[node_id]
+                    data_to_show = node_data.find('last_data', {})
+                    self.node = node_id  # Update instance
+                    self.name = node_data.find('name', f"D2x-{node_id}")
+                    break  # Use first found
+                end
+            end
+            
+            if size(data_to_show) == 0 return nil end
+            
+            import string
+            var msg = ""
+            var fmt = LwSensorFormatter_cls()
+            
+            # MANDATORY: Add header line with device info
+            var name = self.name
+            if name == nil || name == ""
+                name = f"D2x-{self.node}"
+            end
+            var name_tooltip = "Dragino D2x Temperature Sensor"
+            var battery = data_to_show.find('battery_v', 1000)  # Use 1000 if no battery
+            var battery_last_seen = last_update
+            var rssi = data_to_show.find('RSSI', 1000)  # Use 1000 if no RSSI
+            var simulated = data_to_show.find('simulated', false) # Simulated payload indicator
+            
+            # Build display using emoji formatter
+            fmt.header(name, name_tooltip, battery, battery_last_seen, rssi, last_update, simulated)
+            fmt.start_line()
+            
+            # Temperature readings
+            if data_to_show.contains('temp_red_white')
+                fmt.add_sensor("string", f"{data_to_show['temp_red_white']:.1f}°C", "Red/White Probe", "🌡️")
+            end
+            
+            if data_to_show.contains('temp_white')
+                fmt.add_sensor("string", f"{data_to_show['temp_white']:.1f}°C", "White Probe", "🌡️")
+            end
+            
+            if data_to_show.contains('temp_black')
+                fmt.add_sensor("string", f"{data_to_show['temp_black']:.1f}°C", "Black Probe", "⚫")
+            end
+            
+            # Battery voltage
+            if data_to_show.contains('battery_v')
+                fmt.add_sensor("volt", data_to_show['battery_v'], "Battery", "🔋")
+            end
+            
+            # Status indicators
+            var has_status = false
+            if data_to_show.contains('alarm_flag') && data_to_show['alarm_flag']
                 fmt.next_line()
+                fmt.add_status("Alarm", "⚠️", "Temperature alarm triggered")
                 has_status = true
             end
-            fmt.add_status("Datalog", "📊", "Historical data")
-        end
-        
-        if data_to_show.contains('pa8_level')
-            if !has_status
-                fmt.next_line()
-                has_status = true
-            end
-            var pa8_icon = data_to_show['pa8_level'] == "Low" ? "🔻" : "🔺"
-            fmt.add_sensor("string", data_to_show['pa8_level'], "PA8 Level", pa8_icon)
-        end
-        
-        # Device info if available
-        if data_to_show.contains('frequency_band')
-            if !has_status
-                fmt.next_line()
-                has_status = true
-            end
-            fmt.add_sensor("string", data_to_show['frequency_band'], "LoRaWAN Band", "📡")
-        end
-        
-        # Add last seen info if data is old
-        if last_update > 0
-            var age = tasmota.rtc()['local'] - last_update
-            if age > 3600  # Data older than 1 hour
+            
+            if data_to_show.contains('datalog') && data_to_show['datalog']
                 if !has_status
                     fmt.next_line()
                     has_status = true
                 end
-                fmt.add_status(self.format_age(age), "⏱️", nil)
+                fmt.add_status("Datalog", "📊", "Historical data")
             end
-        end
-        
-        fmt.end_line()
-        
-        # ONLY get_msg() return a string that can be used with +=
-        msg += fmt.get_msg()
+            
+            if data_to_show.contains('pa8_level')
+                if !has_status
+                    fmt.next_line()
+                    has_status = true
+                end
+                var pa8_icon = data_to_show['pa8_level'] == "Low" ? "🔻" : "🔺"
+                fmt.add_sensor("string", data_to_show['pa8_level'], "PA8 Level", pa8_icon)
+            end
+            
+            # Device info if available
+            if data_to_show.contains('frequency_band')
+                if !has_status
+                    fmt.next_line()
+                    has_status = true
+                end
+                fmt.add_sensor("string", data_to_show['frequency_band'], "LoRaWAN Band", "📡")
+            end
+            
+            # Add last seen info if data is old
+            if last_update > 0
+                var age = tasmota.rtc()['local'] - last_update
+                if age > 3600  # Data older than 1 hour
+                    if !has_status
+                        fmt.next_line()
+                        has_status = true
+                    end
+                    fmt.add_status(self.format_age(age), "⏱️", nil)
+                end
+            end
+            
+            fmt.end_line()
+            
+            # ONLY get_msg() return a string that can be used with +=
+            msg += fmt.get_msg()
 
-        return msg
+            return msg
+            
+        except .. as e, m
+            print(f"D2x: Display error - {e}: {m}")
+            return "📟 D2x Error - Check Console"
+        end
     end
     
     def format_age(seconds)

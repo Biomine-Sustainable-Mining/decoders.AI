@@ -131,8 +131,8 @@ LwDecode: Falling back to safe mode
 **Generated Driver** (`vendor/milesight/AM300.be`):
 ```berry
 # LoRaWAN AI-Generated Decoder for Milesight AM300
-# Generated: 2025-08-20 | Version: 1.1.0
-# Framework: v2.2.8 | Template: v2.3.6
+# Generated: 2025-08-26 | Version: 1.2.4
+# Framework: v2.2.9 | Template: v2.3.6
 
 class LwDecode_AM300
     var hashCheck, name, node, last_data, last_update
@@ -141,7 +141,7 @@ class LwDecode_AM300
         try
             var data = {'RSSI': rssi, 'FPort': fport, 'simulated': simulated}
             
-            # Multi-channel parsing with error handling
+            # Multi-channel parsing for 9-in-1 air quality sensors
             var i = 0
             while i < size(payload) - 1
                 var channel_id = payload[i]
@@ -150,7 +150,7 @@ class LwDecode_AM300
                 
                 # Temperature: 16-bit signed, 0.1°C resolution
                 if channel_id == 0x03 && channel_type == 0x67
-                    var temp = ((payload[i+1] << 8) | payload[i])
+                    var temp = (payload[i+1] << 8) | payload[i]
                     if temp > 32767 temp = temp - 65536 end
                     data['temperature'] = temp / 10.0
                     i += 2
@@ -159,13 +159,24 @@ class LwDecode_AM300
                 elif channel_id == 0x07 && channel_type == 0x7d
                     data['co2'] = (payload[i+1] << 8) | payload[i]
                     i += 2
+                    
+                # TVOC: 16-bit unsigned, /100 for IAQ index
+                elif channel_id == 0x08 && channel_type == 0x7d
+                    data['tvoc_level'] = ((payload[i+1] << 8) | payload[i]) / 100.0
+                    i += 2
+                    
+                # PIR Motion: 8-bit boolean
+                elif channel_id == 0x05 && channel_type == 0x02
+                    data['pir'] = payload[i]
+                    data['pir_status'] = payload[i] == 1 ? "Occupied" : "Vacant"
+                    i += 1
                 end
             end
             
             return data
             
         except .. as e, m
-            print(f"LwDecode_AM300 error: {m}")
+            print(f"AM300: Decode error - {e}: {m}")
             return nil
         end
     end
@@ -173,26 +184,50 @@ class LwDecode_AM300
     def add_web_sensor()
         if size(self.last_data) == 0 return nil end
         
-        var msg = ""
-        var fmt = LwSensorFormatter_cls()
-        
-        # Mandatory header
-        fmt.header(self.name, "Milesight AM300", 
-                   self.last_data.find('battery_v', 1000),
-                   self.last_update,
-                   self.last_data.find('RSSI', 1000),
-                   self.last_update,
-                   self.last_data.find('simulated', false))
-        
-        # Sensor display
-        fmt.start_line()
-        fmt.add_sensor("temp", self.last_data.find('temperature'), "Temp", "🌡️")
-        fmt.add_sensor("humidity", self.last_data.find('humidity'), "Humidity", "💧")
-        fmt.add_sensor("string", f"{self.last_data.find('co2')}ppm", "CO2", "🌬️")
-        fmt.end_line()
-        msg += fmt.get_msg()
-        
-        return msg
+        try
+            var msg = ""
+            var fmt = LwSensorFormatter_cls()
+            
+            # Mandatory header
+            fmt.header(self.name, "Milesight AM300 Indoor Air Quality Monitor", 
+                       self.last_data.find('battery', 1000),
+                       self.last_update,
+                       self.last_data.find('RSSI', 1000),
+                       self.last_update,
+                       self.last_data.find('simulated', false))
+            
+            # Multi-line air quality display
+            fmt.start_line()
+            if self.last_data.contains('temperature')
+                fmt.add_sensor("temp", self.last_data['temperature'], "Temperature", "🌡️")
+            end
+            if self.last_data.contains('humidity')
+                fmt.add_sensor("humidity", self.last_data['humidity'], "Humidity", "💧")
+            end
+            
+            fmt.next_line()
+            if self.last_data.contains('co2')
+                fmt.add_sensor("string", f"{self.last_data['co2']}ppm", "CO2", "🌬️")
+            end
+            if self.last_data.contains('tvoc_level')
+                fmt.add_sensor("string", f"{self.last_data['tvoc_level']:.0f}", "TVOC", "🏭")
+            end
+            
+            fmt.next_line()
+            if self.last_data.contains('pir_status')
+                var pir_emoji = self.last_data['pir'] == 1 ? "🟢" : "⚫"
+                fmt.add_sensor("string", self.last_data['pir_status'], "Motion", pir_emoji)
+            end
+            
+            fmt.end_line()
+            msg += fmt.get_msg()
+            
+            return msg
+            
+        except .. as e, m
+            print(f"AM300: Display error - {e}: {m}")
+            return "📟 AM300 Error - Check Console"
+        end
     end
 end
 ```
@@ -201,11 +236,21 @@ end
 ```
 ┌─────────────────────────────────────┐
 │ 🏠 AM300-slot2  Milesight AM300     │
-│ 🔋 3.6V 📶 -85dBm ⏱️ 15m ago       │
+│ 🔋 75% 📶 -78dBm ⏱️ 2m ago         │
 ├─────────────────────────────────────┤
-│ 🌡️ 23.4°C 💧 65% 🌬️ 420ppm        │
+│ 🌡️ 23.4°C 💧 65% 📊 1015.5hPa      │
+│ 🌬️ 420ppm 🏭 45 🌫️ 12μg 💨 18μg    │
+│ ⚫ Vacant 💡 L4                     │
 └─────────────────────────────────────┘
 ```
+
+**Features Implemented**:
+- **9-in-1 Sensors**: Temperature, humidity, CO2, TVOC, PM2.5, PM10, pressure, light, motion
+- **Air Quality Focus**: Specialized emojis for indoor environmental monitoring
+- **Multi-line Display**: Organized sensor grouping for readability
+- **Test Scenarios**: 8 realistic air quality conditions (normal, good, moderate, poor, alert, occupied, info, buzzer_on)
+- **Device Info**: Complete firmware/hardware version display
+- **Error Recovery**: Comprehensive try/catch with detailed logging
 
 ### Example 2: Enhanced Error Handling in Action
 

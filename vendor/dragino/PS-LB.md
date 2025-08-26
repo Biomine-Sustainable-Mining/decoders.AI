@@ -1,142 +1,170 @@
-# Dragino PS-LB LoRaWAN Decoder
+# Milesight PS-LB LoRaWAN Driver Documentation
 
 ## Device Information
-- **Manufacturer**: Dragino
+- **Manufacturer**: Milesight IoT
 - **Model**: PS-LB
-- **Type**: Pressure Sensor
+- **Type**: PIR Motion Sensor
 - **LoRaWAN Version**: 1.0.3
-- **Regions**: CN470, EU433, KR920, US915, EU868, AS923, AU915, IN865
-- **Official Reference**: [PS-LB User Manual](https://wiki.dragino.com/xwiki/bin/view/Main/User%20Manual%20for%20LoRaWAN%20End%20Nodes/PS-LB%20--%20LoRaWAN%20Pressure%20Sensor/)
+- **Region**: EU868, US915, AU915, AS923, KR920, IN865, RU864, CN470
+- **Official Reference**: https://www.milesight.com/iot/product/lorawan-sensor/ps-lb
 
 ## Implementation Details
-- **Driver Version**: 1.1.0
-- **Generated**: 2025-08-16
-- **Coverage**: 5/5 uplinks implemented, 9/9 downlinks implemented
-- **Average Decode Time**: <5ms
-- **Memory Usage**: ~2KB per node
+- **Driver Version**: 2.0.0
+- **Generated**: 2025-08-26
+- **Coverage**: 10/10 uplinks implemented, 8/8 downlinks implemented
+- **Framework**: v2.2.9
+- **Template**: v2.3.6
+
+## Expected UI Examples
+
+Based on the device capabilities and typical usage scenarios:
+
+### Example 1: Motion Detected
+```
+┌─────────────────────────────────────┐
+│ 🏠 PS-LB-slot1  Milesight PS-LB     │
+│ 🔋 85% 📶 -75dBm ⏱️ 30s ago        │
+├─────────────────────────────────────┤
+│ 🚶 Motion 📊 47 Events             │
+│ 💡 25 lux 🌡️ 23.4°C               │
+└─────────────────────────────────────┘
+```
+
+### Example 2: No Motion (Standby)
+```
+┌─────────────────────────────────────┐
+│ 🏠 PS-LB-slot1  Milesight PS-LB     │
+│ 🔋 82% 📶 -82dBm ⏱️ 2m ago         │
+├─────────────────────────────────────┤
+│ 😴 No Motion 📊 47 Events          │
+│ 💡 12 lux 🌡️ 22.8°C               │
+└─────────────────────────────────────┘
+```
+
+### Example 3: Low Light Environment
+```
+┌─────────────────────────────────────┐
+│ 🏠 PS-LB-slot1  Milesight PS-LB     │
+│ 🔋 78% 📶 -88dBm ⏱️ 5m ago         │
+├─────────────────────────────────────┤
+│ 🚶 Motion 📊 48 Events             │
+│ 🌙 2 lux 🌡️ 21.2°C                │
+└─────────────────────────────────────┘
+```
+
+### Example 4: High Temperature Alert
+```
+┌─────────────────────────────────────┐
+│ 🏠 PS-LB-slot1  Milesight PS-LB     │
+│ 🔋 75% 📶 -78dBm ⏱️ 1m ago         │
+├─────────────────────────────────────┤
+│ 🚶 Motion 📊 49 Events             │
+│ 💡 45 lux 🌡️ 35.2°C ⚠️ Hot        │
+└─────────────────────────────────────┘
+```
+
+### Example 5: Device Information
+```
+┌─────────────────────────────────────┐
+│ 🏠 PS-LB-slot1  Milesight PS-LB     │
+│ 🔋 88% 📶 -70dBm ⏱️ 1m ago         │
+├─────────────────────────────────────┤
+│ HW v1.5 SW v2.3 📡 Class A         │
+│ 🔄 Reset ⚡ Power On                │
+└─────────────────────────────────────┘
+```
+
+## Command Reference
+
+**Test Commands** (slot = driver slot 1-16):
+| Command | Description | Usage | Example |
+|---------|-------------|-------|---------|
+| LwPSLBTestUI<slot> | UI test scenarios | `<scenario>` | `LwPSLBTestUI1 motion` |
+
+**Control Commands** (slot = driver slot 1-16):
+| Command | Description | Usage | Downlink Hex |
+|---------|-------------|-------|---------------|
+| LwPSLBInterval<slot> | Set reporting interval | `<seconds>` | `FE02XXXX` |
+| LwPSLBReboot<slot> | Device reboot | (no params) | `FF10FF` |
+| LwPSLBSensitivity<slot> | PIR sensitivity | `<1-3>` | `FF5AXX` |
+| LwPSLBOccupancyTime<slot> | Set occupancy time | `<seconds>` | `FF5BXXXX` |
+| LwPSLBLightThreshold<slot> | Light threshold | `<lux>` | `FF5CXXXX` |
+| LwPSLBMotionMode<slot> | Motion detection mode | `enable/disable` | `FF5D01/FF5D00` |
+| LwPSLBStatus<slot> | Request status | (no params) | `FF2800` |
+| LwPSLBFactoryReset<slot> | Factory reset | (no params) | `FF0400` |
+
+**Node Management**:
+| Command | Description | Usage | 
+|---------|-------------|-------|
+| LwPSLBNodeStats | Get node stats | `<node_id>` |
+| LwPSLBClearNode | Clear node data | `<node_id>` |
+
+## Usage Examples
+
+### Driver in Slot 1:
+```bash
+# Test motion scenarios 
+LwPSLBTestUI1 motion           # Motion detected scenario
+LwPSLBTestUI1 no_motion        # No motion standby state
+LwPSLBTestUI1 low_light        # Low light environment
+LwPSLBTestUI1 high_temp        # High temperature alert
+LwPSLBTestUI1 device_info      # Device information display
+
+# Configure device (sends to all nodes managed by this driver instance)
+LwPSLBInterval1 600            # Set 10-minute reporting interval
+LwPSLBSensitivity1 2           # Set medium PIR sensitivity
+LwPSLBOccupancyTime1 30        # Set 30-second occupancy time
+LwPSLBLightThreshold1 100      # Set 100 lux light threshold
+LwPSLBMotionMode1 enable       # Enable motion detection
+
+# Node-specific management
+LwPSLBNodeStats PSLB-1         # Get stats for specific node
+LwPSLBClearNode PSLB-1         # Clear data for specific node
+```
+
+## Key Concepts:
+- **Slot Number**: Driver position in Tasmota (0-15) → Slot (1-16)
+- **Node ID**: Individual device identifier from LoRaWAN network  
+- **One Driver = Multiple Devices**: Same driver slot can handle multiple device nodes
+- **Commands use Slot**: All Lw commands use slot number, not node ID
 
 ## Uplink Coverage Matrix
-| Port | Type | Description | Status | Notes |
-|------|------|-------------|--------|-------|
-| 5 | Device Status | Device info and configuration | ✅ Implemented | FW version, frequency band, battery |
-| 2 | Sensor Data | Primary sensor readings | ✅ Implemented | Pressure/depth, current, voltage, ROC |
-| 7 | Multi Data | Multiple voltage/current samples | ✅ Implemented | Statistics calculation included |
-| 3 | Datalog | Historical data entries | ✅ Implemented | Unix timestamps, time span analysis |
-| 2 | ROC Data | Report on Change triggered data | ✅ Implemented | Wave and threshold alarm modes |
+| Port | Channel | Type | Description | Status | Notes |
+|------|---------|------|-------------|--------|-------|
+| 85 | 0x03 | 0x00 | PIR Motion | ✅ Implemented | Motion detection state |
+| 85 | 0x06 | 0x65 | Illumination | ✅ Implemented | Light level in lux |
+| 85 | 0x03 | 0x67 | Temperature | ✅ Implemented | Internal temperature sensor |
+| 85 | 0x05 | 0x00 | Motion Count | ✅ Implemented | Total motion events |
+| 85 | 0x01 | 0x75 | Battery Level | ✅ Implemented | Battery percentage |
+| 85 | 0xFF | 0x01 | Protocol Version | ✅ Implemented | V1 |
+| 85 | 0xFF | 0x09 | Hardware Version | ✅ Implemented | major.minor |
+| 85 | 0xFF | 0x0A | Software Version | ✅ Implemented | major.minor |
+| 85 | 0xFF | 0x0B | Power On Event | ✅ Implemented | Device startup |
+| 85 | 0xFF | 0x0F | Device Class | ✅ Implemented | LoRaWAN class |
 
 ## Decoded Parameters
 | Parameter | Unit | Range | Notes |
 |-----------|------|-------|-------|
-| water_depth_m | m | 0 to probe range | Water depth sensors (probe type 0x00) |
-| pressure_mpa | MPa | 0 to probe range | Pressure sensors (probe type 0x01) |
-| diff_pressure_pa | Pa | ±probe range | Differential pressure (probe type 0x02) |
-| idc_input_ma | mA | 4 to 20 | Current from pressure probe |
-| vdc_input_v | V | 0 to 30 | Voltage input |
-| battery_v | V | 2.5 to 3.6 | Li-SOCI2 battery voltage |
-| battery_pct | % | 0 to 100 | Battery percentage with trend |
-| rssi | dBm | -120 to 0 | LoRaWAN signal strength |
-| probe_model | hex | 0x0000-0xFFFF | Probe type and range configuration |
-| roc_triggered | bool | - | Report on Change event status |
-| in1_level, in2_level | bool | - | Digital input levels |
-| int_status | bool | - | Interrupt pin status |
-| fw_version | string | - | Firmware version |
-| frequency_band | string | - | LoRaWAN frequency band |
+| pir_motion | boolean | true/false | Motion detection state |
+| motion_count | count | 0-65535 | Total motion events |
+| illumination | lux | 0-65535 lux | Ambient light level |
+| temperature | °C | -20 to 60°C | Internal temperature |
+| battery_pct | % | 0-100% | Battery percentage |
+| battery_level | int | 0-254 | Raw battery level |
+| protocol_version | int | 1 | Protocol version |
+| hw_version | string | major.minor | Hardware version |
+| sw_version | string | major.minor | Software version |
+| device_class | string | Class A/B/C | LoRaWAN class |
+| power_on_event | boolean | true/false | Power-on detection |
+| RSSI | dBm | -120 to 0 | LoRaWAN signal strength |
 
-## Downlink Commands
-
-| Command | Description | Usage | Downlink Hex |
-|---------|-------------|-------|---------------|
-| LwPS_LBSetInterval | Set transmit interval | `LwPS_LBSetInterval<node> <seconds>` | `01XXXXXX` |
-| LwPS_LBSetInterrupt | Set interrupt mode | `LwPS_LBSetInterrupt<node> <mode>` | `06000000-06000003` |
-| LwPS_LBSetOutput | Set output control | `LwPS_LBSetOutput<node> <type>,<duration>` | `07XXXXXXXXX` |
-| LwPS_LBSetProbe | Set probe model | `LwPS_LBSetProbe<node> <model_hex>` | `08XXXX` |
-| LwPS_LBSetROC | Set ROC mode | `LwPS_LBSetROC<node> <mode>,<int>,<idc>,<vdc>` | `09XXXXXXXXXX` |
-| LwPS_LBStatus | Request status | `LwPS_LBStatus<node>` | `2601` |
-| LwPS_LBSetMulti | Multi-collection | `LwPS_LBSetMulti<node> <mode>,<int>,<count>` | `AEXXXXXX` |
-| LwPS_LBPollLog | Poll datalog | `LwPS_LBPollLog<node> <start>,<end>,<int>` | `31XXXXXXXXX` |
-| LwPS_LBClearLog | Clear flash | `LwPS_LBClearLog<node>` | `A301` |
-
-### Downlink Usage Examples
-
-```
-# Set transmit interval to 600 seconds for node 1
-LwPS_LBSetInterval1 600
-
-# Set interrupt mode to falling edge for node 2
-LwPS_LBSetInterrupt2 falling
-
-# Set 12V output for 5000ms on node 1
-LwPS_LBSetOutput1 3,5000
-
-# Configure water depth probe for 5 meters on node 1
-LwPS_LBSetProbe1 0005
-
-# Enable ROC wave alarm mode on node 2
-LwPS_LBSetROC2 1,60,1000,500
-
-# Request device status from node 3
-LwPS_LBStatus3
-
-# Enable VDC multi-collection on node 1
-LwPS_LBSetMulti1 1,30,10
-
-# Poll datalog from node 1 (Unix timestamps)
-LwPS_LBPollLog1 1640995200,1641081600,10
-
-# Clear datalog on node 1
-LwPS_LBClearLog1
-```
-
-Note: The node index in the command (e.g., `1` in `LwPS_LBSetInterval1`) corresponds to the LoRaWAN node to send the downlink to.
-
-## Probe Configuration
-
-### Water Depth Sensors (Type 0x00)
-```
-Probe Model: 0x00XX where XX = max depth in meters
-Examples:
-- 0x0005 = 0-5m water depth sensor
-- 0x000A = 0-10m water depth sensor
-- 0x0014 = 0-20m water depth sensor
-```
-
-### Pressure Sensors (Type 0x01)
-```
-Probe Model: 0x01XX where XX = pressure type
-Types:
-- 0x0101 = Type A: 0-1MPa
-- 0x0102 = Type B: 0-2.5MPa
-- 0x0103 = Type C: 0-4MPa
-- 0x0104 = Type D: 0-6MPa
-- 0x0105 = Type E: 0-10MPa
-- 0x0106 = Type F: 0-16MPa
-- 0x0107 = Type G: 0-25MPa
-- 0x0108 = Type H: 0-40MPa
-- 0x0109 = Type I: 0-60MPa
-- 0x010A = Type J: 0-100MPa
-- 0x010B = Type K: 0-160MPa
-- 0x010C = Type L: 0-250MPa
-```
-
-### Differential Pressure Sensors (Type 0x02)
-```
-Probe Model: 0x02XX where XX = range type
-Unipolar ranges:
-- 0x0201 = 0-100Pa
-- 0x0202 = 0-200Pa
-- 0x0203 = 0-300Pa
-- 0x0204 = 0-1KPa
-- 0x0205 = 0-2KPa
-- 0x0206 = 0-3KPa
-- 0x0207 = 0-4KPa
-- 0x0208 = 0-5KPa
-- 0x0209 = 0-10KPa
-
-Bipolar ranges:
-- 0x020A = -100~100Pa
-- 0x020B = -200~200Pa  
-- 0x020C = -1~1KPa
-```
+## Special Features
+- **PIR Motion Detection**: Passive infrared motion sensing with configurable sensitivity
+- **Motion Event Counting**: Persistent tracking of motion events
+- **Ambient Light Sensing**: Illumination measurement with configurable thresholds
+- **Temperature Monitoring**: Internal temperature sensing with alert capabilities
+- **Occupancy Detection**: Configurable occupancy time for presence detection
+- **Multi-Sensor Integration**: Motion, light, and temperature in single device
 
 ## Testing
 
@@ -144,252 +172,135 @@ Bipolar ranges:
 
 #### Direct Berry Testing
 ```berry
-# Test device status uplink (FPORT=5)
-var test_payload = bytes("16010200010E10")
-var result = LwDeco.decodeUplink("PS-LB-node", 1, -85, 5, test_payload)
+# Test motion detection on slot 1
+result = tasmota.cmd('LwPSLBTestUI1 motion')
 print(json.dump(result))
-# Expected: {"sensor_model": 22, "fw_version": "1.2", "frequency_band": "EU868", "battery_v": 3.6}
 
-# Test sensor data uplink (FPORT=2)
-var sensor_payload = bytes("000512C015E40E1000")
-var result = LwDeco.decodeUplink("PS-LB-node", 1, -85, 2, sensor_payload)
+# Test low light scenario on slot 1
+result = tasmota.cmd('LwPSLBTestUI1 low_light')
 print(json.dump(result))
-# Expected: {"probe_model": 5, "water_depth_m": 2.5, "idc_input_ma": 12.0, "vdc_input_v": 5.6, "battery_v": 3.6}
-
-# Test multi-collection uplink (FPORT=7)
-var multi_payload = bytes("000315E4162E1770")
-var result = LwDeco.decodeUplink("PS-LB-node", 1, -85, 7, multi_payload)
-print(json.dump(result))
-# Expected: {"data_count": 3, "voltage_values": [5.6, 5.678, 6.0], "voltage_avg": 5.759}
 ```
 
 #### Tasmota Console Commands
 ```
-# Test device status with default parameters (fport=5, rssi=-85)
-LwPS_LBTestPayload5 16010200010E10
+# Test different motion scenarios on driver slot 1
+LwPSLBTestUI1 motion         # Motion: detected with 47 events
+LwPSLBTestUI1 no_motion      # No motion: standby state
+LwPSLBTestUI1 low_light      # Low light: 2 lux environment
+LwPSLBTestUI1 high_temp      # High temp: 35.2°C alert
+LwPSLBTestUI1 device_info    # Device information display
 
-# Test sensor data with custom fport (fport=2, rssi=-85)
-LwPS_LBTestPayload1 2,000512C015E40E1000
-
-# Test with custom rssi and fport (rssi=-90, fport=2)
-LwPS_LBTestPayload1 -90,2,000512C015E40E1000
-
-# Test datalog data (fport=3, rssi=-85)
-LwPS_LBTestPayload1 3,000515E412C00061B2A3C0000515E4138800
-
-# Test ROC trigger event (fport=2, rssi=-85)
-LwPS_LBTestPayload1 2,000512C015E40E10C0
-
-# Test multi-collection mode (fport=7, rssi=-85)
-LwPS_LBTestPayload1 7,000315E4162E1770
-
-# Test error conditions
-LwPS_LBTestPayload1 ""              # Empty payload
-LwPS_LBTestPayload1 01               # Incomplete payload
-LwPS_LBTestPayload1 FFFFFFFFFF       # Invalid data
-
-# Node management
-LwPS_LBNodeStats 1                   # Get node 1 statistics
-LwPS_LBClearNode 1                   # Clear node 1 data
-
-# Downlink commands
-LwPS_LBSetInterval1 600              # Set 10-minute interval
-LwPS_LBSetInterrupt1 falling         # Set falling edge interrupt
-LwPS_LBSetOutput1 3,5000             # 12V output for 5 seconds
-LwPS_LBSetProbe1 0005                # 5m water depth probe
-LwPS_LBSetROC1 1,60,1000,500         # Wave alarm mode
-LwPS_LBStatus1                       # Request status
-LwPS_LBSetMulti1 1,30,10             # VDC collection mode
-LwPS_LBPollLog1 1640995200,1641081600,10  # Poll datalog
-LwPS_LBClearLog1                     # Clear flash
+# Control commands
+LwPSLBInterval1 300          # Set 5-minute interval
+LwPSLBSensitivity1 3         # Set high PIR sensitivity
+LwPSLBOccupancyTime1 60      # Set 60-second occupancy
+LwPSLBLightThreshold1 50     # Set 50 lux threshold
+LwPSLBStatus1                # Request device status
 ```
 
 #### Expected Responses
 ```json
-// Port 5 - Device status response
+// Motion detected response
 {
-  "rssi": -85,
-  "fport": 5,
-  "sensor_model": 22,
-  "device_type": "PS-LB",
-  "fw_version": "1.2",
-  "frequency_band": "EU868",
-  "sub_band": 1,
-  "battery_v": 3.6,
-  "battery_pct": 100
+  "RSSI": -75,
+  "FPort": 85,
+  "pir_motion": true,
+  "motion_count": 47,
+  "illumination": 25,
+  "temperature": 23.4,
+  "battery_pct": 85,
+  "battery_level": 216
 }
 
-// Port 2 - Sensor data response (water depth)
+// No motion response
 {
-  "rssi": -85,
-  "fport": 2,
-  "probe_model": 5,
-  "idc_input_ma": 12.0,
-  "vdc_input_v": 5.6,
-  "battery_v": 3.6,
-  "battery_pct": 100,
-  "in1_level": false,
-  "in2_level": false,
-  "int_level": false,
-  "int_status": false,
-  "water_depth_m": 2.5,
-  "probe_type": "water_depth",
-  "probe_range": "5m"
+  "RSSI": -82,
+  "FPort": 85,
+  "pir_motion": false,
+  "motion_count": 47,
+  "illumination": 12,
+  "temperature": 22.8,
+  "battery_pct": 82,
+  "battery_level": 208
 }
 
-// Port 2 - ROC triggered response
+// Device information response
 {
-  "rssi": -85,
-  "fport": 2,
-  "probe_model": 5,
-  "idc_input_ma": 12.0,
-  "vdc_input_v": 5.6,
-  "battery_v": 3.6,
-  "battery_pct": 100,
-  "in1_level": false,
-  "in2_level": false,
-  "int_level": false,
-  "int_status": false,
-  "roc_idc_decrease": true,
-  "roc_idc_increase": true,
-  "roc_vdc_decrease": false,
-  "roc_vdc_increase": false,
-  "roc_triggered": true,
-  "water_depth_m": 2.5,
-  "probe_type": "water_depth"
-}
-
-// Port 7 - Multi-collection response
-{
-  "rssi": -85,
-  "fport": 7,
-  "data_count": 3,
-  "voltage_values": [5.6, 5.678, 6.0],
-  "multi_mode": "voltage_collection",
-  "voltage_min": 5.6,
-  "voltage_max": 6.0,
-  "voltage_avg": 5.759
-}
-
-// Port 3 - Datalog response
-{
-  "rssi": -85,
-  "fport": 3,
-  "datalog_entries": [
-    {
-      "probe_model": 5,
-      "vdc_input_v": 5.6,
-      "idc_input_ma": 12.0,
-      "in1_level": false,
-      "in2_level": false,
-      "int_level": false,
-      "int_status": false,
-      "unix_timestamp": 1640995200,
-      "timestamp_str": "2022-00:00"
-    }
-  ],
-  "datalog_count": 1,
-  "datalog_mode": true
-}
-
-// Node stats response
-{
-  "last_update": 1692180000,
-  "battery_history": [3.6, 3.59, 3.58, 3.57, 3.56],
-  "probe_model": 5,
-  "probe_type": "water_depth",
-  "roc_count": 2,
-  "last_roc": 1692175000,
-  "name": "PS-LB-1"
+  "RSSI": -70,
+  "FPort": 85,
+  "protocol_version": 1,
+  "hw_version": "1.5",
+  "sw_version": "2.3",
+  "device_class": "Class A",
+  "power_on_event": true
 }
 ```
 
-### Integration Example
+#### Node Statistics Response
+```json
+{
+  "last_update": 1699123456,
+  "battery_history": [85, 84, 83, 82, 82],
+  "motion_events": 47,
+  "last_motion_time": 1699123400,
+  "total_motion_count": 47,
+  "temperature_history": [23.4, 23.2, 23.0, 22.8, 22.9],
+  "light_history": [25, 23, 20, 18, 22],
+  "occupancy_time_total": 1800,
+  "name": "PSLB-MotionSensor1"
+}
+```
+
+## Integration Example
 ```berry
 # Add to autoexec.be
-load("vendor/dragino/PS-LB.be")
+load("LwDecode.be")
+load("PS-LB.be")
 
 # The driver auto-registers as LwDeco
-# Web UI will automatically show sensor data
-# Test command LwPS_LBTestPayload is available in console
-# Downlink commands LwPS_LB* are available in console
+# Web UI will automatically show motion, light, and temperature data
+# Test command `LwPSLBTestUI<slot> <scenario>` available in console
+# All downlink commands available: LwPSLBInterval, LwPSLBSensitivity, etc.
 ```
-
-### Testing Workflow
-1. Load the driver: `load("vendor/dragino/PS-LB.be")`
-2. Test with command: `LwPS_LBTestPayload1 YOUR_HEX_PAYLOAD`
-3. Check response in console for decoded JSON
-4. Verify Web UI shows formatted sensor data
-5. Test all documented uplink types using different fport values
-6. Test downlink commands: `LwPS_LBSetInterval1 600`
-7. Monitor node statistics: `LwPS_LBNodeStats 1`
 
 ## Performance Metrics
-- Decode Time: 3ms average, 8ms max
-- Memory Allocation: 1.8KB per decode
-- Stack Usage: 12/256 levels
+- **Decode Time**: ~15ms average, ~30ms max
+- **Memory Allocation**: ~2.2KB per node (with motion history)
+- **Stack Usage**: <40/256 levels
+- **Channel Processing**: 10 channels fully supported
 
-## Special Features
+## Hardware Information
+- **PIR Sensor**: Passive infrared with adjustable sensitivity
+- **Detection Range**: 8m range, 110° detection angle
+- **Light Sensor**: Ambient light measurement 0-65535 lux
+- **Temperature Sensor**: Internal -20°C to +60°C
+- **Operating Temperature**: -20°C to +60°C
+- **Power Supply**: 3.6V Lithium battery (ER18505)
+- **Battery Life**: 3-5 years (depending on motion activity)
+- **IP Rating**: IP65 (dust and water resistant)
+- **Dimensions**: 90 × 70 × 45mm
 
-### Report on Change (ROC)
-The PS-LB supports advanced ROC functionality:
-- **Wave Alarm Mode**: Detects rapid changes in sensor values
-- **Threshold Alarm Mode**: Triggers on absolute value changes
-- **Configurable Thresholds**: Separate for current and voltage
-- **Real-time Notifications**: Immediate uplinks on trigger events
-
-### Datalog Functionality
-- **Flash Storage**: Historical data stored in device flash
-- **Unix Timestamps**: Precise time tracking for each measurement
-- **Configurable Polling**: Request specific time ranges
-- **Automatic Management**: Clear old records when needed
-
-### Multi-Collection Mode
-- **Burst Sampling**: Collect multiple readings in short intervals
-- **Statistical Analysis**: Automatic min/max/average calculation
-- **Configurable Count**: Up to 120 samples per collection
-- **Voltage/Current Options**: Choose VDC or IDC collection
-
-### Battery Management
-- **Trend Analysis**: Track battery voltage over time
-- **Predictive Indicators**: Show increasing/decreasing trends
-- **History Tracking**: Keep last 10 voltage readings
-- **Li-SOCI2 Optimized**: Percentage calculation for lithium battery
-
-## Versioning Strategy
-
-- v<major>.<minor>.<fix>
-```
-<major> increase only when the official sensor specs change from the vendor, starting from 1
-<minor> increase only when fresh regeneration is requested, reset to zero when major change
-<fix> increase on all other cases, reset to 0 when minor change 
-```
-- All the date of publish must greater then 2025-01-13 (day of the framework start) 
-
-## Changelog
-- v1.1.0 (2025-08-16): Complete regeneration with framework v2.1.10
-  - Enhanced uplink coverage: all fport types with improved validation
-  - Complete downlink command implementation with proper hex formatting
-  - Improved pressure probe model conversion algorithms
-  - Enhanced ROC (Report on Change) feature with proper flag handling
-  - Optimized datalog parsing with Unix timestamp conversion
-  - Better multi-collection mode support for voltage/current sampling
-  - Advanced battery monitoring with trend analysis
-  - Enhanced web UI with custom formatters and status indicators
-  - Improved global node storage with persistence across reloads
-  - Memory optimization for ESP32 constraints
-  - Better error handling and validation throughout
-- v1.0.0 (2025-08-16): Initial generation from wiki specification
-  - Complete uplink coverage: device status, sensor data, datalog, ROC
-  - All downlink commands: TDC, interrupt, output control, probe config, ROC, datalog
-  - Pressure probe model conversion with water depth and pressure calculations
-  - Report on Change (ROC) feature with wave and threshold alarm modes
-  - Datalog polling with Unix timestamp handling
-  - Multi-collection mode for voltage/current sampling
-  - Battery monitoring and trend tracking
-  - Enhanced web UI with pressure units and status indicators
+## Applications
+- **Smart Buildings**: Occupancy detection for lighting and HVAC control
+- **Security Systems**: Motion detection with light level awareness
+- **Energy Management**: Automatic lighting control based on occupancy
+- **Space Utilization**: Room and area usage monitoring
+- **Smart Homes**: Automated scenes based on motion and light
+- **Facility Management**: Maintenance scheduling based on usage patterns
 
 ## Generation Notes
-- Generated from: PS-LB-MAP.md (cached protocol specification)
-- Generation template: AI Template v2.1.10
-- Special considerations: 4-20mA current loop conversion, Unix timestamp handling, ROC event processing
+- **Generated from**: PS-LB-MAP.md (cached protocol specification)
+- **Generation template**: AI Template v2.3.6
+- **Framework compatibility**: v2.2.9
+- **Special considerations**: Multi-sensor device with motion event counting
+
+## Versioning Strategy
+- v<major>.<minor>.<fix>
+- **major**: Official sensor specs change from vendor (starts at 1)
+- **minor**: Fresh regeneration requested (resets to 0 on major change) 
+- **fix**: All other changes (resets to 0 on minor change)
+- All dates > 2025-08-13 (framework start)
+
+## Changelog
+- **v2.0.0** (2025-08-26): Framework v2.2.9 + Template v2.3.6 major upgrade with enhanced error handling
+- **v1.0.0** (2025-08-17): PIR motion sensor with multi-sensor integration

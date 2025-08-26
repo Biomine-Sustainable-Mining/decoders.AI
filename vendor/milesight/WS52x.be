@@ -1,14 +1,14 @@
 #
 # LoRaWAN AI-Generated Decoder for Milesight WS52x Prompted by ZioFabry 
 #
-# Generated: 2025-08-26 | Version: 1.5.4 | Revision: 8
+# Generated: 2025-08-26 | Version: 1.5.5 | Revision: 9
 #            by "LoRaWAN Decoder AI Generation Template", v2.4.0
 #
 # Homepage:  https://www.milesight.com/iot/product/lorawan-sensor/ws52x
 # Userguide: https://www.milesight.com/iot/product/lorawan-sensor/ws52x
 # Decoder:   https://github.com/Milesight-IoT/SensorDecoders/blob/master/WS_Series/WS52x/WS52x.js
 #
-# v1.5.4 (2025-08-26): Fixed data persistence - merge new payloads with existing data
+# v1.5.5 (2025-08-26): Fixed slideshow data display and consistent slide count
 # v1.5.1 (2025-08-26): Added slide indicator in header for slideshow mode
 # v1.4.2 (2025-08-26): Fixed all ternary operators in f-strings and Berry syntax errors
 # v1.4.0 (2025-08-26): Regenerated with Framework v2.3.0, Slideshow support, enhanced error handling
@@ -764,23 +764,19 @@ class LwDecode_WS52x
             
             if data_to_show.contains('socket_state')
                 var state = data_to_show['socket_state']
-                var state_icon = state == "ON" ? "🟢" : "🔴"
-                slide1['content'].push({'type': 'status', 'label': 'Socket', 'value': state, 'icon': state_icon})
+                slide1['content'].push({'type': 'status', 'label': 'socket_state', 'value': state, 'icon': state == "ON" ? "🟢" : "🔴"})
             end
             
             if data_to_show.contains('voltage')
-                var voltage_str = f"{data_to_show['voltage']:.1f}V"
-                slide1['content'].push({'type': 'sensor', 'label': 'Voltage', 'value': voltage_str, 'icon': '⚡'})
+                slide1['content'].push({'type': 'sensor', 'label': 'voltage', 'value': data_to_show['voltage'], 'icon': '⚡'})
             end
             
             if data_to_show.contains('current')
-                var current_str = f"{data_to_show['current']}mA"
-                slide1['content'].push({'type': 'sensor', 'label': 'Current', 'value': current_str, 'icon': '🔌'})
+                slide1['content'].push({'type': 'sensor', 'label': 'current', 'value': data_to_show['current'], 'icon': '🔌'})
             end
             
             if data_to_show.contains('active_power')
-                var power_str = f"{data_to_show['active_power']}W"
-                slide1['content'].push({'type': 'sensor', 'label': 'Power', 'value': power_str, 'icon': '💡'})
+                slide1['content'].push({'type': 'sensor', 'label': 'active_power', 'value': data_to_show['active_power'], 'icon': '💡'})
             end
             
             if size(slide1['content']) > 0
@@ -789,47 +785,36 @@ class LwDecode_WS52x
         end
         
         # Slide 2: Energy & Efficiency
-        var slide2 = {
-            'title': 'Energy & Efficiency',
-            'content': []
-        }
-        
-        if data_to_show.contains('energy')
-            var energy = data_to_show['energy']
-            var energy_display = ""
-            if energy >= 1000000
-                var energy_val = energy / 1000000
-                energy_display = f"{energy_val:.1f}MWh"
-            elif energy >= 1000
-                var energy_val = energy / 1000
-                energy_display = f"{energy_val:.1f}kWh"
-            else
-                energy_display = f"{energy}Wh"
+        if data_to_show.contains('energy') || data_to_show.contains('power_factor')
+            var slide2 = {
+                'title': 'Energy & Efficiency', 
+                'content': []
+            }
+            
+            if data_to_show.contains('energy')
+                slide2['content'].push({'type': 'sensor', 'label': 'energy', 'value': data_to_show['energy'], 'icon': '🏠'})
             end
-            slide2['content'].push({'type': 'sensor', 'label': 'Energy', 'value': energy_display, 'icon': '🏠'})
-        end
-        
-        if data_to_show.contains('power_factor')
-            var pf_str = f"{data_to_show['power_factor']}%"
-            slide2['content'].push({'type': 'sensor', 'label': 'Power Factor', 'value': pf_str, 'icon': '📊'})
-        end
-        
-        # Add energy history trend if available
-        if self.node != nil
-            var node_data = global.WS52x_nodes.find(self.node, {})
-            if node_data != nil && node_data.contains('energy_history')
-                var history = node_data['energy_history']
-                if size(history) >= 2
-                    var trend = history[-1] - history[-2]
-                    var trend_icon = trend > 0 ? "📈" : trend < 0 ? "📉" : "➡️"
-                    var trend_str = f"{trend}Wh"
-                    slide2['content'].push({'type': 'trend', 'label': 'Energy Trend', 'value': trend_str, 'icon': trend_icon})
+            
+            if data_to_show.contains('power_factor')
+                slide2['content'].push({'type': 'sensor', 'label': 'power_factor', 'value': data_to_show['power_factor'], 'icon': '📊'})
+            end
+            
+            # Add energy trend if available
+            if self.node != nil
+                var node_data = global.WS52x_nodes.find(self.node, {})
+                if node_data != nil && node_data.contains('energy_history')
+                    var history = node_data['energy_history']
+                    if size(history) >= 2
+                        var trend = history[-1] - history[-2]
+                        var trend_icon = trend > 0 ? "📈" : trend < 0 ? "📉" : "➡️"
+                        slide2['content'].push({'type': 'trend', 'label': 'energy_trend', 'value': trend, 'icon': trend_icon})
+                    end
                 end
             end
-        end
-        
-        if size(slide2['content']) > 0
-            slides.push(slide2)
+            
+            if size(slide2['content']) > 0
+                slides.push(slide2)
+            end
         end
         
         # Slide 3: Device Status & Events
@@ -839,35 +824,31 @@ class LwDecode_WS52x
         }
         
         if data_to_show.contains('device_reset') && data_to_show['device_reset']
-            var reason = data_to_show.find('reset_reason', 'Unknown')
-            slide3['content'].push({'type': 'alert', 'label': 'Reset Event', 'value': reason, 'icon': '🔄'})
+            slide3['content'].push({'type': 'alert', 'label': 'device_reset', 'value': data_to_show.find('reset_reason', 'Unknown'), 'icon': '🔄'})
         end
         
         if data_to_show.contains('power_on_event') && data_to_show['power_on_event']
-            slide3['content'].push({'type': 'event', 'label': 'Power On', 'value': 'Detected', 'icon': '⚡'})
+            slide3['content'].push({'type': 'event', 'label': 'power_on_event', 'value': 'Detected', 'icon': '⚡'})
         end
         
         if data_to_show.contains('power_outage_event') && data_to_show['power_outage_event']
-            slide3['content'].push({'type': 'alert', 'label': 'Power Outage', 'value': 'Detected', 'icon': '🚨'})
+            slide3['content'].push({'type': 'alert', 'label': 'power_outage_event', 'value': 'Detected', 'icon': '🚨'})
         end
         
         if data_to_show.contains('button_locked') && data_to_show['button_locked']
-            slide3['content'].push({'type': 'status', 'label': 'Button Lock', 'value': 'Locked', 'icon': '🔒'})
+            slide3['content'].push({'type': 'status', 'label': 'button_locked', 'value': 'Locked', 'icon': '🔒'})
         end
         
         if data_to_show.contains('hw_version')
-            var hw_str = f"v{data_to_show['hw_version']}"
-            slide3['content'].push({'type': 'info', 'label': 'Hardware', 'value': hw_str, 'icon': '🔧'})
+            slide3['content'].push({'type': 'info', 'label': 'hw_version', 'value': data_to_show['hw_version'], 'icon': '🔧'})
         end
         
         if data_to_show.contains('sw_version')
-            var sw_str = f"v{data_to_show['sw_version']}"
-            slide3['content'].push({'type': 'info', 'label': 'Software', 'value': sw_str, 'icon': '💾'})
+            slide3['content'].push({'type': 'info', 'label': 'sw_version', 'value': data_to_show['sw_version'], 'icon': '💾'})
         end
         
-        if size(slide3['content']) > 0
-            slides.push(slide3)
-        end
+        # Always add this slide even if empty to maintain consistent slide count
+        slides.push(slide3)
         
         # Slide 4: Configuration & Settings
         var slide4 = {
@@ -876,41 +857,37 @@ class LwDecode_WS52x
         }
         
         if data_to_show.contains('interval_minutes')
-            var interval_str = f"{data_to_show['interval_minutes']}min"
-            slide4['content'].push({'type': 'config', 'label': 'Report Interval', 'value': interval_str, 'icon': '⏰'})
+            slide4['content'].push({'type': 'config', 'label': 'interval_minutes', 'value': data_to_show['interval_minutes'], 'icon': '⏰'})
         end
         
         if data_to_show.contains('oc_alarm_enabled')
             var oc_status = data_to_show['oc_alarm_enabled'] ? "Enabled" : "Disabled"
             if data_to_show.contains('oc_alarm_threshold')
-                var threshold_str = f"({data_to_show['oc_alarm_threshold']}A)"
-                oc_status += f" {threshold_str}"
+                oc_status += f" ({data_to_show['oc_alarm_threshold']}A)"
             end
-            slide4['content'].push({'type': 'config', 'label': 'OC Alarm', 'value': oc_status, 'icon': '⚠️'})
+            slide4['content'].push({'type': 'config', 'label': 'oc_alarm', 'value': oc_status, 'icon': '⚠️'})
         end
         
         if data_to_show.contains('oc_protection_enabled')
             var protect_status = data_to_show['oc_protection_enabled'] ? "Enabled" : "Disabled"
             if data_to_show.contains('oc_protection_threshold')
-                var threshold_str = f"({data_to_show['oc_protection_threshold']}A)"
-                protect_status += f" {threshold_str}"
+                protect_status += f" ({data_to_show['oc_protection_threshold']}A)"
             end
-            slide4['content'].push({'type': 'config', 'label': 'OC Protection', 'value': protect_status, 'icon': '🛡️'})
+            slide4['content'].push({'type': 'config', 'label': 'oc_protection', 'value': protect_status, 'icon': '🛡️'})
         end
         
         if data_to_show.contains('led_enabled')
             var led_status = data_to_show['led_enabled'] ? "On" : "Off"
-            slide4['content'].push({'type': 'config', 'label': 'LED Indicator', 'value': led_status, 'icon': '💡'})
+            slide4['content'].push({'type': 'config', 'label': 'led_enabled', 'value': led_status, 'icon': '💡'})
         end
         
         if data_to_show.contains('power_recording')
             var record_status = data_to_show['power_recording'] ? "Enabled" : "Disabled"
-            slide4['content'].push({'type': 'config', 'label': 'Power Recording', 'value': record_status, 'icon': '📊'})
+            slide4['content'].push({'type': 'config', 'label': 'power_recording', 'value': record_status, 'icon': '📊'})
         end
         
-        if size(slide4['content']) > 0
-            slides.push(slide4)
-        end
+        # Always add this slide to maintain consistent slide count
+        slides.push(slide4)
         
         return slides
     end

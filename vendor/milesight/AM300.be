@@ -1,7 +1,7 @@
 #
 # LoRaWAN AI-Generated Decoder for Milesight AM300 Prompted by ZioFabry 
 #
-# Generated: 2025-08-26 | Version: 1.2.1 | Revision: 3
+# Generated: 2025-08-26 | Version: 1.2.2 | Revision: 4
 #            by "LoRaWAN Decoder AI Generation Template", v2.3.6
 #
 # Homepage:  https://www.milesight-iot.com/lorawan/sensor/am300/
@@ -9,6 +9,10 @@
 # Decoder:   https://github.com/Milesight-IoT/SensorDecoders/tree/master/AM_Series
 # 
 # Changelog:
+# v1.2.2 (2025-08-26): Fixed moderate test scenario payload
+#   - Reconstructed proper moderate air quality test payload
+#   - Temperature 22.5°C, CO2 800ppm, TVOC 120, Pressure 1015.5hPa
+#   - All sensors now display correctly in moderate scenario
 # v1.2.1 (2025-08-26): Fixed light level channel type handling
 #   - Added support for light level channel type 0x10 (alternative format)
 #   - Updated MAP documentation to include both 0xcb and 0x10 formats
@@ -84,7 +88,7 @@ class LwDecode_AM300
                         
                     # TEMPERATURE  
                     elif channel_id == 0x03 && channel_type == 0x67
-                        var temp = ((payload[i+1] << 8) | payload[i])
+                        var temp = (payload[i+1] << 8) | payload[i]
                         if temp > 32767 temp = temp - 65536 end
                         data['temperature'] = temp / 10.0
                         i += 2
@@ -480,7 +484,7 @@ tasmota.add_cmd("LwAM300TestUI", def(cmd, idx, payload_str)
         # Realistic test payloads for different air quality conditions
         "normal":    "0175640367001804680A05020006CB040707D0190808D006000973A02803FE01",      # Normal air quality
         "good":      "01756403670096046807050200060CB020707D0E8030808D003000973A02803FF01",      # Good conditions  
-        "moderate":  "017550036700C80468280502010610050707D0700A0808D00F000973982F03FF01",      # Moderate air quality
+        "moderate":  "0175500367E100046850050201061005077D2003087DE02E0973AB27",      # Moderate air quality
         "poor":      "01754003670118046832050201061506707D0B40B0808D018000973753A03FF01",      # Poor conditions
         "occupied":  "01756003670082046816050201061004070870100808D005000973A02803FF01",      # Motion detected
         "alert":     "017535036700FA04683C050201061C070707D0D0070808D025000973703C03FF01",     # High pollution alert

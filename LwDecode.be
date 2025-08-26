@@ -1,4 +1,4 @@
-## Version: 2.4.0 | Framework: LwDecode | Platform: Tasmota Berry
+## Version: 2.4.2 | Framework: LwDecode | Platform: Tasmota Berry
 
 import mqtt
 import string
@@ -905,7 +905,9 @@ class LwDecode_cls : Driver
     
     # Collect slides from all decoders
     for decoder: self.lw_decoders
-      if decoder.find('build_slideshow_slides')
+      # Check if decoder has slideshow capability
+      var has_slideshow = self.get_decoder_property(decoder, 'build_slideshow_slides', nil)
+      if has_slideshow != nil
         try
           var decoder_slides = decoder.build_slideshow_slides()
           for slide : decoder_slides

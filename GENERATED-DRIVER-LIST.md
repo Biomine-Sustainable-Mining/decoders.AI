@@ -4,7 +4,7 @@
 This document maintains a comprehensive list of all AI-generated drivers for the LwDecode framework with version tracking and generation dates.
 
 ## Versioning Strategy
-- v<major>.<minor>.<fix>
+- v`<major>`.`<minor>`.`<fix>`
   - **major**: Increased only when official sensor specs change from vendor (starts at 1)
   - **minor**: Increased only when fresh regeneration is requested (resets to 0 on major change)
   - **fix**: Increased on all other cases (resets to 0 on minor change)

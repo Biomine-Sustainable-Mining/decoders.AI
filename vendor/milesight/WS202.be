@@ -1,13 +1,14 @@
 #
 # LoRaWAN AI-Generated Decoder for Milesight WS202 Prompted by ZioFabry
 #
-# Generated: 2025-08-20 | Version: 1.0.1 | Revision: 2
-#            by "LoRaWAN Decoder AI Generation Template", v2.2.9
+# Generated: 2025-08-26 | Version: 1.3.0 | Revision: 3
+#            by "LoRaWAN Decoder AI Generation Template", v2.3.6
 #
 # Homepage:  https://resource.milesight.com/milesight/iot/document/ws202-user-guide-en.pdf
 # Userguide: https://resource.milesight.com/milesight/iot/document/ws202-user-guide-en.pdf
 # Decoder:   https://resource.milesight.com/milesight/iot/document/ws202-user-guide-en.pdf
 # 
+# v1.3.0 (2025-08-26): Framework v2.2.9 + Template v2.3.6 upgrade - enhanced error handling
 # v1.0.1 (2025-08-20): Fixed hex payload spaces in TestUI scenarios
 # v1.0.0 (2025-08-20): Initial generation from PDF specification
 
@@ -189,110 +190,127 @@ class LwDecode_WS202
     end
     
     def add_web_sensor()
-        import global
-        
-        # Try to use current instance data first
-        var data_to_show = self.last_data
-        var last_update = self.last_update
-        
-        # If no instance data, try to recover from global storage
-        if size(data_to_show) == 0 && self.node != nil
-            var node_data = global.WS202_nodes.find(self.node, {})
-            data_to_show = node_data.find('last_data', {})
-            last_update = node_data.find('last_update', 0)
-        end
-        
-        if size(data_to_show) == 0 return "" end
-        
-        import string
-        var msg = ""
-        var fmt = LwSensorFormatter_cls()
-        
-        # MANDATORY: Add header line with device info
-        var name = self.name
-        if name == nil || name == ""
-            name = f"WS202-{self.node}"
-        end
-        var name_tooltip = "Milesight WS202"
-        var battery = data_to_show.find('battery_v', 1000)  # Use 1000 if no battery
-        var battery_last_seen = last_update
-        var rssi = data_to_show.find('RSSI', 1000)  # Use 1000 if no RSSI
-        var simulated = data_to_show.find('simulated', false) # Simulated payload indicator
-        
-        # Build display using emoji formatter
-        fmt.header(name, name_tooltip, battery, battery_last_seen, rssi, last_update, simulated)
-        fmt.start_line()
-        
-        # Main sensor line
-        if data_to_show.contains('occupancy')
-            var pir_icon = data_to_show['pir_status'] ? "🚶" : "🏠"
-            fmt.add_sensor("string", data_to_show['occupancy'], "PIR Motion Sensor", pir_icon)
-        end
-        
-        if data_to_show.contains('illuminance')
-            var light_icon = data_to_show['light_status'] ? "☀️" : "🌙"
-            fmt.add_sensor("string", data_to_show['illuminance'], "Light Sensor", light_icon)
-        end
-        
-        if data_to_show.contains('battery_pct')
-            fmt.add_sensor("string", f"{data_to_show['battery_pct']}%", "Battery Level", "🔋")
-        end
-        
-        # Device info line (if present)
-        var has_device_info = false
-        if data_to_show.contains('sw_version') || data_to_show.contains('hw_version') || data_to_show.contains('device_class')
-            fmt.next_line()
-            if data_to_show.contains('sw_version')
-                fmt.add_sensor("string", data_to_show['sw_version'], "Software Version", "💿")
-                has_device_info = true
+        try
+            import global
+            
+            # Try to use current instance data first
+            var data_to_show = self.last_data
+            var last_update = self.last_update
+            
+            # If no instance data, try to recover from global storage
+            if size(data_to_show) == 0 && self.node != nil
+                var node_data = global.WS202_nodes.find(self.node, {})
+                data_to_show = node_data.find('last_data', {})
+                last_update = node_data.find('last_update', 0)
             end
-            if data_to_show.contains('hw_version')
-                fmt.add_sensor("string", data_to_show['hw_version'], "Hardware Version", "🔧")
-                has_device_info = true
+            
+            # Fallback: find ANY stored node if no specific node
+            if size(data_to_show) == 0 && size(global.WS202_nodes) > 0
+                for node_id: global.WS202_nodes.keys()
+                    var node_data = global.WS202_nodes[node_id]
+                    data_to_show = node_data.find('last_data', {})
+                    self.node = node_id  # Update instance
+                    self.name = node_data.find('name', f"WS202-{node_id}")
+                    break  # Use first found
+                end
             end
-            if data_to_show.contains('device_class')
-                fmt.add_sensor("string", data_to_show['device_class'], "LoRaWAN Class", "📡")
-                has_device_info = true
+            
+            if size(data_to_show) == 0 return "" end
+            
+            import string
+            var msg = ""
+            var fmt = LwSensorFormatter_cls()
+            
+            # MANDATORY: Add header line with device info
+            var name = self.name
+            if name == nil || name == ""
+                name = f"WS202-{self.node}"
             end
-        end
-        
-        # Event line (if present)
-        var has_events = false
-        if data_to_show.contains('power_on_event') && data_to_show['power_on_event']
-            if !has_device_info
+            var name_tooltip = "Milesight WS202"
+            var battery = data_to_show.find('battery_v', 1000)  # Use 1000 if no battery
+            var battery_last_seen = last_update
+            var rssi = data_to_show.find('RSSI', 1000)  # Use 1000 if no RSSI
+            var simulated = data_to_show.find('simulated', false) # Simulated payload indicator
+            
+            # Build display using emoji formatter
+            fmt.header(name, name_tooltip, battery, battery_last_seen, rssi, last_update, simulated)
+            fmt.start_line()
+            
+            # Main sensor line
+            if data_to_show.contains('occupancy')
+                var pir_icon = data_to_show['pir_status'] ? "🚶" : "🏠"
+                fmt.add_sensor("string", data_to_show['occupancy'], "PIR Motion Sensor", pir_icon)
+            end
+            
+            if data_to_show.contains('illuminance')
+                var light_icon = data_to_show['light_status'] ? "☀️" : "🌙"
+                fmt.add_sensor("string", data_to_show['illuminance'], "Light Sensor", light_icon)
+            end
+            
+            if data_to_show.contains('battery_pct')
+                fmt.add_sensor("string", f"{data_to_show['battery_pct']}%", "Battery Level", "🔋")
+            end
+            
+            # Device info line (if present)
+            var has_device_info = false
+            if data_to_show.contains('sw_version') || data_to_show.contains('hw_version') || data_to_show.contains('device_class')
                 fmt.next_line()
-            else
-                fmt.next_line()
+                if data_to_show.contains('sw_version')
+                    fmt.add_sensor("string", data_to_show['sw_version'], "Software Version", "💿")
+                    has_device_info = true
+                end
+                if data_to_show.contains('hw_version')
+                    fmt.add_sensor("string", data_to_show['hw_version'], "Hardware Version", "🔧")
+                    has_device_info = true
+                end
+                if data_to_show.contains('device_class')
+                    fmt.add_sensor("string", data_to_show['device_class'], "LoRaWAN Class", "📡")
+                    has_device_info = true
+                end
             end
-            fmt.add_sensor("string", "Power On", "Device Event", "⚡")
-            has_events = true
-        end
-        
-        if data_to_show.contains('device_reset') && data_to_show['device_reset']
-            if !has_events && !has_device_info
-                fmt.next_line()
+            
+            # Event line (if present)
+            var has_events = false
+            if data_to_show.contains('power_on_event') && data_to_show['power_on_event']
+                if !has_device_info
+                    fmt.next_line()
+                else
+                    fmt.next_line()
+                end
+                fmt.add_sensor("string", "Power On", "Device Event", "⚡")
+                has_events = true
             end
-            fmt.add_sensor("string", "Reset", "Device Event", "🔄")
-            has_events = true
-        end
-        
-        # Add last seen info if data is old
-        if last_update > 0
-            var age = tasmota.rtc()['local'] - last_update
-            if age > 3600  # Data older than 1 hour
+            
+            if data_to_show.contains('device_reset') && data_to_show['device_reset']
                 if !has_events && !has_device_info
                     fmt.next_line()
                 end
-                fmt.add_status(self.format_age(age), "⏱️", nil)
+                fmt.add_sensor("string", "Reset", "Device Event", "🔄")
+                has_events = true
             end
-        end
-        
-        fmt.end_line()
-        
-        # ONLY get_msg() return a string that can be used with +=
-        msg += fmt.get_msg()
+            
+            # Add last seen info if data is old
+            if last_update > 0
+                var age = tasmota.rtc()['local'] - last_update
+                if age > 3600  # Data older than 1 hour
+                    if !has_events && !has_device_info
+                        fmt.next_line()
+                    end
+                    fmt.add_status(self.format_age(age), "⏱️", nil)
+                end
+            end
+            
+            fmt.end_line()
+            
+            # ONLY get_msg() return a string that can be used with +=
+            msg += fmt.get_msg()
 
-        return msg
+            return msg
+            
+        except .. as e, m
+            print(f"WS202: Display error - {e}: {m}")
+            return "📟 WS202 Error - Check Console"
+        end
     end
     
     def format_age(seconds)

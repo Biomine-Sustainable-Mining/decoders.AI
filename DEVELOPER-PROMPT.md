@@ -1,5 +1,5 @@
 # LoRaWAN Decoder AI Generation Template
-## Version: 2.3.6 | Framework: LwDecode | Platform: Tasmota Berry
+## Version: 2.4.0 | Framework: LwDecode v2.3.0 | Platform: Tasmota Berry
 
 ---
 

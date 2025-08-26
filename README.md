@@ -100,7 +100,19 @@ Claude will automatically create:
 4. **Generation Report** at `vendor/[manufacturer]/[MODEL]-REPORT.md`
 5. **Generation Request** at `vendor/[manufacturer]/[MODEL]-REQ.md`
 
-## 🔧 Framework v2.2.9 Features
+## 🔧 Framework v2.3.0 Features
+
+### Multi-UI Style System
+- **4 Display Styles**: Minimal, compact, detailed, technical
+- **Dynamic Switching**: Console commands for style changes
+- **Label Control**: Show/hide descriptive labels per style
+- **Memory Efficient**: <1KB overhead per style
+
+### Timed Slideshow Framework  
+- **5 Slide Types**: Primary data, secondary, events, technical, trends
+- **Synchronized Timing**: Cross-driver coordination
+- **Priority-Based**: Smart slide generation based on available data
+- **Configurable Duration**: 1-30 second slides
 
 ### Enhanced Error Handling
 - **Stack Traces**: Full call stack on errors for debugging
@@ -339,8 +351,8 @@ A: Use LwDecode.get_performance_stats() for detailed timing analysis.
 ## 📊 Project Statistics
 
 ### Current Framework Status
-- **Framework Version**: v2.2.9 (Latest stable)
-- **Template Version**: v2.3.6 (Latest with REQ file generation)
+- **Framework Version**: v2.3.0 (Latest with Multi-UI & Slideshow)
+- **Template Version**: v2.4.0 (Latest with slideshow generation)
 - **Total Files**: 85 (16 framework + 69 driver files)
 - **Total Drivers**: 17 production-ready drivers
 - **Total Vendors**: 5 supported manufacturers
@@ -368,9 +380,9 @@ All 17 drivers now have complete documentation sets:
 ## 📚 Documentation Resources
 
 ### Core Documentation
-- **[DEVELOPER-PROMPT.md](DEVELOPER-PROMPT.md)** - Complete AI generation template (v2.3.6)
-- **[FRAMEWORK.md](FRAMEWORK.md)** - Implementation details and API reference (v2.3.0)
-- **[LwDecode.be](LwDecode.be)** - Core framework with error handling (v2.2.9)
+- **[DEVELOPER-PROMPT.md](DEVELOPER-PROMPT.md)** - Complete AI generation template (v2.4.0)
+- **[FRAMEWORK.md](FRAMEWORK.md)** - Implementation details and API reference (v2.4.0)
+- **[LwDecode.be](LwDecode.be)** - Core framework with Multi-UI & slideshow (v2.3.0)
 - **[BERRY-CUSTOM-LANGUAGE-REFERENCE.md](BERRY-CUSTOM-LANGUAGE-REFERENCE.md)** - Berry syntax constraints (v1.2.0)
 - **[GENERATED-DRIVER-LIST.md](GENERATED-DRIVER-LIST.md)** - AI-maintained driver catalog
 - **[emoji-reference.md](emoji-reference.md)** - Emoji standardization guide (v1.08)
@@ -438,9 +450,9 @@ AI-generated code is considered derivative work of input specifications.
 
 ---
 
-*Framework Version: 2.2.9 | Template Version: 2.3.6 | Complete Documentation Coverage*
+*Framework Version: 2.3.0 | Template Version: 2.4.0 | Multi-UI & Slideshow Support*
 
-*Last Updated: 2025-08-26 | Status: Production Ready with 17 Drivers (85 Total Files)*
+*Last Updated: 2025-08-26 | Status: Production Ready with 17 Drivers + Multi-UI Framework*
 
 ---
 

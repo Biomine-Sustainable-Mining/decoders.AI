@@ -1,16 +1,67 @@
-# AI Powered LwDecode Framework for LoRaWAN Device Decoders v2.3.0
+## New Multi-UI Style System (v2.3.0)
+
+### UI Style Configuration
+```bash
+LwUIStyle minimal          # Icons and values only
+LwUIStyle compact          # Current default behavior
+LwUIStyle detailed         # With descriptive labels
+LwUIStyle technical        # Full technical information
+```
+
+### Slideshow Framework
+```bash
+LwSlideshow on             # Enable slideshow mode
+LwSlideshow off            # Disable slideshow (default)
+LwSlideDuration 3000       # 3 second slides (1000-30000ms)
+```
+
+### Style Implementation in Drivers
+```berry
+# Enhanced add_web_sensor() with slideshow support
+def add_web_sensor()
+    # Check if slideshow is enabled
+    if LwSlideshowManager.slideshow_enabled
+        return self.build_slideshow_display()
+    else
+        return self.build_standard_display()  # Current behavior
+    end
+end
+
+def build_slideshow_display()
+    var slideshow = LwSlideBuilder(self.last_data)
+    
+    # Add slides based on available data
+    slideshow.add_slide(1, def() return self.build_primary_slide() end, 
+                       def() return true end)  # Always show primary
+    slideshow.add_slide(2, def() return self.build_events_slide() end,
+                       def() return self.has_recent_events() end)
+    slideshow.add_slide(3, def() return self.build_technical_slide() end,
+                       def() return self.has_technical_info() end)
+    
+    var slides = slideshow.build_slideshow()
+    var current_idx = LwSlideshowManager.get_current_slide_index()
+    var active_slide = slides.find(current_idx % size(slides), slides[0])
+    
+    return active_slide
+end
+```
+
+# AI Powered LwDecode Framework for LoRaWAN Device Decoders v2.4.0
 
 ## Overview
 
-LwDecode is a AI Powered Berry framework for Tasmota ESP32 that provides a standardized interface for decoding LoRaWAN sensor payloads. It integrates with Tasmota's LoRaWAN bridge functionality to decode device uplinks, display sensor data in the web UI, and manage downlink commands.
+LwDecode is an AI Powered Berry framework for Tasmota ESP32 providing standardized LoRaWAN sensor payload decoding with **Multi-UI Style System** and **Timed Slideshow Framework** capabilities.
 
-**Enhanced Error Handling**: v2.2.8 introduces comprehensive error handling with stack traces, retry mechanisms, and detailed logging for improved debugging and reliability.
+**Framework v2.3.0**: Multi-UI styles (minimal, compact, detailed, technical) with synchronized slideshow support and enhanced error handling.
 
 ## Architecture
 
 ### Core Components
 
-1. **LwDecode.be** (v2.2.8) - Main framework providing:
+1. **LwDecode.be** (v2.3.0) - Main framework providing:
+   - **Multi-UI Style System**: 4 display styles with dynamic switching
+   - **Slideshow Framework**: Synchronized multi-slide presentations
+   - **Style Commands**: LwUIStyle, LwSlideshow, LwSlideDuration
    - Payload decoding infrastructure
    - Web UI integration with caching
    - MQTT message publishing

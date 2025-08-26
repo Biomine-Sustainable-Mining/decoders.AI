@@ -32,8 +32,10 @@ This document maintains the definitive list of emojis used across all LwDecode d
 | **🏠** | U+1F3E0 | House | Energy (Wh/kWh) | [WS523](vendor/milesight/WS523.md), [WS52x](vendor/milesight/WS52x.md) | ✅ Standard | Energy consumption |
 | **🌬️** | U+1F32C | Wind Face | CO2 (ppm) | [AM300](vendor/milesight/AM300.md) | ✅ Standard | Carbon dioxide concentration |
 | **🏭** | U+1F3ED | Factory | TVOC (ppb) | [AM300](vendor/milesight/AM300.md) | ✅ Standard | Total volatile organic compounds |
-| **🌫️** | U+1F32B | Fog | PM2.5 (μg/m³) | [AM300](vendor/milesight/AM300.md) | ✅ Standard | Fine particulate matter |
-| **💨** | U+1F4A8 | Dashing Away | PM10 (μg/m³) | [AM300](vendor/milesight/AM300.md) | ✅ Standard | Coarse particulate matter |
+| **🌫️** | U+1F32B | Fog | PM10 (μg/m³) | [AM300](vendor/milesight/AM300.md), [AM308L](vendor/milesight/AM308L.md) | ✅ Standard | Coarse particulate matter |
+| **💨** | U+1F4A8 | Dashing Away | CO2 (ppm) / TVOC | [AM300](vendor/milesight/AM300.md), [AM308L](vendor/milesight/AM308L.md) | ✅ Standard | Carbon dioxide, volatile compounds |
+| **🫧** | U+1FAE7 | Bubbles | PM2.5 (μg/m³) | [AM308L](vendor/milesight/AM308L.md) | ✅ New | Fine particulate matter |
+| **🌿** | U+1F33F | Herb | TVOC (IAQ) | [AM308L](vendor/milesight/AM308L.md) | ✅ New | TVOC in IAQ units |
 | **🧪** | U+1F9EA | Test Tube | HCHO (mg/m³) | [AM300](vendor/milesight/AM300.md) | ✅ Standard | Formaldehyde concentration |
 | **⚗️** | U+2697 | Alembic | O3 (ppm) | [AM300](vendor/milesight/AM300.md) | ✅ Standard | Ozone concentration |
 | **🔊** | U+1F50A | Speaker High Volume | Frequency/Audio/Buzzer | [AM300](vendor/milesight/AM300.md), [BOB-ASSISTANT](vendor/watteco/BOB-ASSISTANT.md) | ✅ Standard | Buzzer on/audio alert, peak frequency |
@@ -63,8 +65,9 @@ This document maintains the definitive list of emojis used across all LwDecode d
 - **[SE01-LB](vendor/dragino/SE01-LB.md)**: 8 emojis (soil moisture & EC sensor)
 - **[SN50v3-LB](vendor/dragino/SN50v3-LB.md)**: 10 emojis (generic 12-mode sensor node)
 
-### **Milesight (6 drivers)**
+### **Milesight (7 drivers)**
 - **[AM300](vendor/milesight/AM300.md)**: 16 emojis (9-in-1 air quality monitor)
+- **[AM308L](vendor/milesight/AM308L.md)**: 11 emojis (environmental monitoring sensor)
 - **[WS101](vendor/milesight/WS101.md)**: 4 emojis (smart button)
 - **[WS202](vendor/milesight/WS202.md)**: 4 emojis (PIR & light sensor)
 - **[WS301](vendor/milesight/WS301.md)**: 8 emojis (magnetic door/window sensor)
@@ -81,11 +84,11 @@ This document maintains the definitive list of emojis used across all LwDecode d
 - **[BOB-ASSISTANT](vendor/watteco/BOB-ASSISTANT.md)**: 8 emojis (vibration sensor with ML)
 
 ### **Framework Statistics**
-- **Total unique emojis**: 42
+- **Total unique emojis**: 44
 - **Universal coverage**: 100% (⏱️ and 🔋 in all drivers)
 - **Temperature consistency**: 100% (🌡️ in all temp sensors)
 - **Framework integration**: 100% (all use LwSensorFormatter_cls)
-- **Complete documentation**: 17/17 drivers with full emoji coverage
+- **Complete documentation**: 18/18 drivers with full emoji coverage
 
 ---
 

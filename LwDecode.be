@@ -19,16 +19,16 @@ class LwDisplayManager
     }
     
     static def set_ui_style(style)
-        if self.style_config.contains(style)
-            self.current_style = style
+        if LwDisplayManager.style_config.contains(style)
+            LwDisplayManager.current_style = style
             return true
         end
         return false
     end
     
     static def get_style_config(style_override)
-        var style = style_override ? style_override : self.current_style
-        return self.style_config.find(style, self.style_config["compact"])
+        var style = style_override ? style_override : LwDisplayManager.current_style
+        return LwDisplayManager.style_config.find(style, LwDisplayManager.style_config["compact"])
     end
 end
 
@@ -40,28 +40,28 @@ class LwSlideshowManager
     static var slideshow_enabled = false
     
     static def get_current_slide_index()
-        if !self.slideshow_enabled return 0 end
+        if !LwSlideshowManager.slideshow_enabled return 0 end
         
         var current_time = tasmota.millis()
-        if self.slide_cycle_start == 0
-            self.slide_cycle_start = current_time
+        if LwSlideshowManager.slide_cycle_start == 0
+            LwSlideshowManager.slide_cycle_start = current_time
         end
         
-        var elapsed = current_time - self.slide_cycle_start
+        var elapsed = current_time - LwSlideshowManager.slide_cycle_start
         var slides_per_cycle = 5
-        return int(elapsed / self.slide_duration) % slides_per_cycle
+        return int(elapsed / LwSlideshowManager.slide_duration) % slides_per_cycle
     end
     
     static def set_slideshow(enabled)
-        self.slideshow_enabled = enabled
+        LwSlideshowManager.slideshow_enabled = enabled
         if enabled
-            self.slide_cycle_start = tasmota.millis()
+            LwSlideshowManager.slide_cycle_start = tasmota.millis()
         end
     end
     
     static def set_slide_duration(duration)
         if duration >= 1000 && duration <= 30000
-            self.slide_duration = duration
+            LwSlideshowManager.slide_duration = duration
             return true
         end
         return false

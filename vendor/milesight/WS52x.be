@@ -1,14 +1,14 @@
 #
 # LoRaWAN AI-Generated Decoder for Milesight WS52x Prompted by ZioFabry 
 #
-# Generated: 2025-08-26 | Version: 1.5.3 | Revision: 7
+# Generated: 2025-08-26 | Version: 1.5.4 | Revision: 8
 #            by "LoRaWAN Decoder AI Generation Template", v2.4.0
 #
 # Homepage:  https://www.milesight.com/iot/product/lorawan-sensor/ws52x
 # Userguide: https://www.milesight.com/iot/product/lorawan-sensor/ws52x
 # Decoder:   https://github.com/Milesight-IoT/SensorDecoders/blob/master/WS_Series/WS52x/WS52x.js
 #
-# v1.5.3 (2025-08-26): Fixed slideshow empty slides for config-only payloads
+# v1.5.4 (2025-08-26): Fixed data persistence - merge new payloads with existing data
 # v1.5.1 (2025-08-26): Added slide indicator in header for slideshow mode
 # v1.4.2 (2025-08-26): Fixed all ternary operators in f-strings and Berry syntax errors
 # v1.4.0 (2025-08-26): Regenerated with Framework v2.3.0, Slideshow support, enhanced error handling
@@ -313,7 +313,16 @@ class LwDecode_WS52x
                 end
             end
             
-            # Update node history in global storage
+            # Update node history in global storage - MERGE with existing data
+            var existing_data = node_data.find('last_data', {})
+            
+            # Merge new data with existing data (preserve old values)
+            for key: existing_data.keys()
+                if !data.contains(key)
+                    data[key] = existing_data[key]
+                end
+            end
+            
             node_data['last_data'] = data
             node_data['last_update'] = tasmota.rtc()['local']
             node_data['name'] = name

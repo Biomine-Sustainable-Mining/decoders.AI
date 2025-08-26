@@ -1,13 +1,14 @@
 #
 # LoRaWAN AI-Generated Decoder for Dragino LHT65 Prompted by ZioFabry
 #
-# Generated: 2025-08-20 | Version: 1.0.0 | Revision: 1
-#            by "LoRaWAN Decoder AI Generation Template", v2.3.0
+# Generated: 2025-08-26 | Version: 1.1.0 | Revision: 2
+#            by "LoRaWAN Decoder AI Generation Template", v2.3.6
 #
 # Homepage:  https://www.dragino.com/products/lora-lorawan-end-node/item/151-lht65.html
 # Userguide: https://www.dragino.com/downloads/downloads/LHT65/UserManual/LHT65_Temperature_Humidity_Sensor_UserManual_v1.8.5.pdf
 # Decoder:   https://github.com/dragino/dragino-end-node-decoder/tree/main/LHT65
 # 
+# v1.1.0 (2025-08-26): Framework v2.2.9 + Template v2.3.6 upgrade - enhanced error handling
 # v1.0.0 (2025-08-20): Initial generation from cached MAP specification
 
 class LwDecode_LHT65
@@ -46,8 +47,8 @@ class LwDecode_LHT65
         try
             self.name = name
             self.node = node
-            data['rssi'] = rssi
-            data['fport'] = fport
+            data['RSSI'] = rssi
+            data['FPort'] = fport
             
             var node_data = global.LHT65_nodes.find(node, {})
             
@@ -177,96 +178,113 @@ class LwDecode_LHT65
     end
     
     def add_web_sensor()
-        import global
-        
-        var data_to_show = self.last_data
-        var last_update = self.last_update
-        
-        if size(data_to_show) == 0 && self.node != nil
-            var node_data = global.LHT65_nodes.find(self.node, {})
-            data_to_show = node_data.find('last_data', {})
-            last_update = node_data.find('last_update', 0)
-        end
-        
-        if size(data_to_show) == 0 return nil end
-        
-        import string
-        var msg = ""
-        var fmt = LwSensorFormatter_cls()
-        
-        var name = self.name
-        if name == nil || name == ""
-            name = f"LHT65-{self.node}"
-        end
-        var name_tooltip = "Dragino LHT65"
-        var battery = data_to_show.find('battery_v', 1000)
-        var battery_last_seen = last_update
-        var rssi = data_to_show.find('rssi', 1000)
-        var simulated = data_to_show.find('simulated', false)
-        
-        fmt.header(name, name_tooltip, battery, battery_last_seen, rssi, last_update, simulated)
-        fmt.start_line()
-        
-        # Main sensor line
-        if data_to_show.contains('temperature')
-            fmt.add_sensor("string", f"{data_to_show['temperature']:.1f}°C", "Temperature", "🌡️")
-        end
-        
-        if data_to_show.contains('humidity')
-            fmt.add_sensor("string", f"{data_to_show['humidity']:.1f}%", "Humidity", "💧")
-        end
-        
-        # External sensor data
-        if data_to_show.contains('ext_temperature')
-            fmt.add_sensor("string", f"{data_to_show['ext_temperature']:.1f}°C", "External Temp", "🔗")
-        elif data_to_show.contains('illuminance')
-            fmt.add_sensor("string", f"{data_to_show['illuminance']}lx", "Light", "☀️")
-        elif data_to_show.contains('adc_voltage')
-            fmt.add_sensor("string", f"{data_to_show['adc_voltage']}mV", "ADC", "📏")
-        elif data_to_show.contains('event_count')
-            fmt.add_sensor("string", f"{data_to_show['event_count']}", "Count", "🔢")
-        end
-        
-        # External sensor status line
-        if data_to_show.contains('ext_name') && data_to_show['ext_name'] != "None"
-            fmt.next_line()
-            fmt.add_sensor("string", data_to_show['ext_name'], "External Sensor", "🔗")
+        try
+            import global
             
-            if data_to_show.contains('cable_connected')
-                var cable_icon = data_to_show['cable_connected'] ? "🔌" : "❌"
-                var cable_text = data_to_show['cable_connected'] ? "Connected" : "Disconnected"
-                fmt.add_sensor("string", cable_text, "Cable", cable_icon)
+            var data_to_show = self.last_data
+            var last_update = self.last_update
+            
+            if size(data_to_show) == 0 && self.node != nil
+                var node_data = global.LHT65_nodes.find(self.node, {})
+                data_to_show = node_data.find('last_data', {})
+                last_update = node_data.find('last_update', 0)
             end
             
-            if data_to_show.contains('interrupt_triggered') && data_to_show['interrupt_triggered']
-                fmt.add_sensor("string", "Triggered", "Interrupt", "⚡")
+            # Fallback: find ANY stored node if no specific node
+            if size(data_to_show) == 0 && size(global.LHT65_nodes) > 0
+                for node_id: global.LHT65_nodes.keys()
+                    var node_data = global.LHT65_nodes[node_id]
+                    data_to_show = node_data.find('last_data', {})
+                    self.node = node_id
+                    self.name = node_data.find('name', f"LHT65-{node_id}")
+                    break
+                end
             end
             
-            if data_to_show.contains('ext_disconnected') && data_to_show['ext_disconnected']
-                fmt.add_sensor("string", "No Sensor", "Status", "❌")
+            if size(data_to_show) == 0 return nil end
+            
+            import string
+            var msg = ""
+            var fmt = LwSensorFormatter_cls()
+            
+            var name = self.name
+            if name == nil || name == ""
+                name = f"LHT65-{self.node}"
             end
-        end
-        
-        # Battery status line
-        if data_to_show.contains('battery_level')
-            if !data_to_show.contains('ext_name') || data_to_show['ext_name'] == "None"
+            var name_tooltip = "Dragino LHT65"
+            var battery = data_to_show.find('battery_v', 1000)
+            var battery_last_seen = last_update
+            var rssi = data_to_show.find('RSSI', 1000)
+            var simulated = data_to_show.find('simulated', false)
+            
+            fmt.header(name, name_tooltip, battery, battery_last_seen, rssi, last_update, simulated)
+            fmt.start_line()
+            
+            # Main sensor line
+            if data_to_show.contains('temperature')
+                fmt.add_sensor("string", f"{data_to_show['temperature']:.1f}°C", "Temperature", "🌡️")
+            end
+            
+            if data_to_show.contains('humidity')
+                fmt.add_sensor("string", f"{data_to_show['humidity']:.1f}%", "Humidity", "💧")
+            end
+            
+            # External sensor data
+            if data_to_show.contains('ext_temperature')
+                fmt.add_sensor("string", f"{data_to_show['ext_temperature']:.1f}°C", "External Temp", "🔗")
+            elif data_to_show.contains('illuminance')
+                fmt.add_sensor("string", f"{data_to_show['illuminance']}lx", "Light", "☀️")
+            elif data_to_show.contains('adc_voltage')
+                fmt.add_sensor("string", f"{data_to_show['adc_voltage']}mV", "ADC", "📏")
+            elif data_to_show.contains('event_count')
+                fmt.add_sensor("string", f"{data_to_show['event_count']}", "Count", "🔢")
+            end
+            
+            # External sensor status line
+            if data_to_show.contains('ext_name') && data_to_show['ext_name'] != "None"
                 fmt.next_line()
+                fmt.add_sensor("string", data_to_show['ext_name'], "External Sensor", "🔗")
+                
+                if data_to_show.contains('cable_connected')
+                    var cable_icon = data_to_show['cable_connected'] ? "🔌" : "❌"
+                    var cable_text = data_to_show['cable_connected'] ? "Connected" : "Disconnected"
+                    fmt.add_sensor("string", cable_text, "Cable", cable_icon)
+                end
+                
+                if data_to_show.contains('interrupt_triggered') && data_to_show['interrupt_triggered']
+                    fmt.add_sensor("string", "Triggered", "Interrupt", "⚡")
+                end
+                
+                if data_to_show.contains('ext_disconnected') && data_to_show['ext_disconnected']
+                    fmt.add_sensor("string", "No Sensor", "Status", "❌")
+                end
             end
-            fmt.add_sensor("string", data_to_show['battery_level'], "Battery", "🔋")
-        end
-        
-        # Add last seen info if data is old
-        if last_update > 0
-            var age = tasmota.rtc()['local'] - last_update
-            if age > 3600
-                fmt.next_line()
-                fmt.add_status(self.format_age(age), "⏱️", nil)
+            
+            # Battery status line
+            if data_to_show.contains('battery_level')
+                if !data_to_show.contains('ext_name') || data_to_show['ext_name'] == "None"
+                    fmt.next_line()
+                end
+                fmt.add_sensor("string", data_to_show['battery_level'], "Battery", "🔋")
             end
+            
+            # Add last seen info if data is old
+            if last_update > 0
+                var age = tasmota.rtc()['local'] - last_update
+                if age > 3600
+                    fmt.next_line()
+                    fmt.add_status(self.format_age(age), "⏱️", nil)
+                end
+            end
+            
+            fmt.end_line()
+            msg += fmt.get_msg()
+            return msg
+            
+        except .. as e, m
+            print(f"LHT65: Display error - {e}: {m}")
+            return "📟 LHT65 Error - Check Console"
         end
-        
-        fmt.end_line()
-        msg += fmt.get_msg()
-        return msg
     end
     
     def format_age(seconds)

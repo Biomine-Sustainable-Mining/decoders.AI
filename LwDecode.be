@@ -1,4 +1,4 @@
-## Version: 2.6.2 | Framework: LwDecode | Platform: Tasmota Berry
+## Version: 2.6.3 | Framework: LwDecode | Platform: Tasmota Berry
 
 import mqtt
 import string
@@ -976,10 +976,9 @@ class LwDecode_cls : Driver
       var label = item.find('label', '')
       var value = item.find('value', '')
       
-      # Ensure we have valid strings
+      # Ensure we have valid data and map to driver's expected keys
       if label != nil && label != '' && value != nil
-        var key = string.tolower(string.replace(str(label), ' ', '_'))
-        sensor_data[key] = str(value)
+        sensor_data[label] = value
       end
     end
     

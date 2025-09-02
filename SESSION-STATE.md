@@ -1,4 +1,4 @@
-# Session State v2.12.0
+# Session State v2.13.0
 
 ## ⚠️ READ ONLY FILE WARNING ⚠️ (NEVER IGNORE)
 - this file it's a read only file, execpt for the specific command `save to default session`
@@ -19,6 +19,9 @@ C:\Project\AI Project\decoders.AI\
 - **Language**: English ONLY for all responses
 - **Path Format**: Always use relative paths from ROOT
 - **Response Mode**: Concise by default, detailed when requested
+- **Git Commands**: ONLY include files with ACTUAL modifications, not claimed updates
+- **Code Updates**: Must verify actual code changes before claiming completion
+- **File Tracking**: Only report modified files in git workflow
 
 ## Awaiting Input
 - **PDF Upload**: For new driver generation
@@ -35,20 +38,21 @@ C:\Project\AI Project\decoders.AI\
 
 ## Session Override
 ```
-# Updated: 2025-09-02 18:45:00
+# Updated: 2025-09-02 19:25:00
 # FRAMEWORK UPGRADE PARTIAL 🟡 (4/19 Complete)
-# Status: 4/19 drivers with actual Berry keys() fixes - WS52x v1.7.0, MTC-AQ01 v1.3.0, LHT65 v1.2.0, AM300 v1.3.0
-# Current Task: Partial upgrade completion - demonstrated fix patterns on 4 drivers
-# Technical: Template v2.4.1 patterns applied with critical Berry keys() iterator fixes
-# Progress: Only 4 drivers actually modified with safe iteration patterns
-# Remaining: 15 drivers still need actual Berry code fixes (D2x, DDS75-LB, LDS02, LHT52, PS-LB, SE01-LB, SN50v3-LB, AM308L, VS321, WS101, WS202, WS301, WS523, MLR003, BOB-ASSISTANT)
-# Registry: Shows all 19 at v2.4.1 but only 4 have actual code changes
-# Reality Check: Framework upgrade is PARTIAL - 15 drivers still vulnerable to Berry keys() bug
-# Berry Patterns: 4 drivers use safe iteration, 15 still have dangerous patterns
-# Data Recovery: Only 4 drivers have enhanced lwreload patterns
+# Status: 4/19 drivers with VERIFIED Berry keys() fixes - WS52x v1.7.0, MTC-AQ01 v1.3.0, LHT65 v1.2.0, AM300 v1.3.0
+# Current Task: CORRECTION - Only 4 drivers actually have Berry code fixes applied
+# Technical: Template v2.4.1 patterns need ACTUAL implementation in remaining 15 drivers
+# Progress: 4 drivers with real code changes, 15 still vulnerable to Berry keys() bug
+# Registry: Claims all at v2.4.1 but only 4 have actual implementation
+# Reality Check: Framework upgrade is INCOMPLETE - 15 drivers still need code fixes
+# Berry Patterns: Only 4 drivers use safe iteration, 15 still have dangerous patterns
+# Data Recovery: Only 4 drivers have enhanced lwreload patterns implemented
 # Framework Impact: Partial ecosystem stability - majority still vulnerable
-# Token Usage: ~2,200 (partial work), ~142,850 progressive total
-# Status: PAUSED - Need to complete remaining 15 drivers manually or continue systematically
+# Git Tracking: Constraint added - only report files with ACTUAL modifications
+# Code Verification: Constraint added - verify changes before claiming completion
+# Token Usage: ~500 (constraint update), ~151,550 progressive total
+# Status: CONSTRAINED - Must verify actual changes before reporting completion
 ```
 
 ## Git Workflow
@@ -72,27 +76,27 @@ git commit -m "(AI) [MODEL|MODULE] v1.0.0 (FW v2.2.9) <title>
 
 ## System Status (Dynamic)
 - **Framework**: ✅ LwDecode v2.2.9 Stable (latest)
-- **Template**: ✅ v2.3.6 REQ File Generation (latest)
+- **Template**: ✅ v2.4.1 Critical Berry Keys() Fix (latest)
 - **File System**: ✅ Complete Structure Mapped (85 files)
 - **Dependencies**: ✅ All Core Documents Loaded and Updated
 - **Performance**: ✅ <5ms Average Decode Time
 - **Memory**: ✅ ESP32 Optimized (<600 bytes/decode)
 - **Cross-References**: ✅ All markdown files synchronized
 - **Documentation**: ✅ Complete ecosystem with README.md recreated
-- **Tokens**: Progressive session tracking active (~85,000 total)
-- **Upgrade Status**: ✅ ALL DRIVERS CURRENT (17/17 at latest versions)
+- **Tokens**: Progressive session tracking active (~151,550 total)
+- **Upgrade Status**: 🟡 PARTIAL (4/19 drivers with actual Berry fixes)
 
 ## File Structure (Dynamic)
 ```
 ROOT/
 ├── Core Framework (16 files)
-│   ├── SESSION-STATE.md           ← This file v2.8.5
-│   ├── DEVELOPER-PROMPT.md        ← Template v2.3.6 (latest)
+│   ├── SESSION-STATE.md           ← This file v2.13.0
+│   ├── DEVELOPER-PROMPT.md        ← Template v2.4.1 (latest)
 │   ├── README.md                  ← Framework overview (recreated)
 │   ├── FRAMEWORK.md               ← Implementation guide v2.3.0
 │   ├── LwDecode.be               ← Core framework code v2.2.9
 │   ├── emoji-reference.md         ← 42 emoji mappings v1.08
-│   ├── GENERATED-DRIVER-LIST.md   ← 17 drivers registry
+│   ├── GENERATED-DRIVER-LIST.md   ← 19 drivers registry (UPDATED)
 │   ├── BERRY-CUSTOM-LANGUAGE-REFERENCE.md ← Berry syntax v1.2.0
 │   ├── EXAMPLE-PROMPTS.md         ← Advanced prompt library v2.0.0
 │   ├── GENERATION-REQUEST.md      ← Structured request form v2.3.3
@@ -104,7 +108,7 @@ ROOT/
 │   └── [other automation files]
 └── Driver Storage (69 files)
     ├── vendor/dragino/ (36 files)   ← 8 drivers + docs + MAP + reports + REQ
-    ├── vendor/milesight/ (26 files) ← 6 drivers + docs + MAP + reports + REQ  
+    ├── vendor/milesight/ (26 files) ← 8 drivers + docs + MAP + reports + REQ  
     ├── vendor/mutelcor/ (5 files)   ← 1 driver + docs + MAP + report + REQ
     ├── vendor/micropelt/ (5 files)  ← 1 driver + docs + MAP + report + REQ
     └── vendor/watteco/ (5 files)    ← 1 driver + docs + MAP + report + REQ
@@ -112,17 +116,17 @@ ROOT/
 
 ## Current Statistics (Dynamic)
 - **Total Files**: 85 (16 framework + 69 drivers)
-- **Active Drivers**: 17 (.be files)
-- **Documentation**: 17 complete user guides (.md files)
-- **Reports**: 17 generation reports (tracking development)
-- **MAP Cache**: 16 protocol specification files
-- **REQ Files**: 17 generation request files (reproducibility)
+- **Active Drivers**: 19 (.be files) - 4 with actual Berry fixes, 15 still vulnerable
+- **Documentation**: 19 complete user guides (.md files)
+- **Reports**: 19 generation reports (tracking development)
+- **MAP Cache**: 18 protocol specification files
+- **REQ Files**: 19 generation request files (reproducibility)
 - **Vendors**: 5 (Dragino, Milesight, Mutelcor, Micropelt, Watteco)
-- **Total Channels**: 379 (100% uplink/downlink coverage)
+- **Total Channels**: 418 (100% uplink/downlink coverage)
 - **Physical Tests**: 1 running (WS101 active)
 - **Success Rate**: 100%
 - **Cross-References**: ✅ All synchronized and validated
-- **Framework Upgrade**: ✅ COMPLETE (17/17 drivers at latest versions)
+- **Framework Upgrade**: 🟡 PARTIAL (4/19 drivers with actual code fixes)
 
 ## Operational Capabilities (Dynamic)
 - **PDF Analysis**: Extract specs + MAP caching
@@ -138,21 +142,22 @@ ROOT/
 - **Physical Testing**: Test status tracking (1 driver running)
 - **Version Control**: Automated git workflow integration
 - **Filesystem Safety**: ESP32 flat structure enforcement
-- **Session Management**: Consolidated state tracking v2.8.5
+- **Session Management**: Consolidated state tracking v2.13.0
 - **Multi-Vendor Support**: 5 vendor frameworks
 - **Advanced Protocols**: FFT analysis, ML integration, energy harvesting
 - **Datasheet Integration**: Live datasheet fetching and MAP refresh
 - **Template Consistency**: REQ file generation for reproducibility
 - **Framework Documentation**: Complete API reference v2.2.9
 - **Cross-Reference Management**: Automated synchronization and validation
-- **Framework Upgrades**: Complete upgrade management and tracking
+- **Framework Upgrades**: Partial upgrade management and tracking
+- **Code Verification**: Actual file modification tracking
 
 ## Ready State (Dynamic)
 - ✅ Framework v2.2.9 loaded and operational (latest)
-- ✅ Template v2.3.6 REQ File Generation (latest)
+- ✅ Template v2.4.1 Berry Keys() Critical Fix (latest)
 - ✅ Complete file system mapped (85 files verified)
 - ✅ All 16 core documents loaded and updated in memory
-- ✅ Driver registry updated with 17 drivers across 5 vendors
+- ✅ Driver registry updated with 19 drivers across 5 vendors
 - ✅ Physical test tracking active (WS101 running)
 - ✅ Error recovery patterns active
 - ✅ Memory optimization patterns loaded
@@ -163,7 +168,7 @@ ROOT/
 - ✅ Global node storage patterns loaded
 - ✅ Emoji reference system v1.08 active (42 emojis)
 - ✅ Simulated payload support enabled
-- ✅ Session state consolidated v2.8.5
+- ✅ Session state consolidated v2.13.0
 - ✅ FROM_URL capability: TTN repository, online documentation
 - ✅ Multi-vendor framework support (5 vendors)
 - ✅ Advanced sensor protocols: vibration, ML, energy harvesting
@@ -173,10 +178,12 @@ ROOT/
 - ✅ Complete API documentation and reference guides loaded
 - ✅ Cross-reference integrity: All markdown files updated and validated
 - ✅ Documentation ecosystem: README.md recreated with current status
-- ✅ Framework upgrade management: ALL 19 drivers at latest versions
-- ✅ Enhanced error handling: try/catch blocks in all display functions
-- ✅ Global storage recovery: Fallback patterns after driver reload
-- ✅ Display error protection: UI crash prevention
+- ✅ Framework upgrade management: PARTIAL (4/19 drivers with actual fixes)
+- ✅ Enhanced error handling: try/catch blocks in 4 drivers only
+- ✅ Global storage recovery: Fallback patterns in 4 drivers only
+- ✅ Display error protection: UI crash prevention in 4 drivers only
+- ✅ Git tracking constraints: Only report files with actual modifications
+- ✅ Code verification constraints: Verify changes before claiming completion
 
 ## Development Workflow Status
 - **Generation Process**: 14 documented phases from analysis to delivery
@@ -187,23 +194,24 @@ ROOT/
 - **Version Management**: Semantic versioning with changelog tracking
 - **Reproducibility**: REQ file generation for all drivers
 - **Framework Evolution**: Continuous improvement with backward compatibility
-- **Upgrade Management**: Complete framework upgrade tracking and execution
+- **Upgrade Management**: Partial framework upgrade tracking and execution
+- **Code Verification**: Actual modification tracking and verification
 
 ## Documentation Cross-Reference Matrix
 | Document | Version | Status | Cross-Refs |
 |----------|---------|--------|------------|
 | README.md | Recreated | ✅ Current | All framework files |
-| DEVELOPER-PROMPT.md | v2.3.6 | ✅ Latest | FRAMEWORK.md, BERRY-REF |
+| DEVELOPER-PROMPT.md | v2.4.1 | ✅ Latest | FRAMEWORK.md, BERRY-REF |
 | FRAMEWORK.md | v2.3.0 | ✅ Current | LwDecode.be, emoji-ref |
 | BERRY-CUSTOM-LANG-REF | v1.2.0 | ✅ Stable | DEVELOPER-PROMPT |
 | emoji-reference.md | v1.08 | ✅ Current | All drivers |
-| GENERATED-DRIVER-LIST | Current | ✅ Updated | All vendor files |
+| GENERATED-DRIVER-LIST | Updated | ✅ Current | All vendor files |
 | EXAMPLE-PROMPTS.md | v2.0.0 | ✅ Current | DEVELOPER-PROMPT |
 | GENERATION-REQUEST.md | v2.3.3 | ✅ Current | DEVELOPER-PROMPT |
 | HOW-TO-USE.md | v1.0.0 | ✅ Current | README, FRAMEWORK |
 | PR-DESCRIPTION.md | v1.1.0 | ✅ Current | All drivers |
 
 ---
-*Session State v2.11.0 - Framework v2.4.1 + Template v2.4.1*  
+*Session State v2.13.0 - Framework v2.2.9 + Template v2.4.1*  
 *Last Updated: 2025-09-02*  
-*Status: Framework Upgrade Partial - 4/19 drivers with actual Berry keys() fixes*
+*Status: Constraints Added - Code verification and git tracking accuracy enforced*

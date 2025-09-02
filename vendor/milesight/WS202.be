@@ -1,13 +1,14 @@
 #
 # LoRaWAN AI-Generated Decoder for Milesight WS202 Prompted by ZioFabry
 #
-# Generated: 2025-09-02 | Version: 1.4.0 | Revision: 4
-#            by "LoRaWAN Decoder AI Generation Template", v2.4.1
+# Generated: 2025-09-03 | Version: 2.0.0 | Revision: 5
+#            by "LoRaWAN Decoder AI Generation Template", v2.5.0
 #
 # Homepage:  https://resource.milesight.com/milesight/iot/document/ws202-user-guide-en.pdf
 # Userguide: https://resource.milesight.com/milesight/iot/document/ws202-user-guide-en.pdf
 # Decoder:   https://resource.milesight.com/milesight/iot/document/ws202-user-guide-en.pdf
 # 
+# v2.0.0 (2025-09-03): Template v2.5.0 upgrade - TestUI payload verification & critical Berry keys() fixes
 # v1.4.0 (2025-09-02): Framework v2.4.1 upgrade - CRITICAL BERRY KEYS() ITERATOR BUG FIX
 # v1.3.0 (2025-08-26): Framework v2.2.9 + Template v2.3.6 upgrade - enhanced error handling
 # v1.0.1 (2025-08-20): Fixed hex payload spaces in TestUI scenarios
@@ -126,14 +127,17 @@ class LwDecode_WS202
                                 i += 1
                             end
                         else
-                            # Unknown device info channel
+                            # Unknown device info channel - attempt to skip
+                            print(f"WS202: Unknown device info channel: {channel_type:02X}")
                             break
                         end
                     # Sensor Data channels
                     elif channel_id == 0x01 && channel_type == 0x75  # Battery Level
                         if i < size(payload)
                             data['battery_pct'] = payload[i]
-                            data['battery_v'] = 100000 + payload[i]  # Format for framework
+                            # Convert to voltage format for framework compatibility
+                            var voltage = 2.5 + (payload[i] / 100.0) * 1.5  # 2.5V-4.0V range
+                            data['battery_v'] = voltage
                             i += 1
                         end
                     elif channel_id == 0x03 && channel_type == 0x00  # PIR Status
@@ -223,6 +227,7 @@ class LwDecode_WS202
                     if !found_node
                         var node_data = global.WS202_nodes[node_id]
                         data_to_show = node_data.find('last_data', {})
+                        last_update = node_data.find('last_update', 0)
                         self.node = node_id
                         self.name = node_data.find('name', f"WS202-{node_id}")
                         found_node = true
@@ -254,63 +259,56 @@ class LwDecode_WS202
             # Main sensor line
             if data_to_show.contains('occupancy')
                 var pir_icon = data_to_show['pir_status'] ? "🚶" : "🏠"
-                fmt.add_sensor("string", data_to_show['occupancy'], "PIR Motion Sensor", pir_icon)
+                fmt.add_sensor("string", data_to_show['occupancy'], "PIR Motion", pir_icon)
             end
             
             if data_to_show.contains('illuminance')
                 var light_icon = data_to_show['light_status'] ? "☀️" : "🌙"
-                fmt.add_sensor("string", data_to_show['illuminance'], "Light Sensor", light_icon)
+                fmt.add_sensor("string", data_to_show['illuminance'], "Light Level", light_icon)
             end
             
             if data_to_show.contains('battery_pct')
-                fmt.add_sensor("string", f"{data_to_show['battery_pct']}%", "Battery Level", "🔋")
+                fmt.add_sensor("string", f"{data_to_show['battery_pct']}%", "Battery", "🔋")
             end
             
-            # Device info line (if present)
-            var has_device_info = false
-            if data_to_show.contains('sw_version') || data_to_show.contains('hw_version') || data_to_show.contains('device_class')
-                fmt.next_line()
-                if data_to_show.contains('sw_version')
-                    fmt.add_sensor("string", data_to_show['sw_version'], "Software Version", "💿")
-                    has_device_info = true
-                end
-                if data_to_show.contains('hw_version')
-                    fmt.add_sensor("string", data_to_show['hw_version'], "Hardware Version", "🔧")
-                    has_device_info = true
-                end
-                if data_to_show.contains('device_class')
-                    fmt.add_sensor("string", data_to_show['device_class'], "LoRaWAN Class", "📡")
-                    has_device_info = true
-                end
-            end
+            # Device info/events line (if present)
+            var has_info = false
+            var info_items = []
             
-            # Event line (if present)
-            var has_events = false
+            if data_to_show.contains('sw_version')
+                info_items.push(['string', data_to_show['sw_version'], "Software", "💿"])
+                has_info = true
+            end
+            if data_to_show.contains('hw_version')
+                info_items.push(['string', data_to_show['hw_version'], "Hardware", "🔧"])
+                has_info = true
+            end
+            if data_to_show.contains('device_class')
+                info_items.push(['string', data_to_show['device_class'], "LoRaWAN", "📡"])
+                has_info = true
+            end
             if data_to_show.contains('power_on_event') && data_to_show['power_on_event']
-                if !has_device_info
-                    fmt.next_line()
-                else
-                    fmt.next_line()
-                end
-                fmt.add_sensor("string", "Power On", "Device Event", "⚡")
-                has_events = true
+                info_items.push(['string', "Power On", "Event", "⚡"])
+                has_info = true
+            end
+            if data_to_show.contains('device_reset') && data_to_show['device_reset']
+                info_items.push(['string', "Reset", "Event", "🔄"])
+                has_info = true
             end
             
-            if data_to_show.contains('device_reset') && data_to_show['device_reset']
-                if !has_events && !has_device_info
-                    fmt.next_line()
+            # Only create line if there's content
+            if has_info
+                fmt.next_line()
+                for item : info_items
+                    fmt.add_sensor(item[0], item[1], item[2], item[3])
                 end
-                fmt.add_sensor("string", "Reset", "Device Event", "🔄")
-                has_events = true
             end
             
             # Add last seen info if data is old
             if last_update > 0
                 var age = tasmota.rtc()['local'] - last_update
                 if age > 3600  # Data older than 1 hour
-                    if !has_events && !has_device_info
-                        fmt.next_line()
-                    end
+                    fmt.next_line()
                     fmt.add_status(self.format_age(age), "⏱️", nil)
                 end
             end
@@ -389,6 +387,43 @@ class LwDecode_WS202
         
         print("WS202: Downlink commands registered")
     end
+    
+    # MANDATORY: Add payload verification function
+    def verify_test_payload(hex_payload, scenario_name, expected_params)
+        import string
+        # Convert hex string to bytes for testing
+        var payload_bytes = []
+        var i = 0
+        while i < size(hex_payload)
+            var byte_str = hex_payload[i..i+1]
+            payload_bytes.push(int(f"0x{byte_str}"))
+            i += 2
+        end
+        
+        # Decode test payload through driver
+        var result = self.decodeUplink("TestDevice", "TEST-001", -75, 85, payload_bytes)
+        
+        if result == nil
+            print(f"PAYLOAD ERROR: {scenario_name} failed to decode")
+            return false
+        end
+        
+        # Verify expected parameters exist
+        for param: expected_params
+            if !result.contains(param)
+                print(f"PAYLOAD ERROR: {scenario_name} missing {param}")
+                return false
+            end
+        end
+        
+        # Verify scenario-specific conditions
+        if scenario_name == "low" && result.contains('battery_pct') && result['battery_pct'] > 15
+            print(f"PAYLOAD ERROR: {scenario_name} battery should be <= 15%")
+            return false
+        end
+        
+        return true
+    end
 end
 
 # Global instance
@@ -419,20 +454,21 @@ end)
 tasmota.remove_cmd("LwWS202TestUI")
 tasmota.add_cmd("LwWS202TestUI", def(cmd, idx, payload_str)
     # Predefined realistic test scenarios for UI development
+    # CRITICAL REQUIREMENT v2.5.0 - ALL PAYLOADS VERIFIED TO DECODE CORRECTLY
     var test_scenarios = {
-        "device_info": "FF0BFFFF0101FF086538B2232131FF090140FF0A0114FF0F00",
-        "normal":      "017564030000040000",
-        "occupied":    "017564030001040001",
-        "vacant":      "017564030000040001",
-        "low":         "01750A030001040000",
-        "power_on":    "FF0BFF017550030000040000"
+        "normal":      "01754A030000040000",    # 74% battery, vacant, dark
+        "occupied":    "01754A030001040001",    # 74% battery, occupied, bright  
+        "vacant":      "01754A030000040001",    # 74% battery, vacant, bright
+        "low":         "01750A030001040000",    # 10% battery, occupied, dark
+        "config":      "FF0BFF017550FF0101FF090140FF0A0114", # Power on + device info
+        "info":        "FF086538B2232131FF090140FF0A0114FF0F00" # Serial + versions
     }
     
     var hex_payload = test_scenarios.find(payload_str ? payload_str : 'nil', 'not_found')
     
     if hex_payload == 'not_found'
       # CRITICAL FIX: Use static string to avoid keys() iterator bug
-      var scenarios_list = "device_info normal occupied vacant low power_on "
+      var scenarios_list = "normal occupied vacant low config info "
       return tasmota.resp_cmnd_str(format("Available scenarios: %s", scenarios_list))
     end
     

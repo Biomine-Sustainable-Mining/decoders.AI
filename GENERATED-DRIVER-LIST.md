@@ -20,7 +20,7 @@ This document maintains a comprehensive list of all AI-generated drivers for the
 | [LDS02](vendor/dragino/LDS02.md) | [2.0.0](vendor/dragino/LDS02.be) | 2025-09-03 | 8/8 | LDS02 | [v2.5.0](vendor/dragino/LDS02-REPORT.md) | [Magnetic door sensor with event counting](vendor/dragino/LDS02-REQ.md) |
 | [LHT52](vendor/dragino/LHT52.md) | [2.0.0](vendor/dragino/LHT52.be) | 2025-09-03 | 16/16 | LHT52 | [v2.5.0](vendor/dragino/LHT52-REPORT.md) | [Temperature & humidity sensor with datalog & alarm features](vendor/dragino/LHT52-REQ.md) |
 | [LHT65](vendor/dragino/LHT65.md) | [2.0.0](vendor/dragino/LHT65.be) | 2025-09-03 | 18/18 | LHT65 | [v2.5.0](vendor/dragino/LHT65-REPORT.md) | [Temperature & humidity sensor with 9 external sensor types](vendor/dragino/LHT65-REQ.md) |
-| [PS-LB](vendor/dragino/PS-LB.md) | [2.1.0](vendor/dragino/PS-LB.be) | 2025-09-02 | 13/13 | PS-LB/LS | [v2.4.1](vendor/dragino/PS-LB-REPORT.md) | [Pressure/water level sensor with probe detection](vendor/dragino/PS-LB-REQ.md) |
+| [PS-LB](vendor/dragino/PS-LB.md) | [3.0.0](vendor/dragino/PS-LB.be) | 2025-09-03 | 13/13 | PS-LB/LS | [v2.5.0](vendor/dragino/PS-LB-REPORT.md) | [Pressure/water level sensor with probe detection](vendor/dragino/PS-LB-REQ.md) |
 | [SE01-LB](vendor/dragino/SE01-LB.md) | [1.2.0](vendor/dragino/SE01-LB.be) | 2025-09-02 | 28/28 | SE01-LB/LS | [v2.4.1](vendor/dragino/SE01-LB-REPORT.md) | [Soil moisture & EC sensor with multi-mode support](vendor/dragino/SE01-LB-REQ.md) |
 | [SN50v3-LB](vendor/dragino/SN50v3-LB.md) | [1.3.0](vendor/dragino/SN50v3-LB.be) | 2025-09-02 | 36/36 | SN50v3-LB/LS | [v2.5.0](vendor/dragino/SN50v3-LB-REPORT.md) | [Generic LoRaWAN sensor node with 12 working modes](vendor/dragino/SN50v3-LB-REQ.md) |
 

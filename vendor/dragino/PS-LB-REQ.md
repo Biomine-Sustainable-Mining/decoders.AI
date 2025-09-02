@@ -1,5 +1,5 @@
 # Dragino PS-LB Generation Request
-## Version: 2.3.6 | Framework: LwDecode v2.2.9 | Platform: Tasmota Berry
+## Version: 2.5.0 | Framework: LwDecode v2.2.9 | Platform: Tasmota Berry
 
 ---
 
@@ -9,11 +9,11 @@
 
 ```yaml
 # Dragino PS-LB Driver Generation Request
-## Version: 2.3.6 | Framework: LwDecode v2.2.9 | Platform: Tasmota Berry
+## Version: 2.5.0 | Framework: LwDecode v2.2.9 | Platform: Tasmota Berry
 
 ### Request Type
 - [x] REGENERATE - Fresh generation from existing MAP file
-- [x] UPGRADE - Framework v2.2.9 + Template v2.3.6
+- [x] FULL - Complete driver with all features
 
 ### Device Information
 vendor: "Dragino"
@@ -91,96 +91,96 @@ custom_test_scenarios:
     expected_params: ["pressure_mpa", "idc_current_ma", "vdc_voltage", "battery_v"]
   - name: "roc_event"
     description: "Report on Change event triggered"
-    expected_params: ["roc_events", "roc_mode", "idc_current_ma", "battery_v"]
+    expected_params: ["roc_events", "idc_current_ma", "battery_v"]
   - name: "multi_data"
     description: "Multi-collection mode with multiple readings"
     expected_params: ["voltage_values", "avg_voltage", "data_count", "multi_mode"]
   - name: "status"
     description: "Device status information (FPort=5)"
     expected_params: ["sensor_model", "fw_version", "frequency_band", "battery_v"]
-  - name: "datalog"
-    description: "Datalog entries with timestamps"
-    expected_params: ["datalog_entries", "entry_count", "datalog_mode"]
   - name: "low_battery"
     description: "Low battery warning condition"
     expected_params: ["water_depth_m", "battery_v"]
 
 ### Additional Notes
-Current Implementation Features (v2.0.0):
+Current Implementation Features (v3.0.0):
 ```
 CRITICAL: Maintain these exact features in regeneration:
 
 1. **Critical Berry Patterns (MANDATORY)**:
    - Global storage patterns: PSLB_nodes for multi-device support
-   - Error handling with try/catch blocks in display functions
-   - Display error protection prevents UI crashes
-   - Global storage recovery after driver reload
-   - RSSI/FPort uppercase parameter compatibility
+   - Enhanced lwreload recovery with found_node flag pattern
+   - Display error protection with try/catch wrapper
+   - Template v2.5.0 payload verification system
+   - Static scenario list to avoid keys() iterator bug
 
 2. **Enhanced UI Display**:
    - Multi-line format for comprehensive sensor data
-   - Probe type detection and display
-   - Water depth and pressure calculations from 4-20mA
-   - ROC (Report on Change) event indication
-   - Multi-collection mode with statistics
-   - Digital input status display
+   - Probe type detection and display with 4-20mA calculations
+   - Water depth and pressure calculations with unit conversions
+   - ROC (Report on Change) event indication with flag decoding
+   - Multi-collection mode with statistics and averaging
+   - Device status display with frequency band mapping
 
 3. **Robust Error Handling**:
-   - Probe model validation and type detection
-   - 4-20mA and 0-30V input range validation
+   - Probe model validation and type detection (aa/bb bytes)
+   - 4-20mA and 0-30V input range validation with calculations
    - Try/catch blocks in all display functions
    - Fallback data recovery from global storage
+   - Enhanced display error protection
 
 4. **Global Storage Patterns**:
-   - Multi-node support with persistent storage
-   - Battery history tracking (last 10 readings)
-   - Water depth and pressure trend tracking
-   - ROC event counting and timestamp tracking
-   - Node statistics and management commands
+   - Multi-node support with persistent PSLB_nodes storage
+   - Battery history tracking (last 10 readings with trend analysis)
+   - Water depth and pressure trend tracking for analytics
+   - ROC event counting and timestamp tracking for alerts
+   - Node statistics and management commands for maintenance
 
 5. **All Downlink Commands Working**:
-   - LwPSLBInterval: Set transmit interval (30-16777215 seconds)
+   - LwPSLBInterval: Set transmit interval (30-16777215 seconds) with validation
    - LwPSLBInterrupt: Configure interrupt modes (disable/falling/rising/both)
    - LwPSLBOutput: Control output voltages (3V3/5V/12V with duration)
-   - LwPSLBProbe: Set probe model configuration
+   - LwPSLBProbe: Set probe model configuration (16-bit config)
    - LwPSLBROC: Configure Report on Change mode and thresholds
-   - LwPSLBStatus: Request device status
+   - LwPSLBStatus: Request device status (firmware, band info)
    - LwPSLBMultiCollection: Set multi-collection mode parameters
-   - LwPSLBPoll: Poll datalog with timestamp range
+   - LwPSLBPoll: Poll datalog with timestamp range queries
    - LwPSLBClearFlash: Clear flash record storage
 
 6. **Framework Compatibility**:
-   - Framework v2.2.9: RSSI/FPort uppercase, simulated parameter
-   - Template v2.3.6: Enhanced error handling patterns
-   - Probe detection system with type identification
+   - Framework v2.2.9: RSSI/FPort uppercase, simulated parameter support
+   - Template v2.5.0: Verified TestUI payload decoding system
+   - Probe detection system with type identification and calculations
    - Multi-mode operation (sensor/ROC/multi-collection/datalog)
-   - Current loop and voltage input processing
+   - Current loop and voltage input processing with unit conversions
+   - Enhanced payload verification with decode-back testing
 ```
 
 ### Request Summary
-Request ID: PSLB-REQ-2025-08-26
-Submitted: 2025-08-26 15:02:00
-Version Target: v2.0.0
+Request ID: PSLB-REQ-2025-09-03
+Submitted: 2025-09-03 14:15:00
+Version Target: v3.0.0
 Expected Deliverables:
 - [x] Driver file: vendor/dragino/PS-LB.be
 - [x] Documentation: vendor/dragino/PS-LB.md
 - [x] Generation report: vendor/dragino/PS-LB-REPORT.md
 
-*Form Version: 2.3.6 | Compatible with Template Version: 2.3.6*
-*Generated: 2025-08-26 15:02:00 | Framework: LwDecode v2.2.9*
+*Form Version: 2.5.0 | Compatible with Template Version: 2.5.0*
+*Generated: 2025-09-03 14:15:00 | Framework: LwDecode v2.2.9*
 ```
 
 ## 🎯 OBJECTIVE
-Template upgrade from v2.3.3 to v2.3.6 for PS-LB driver maintaining all existing functionality while adding enhanced error handling patterns and framework compatibility updates.
+Template upgrade from v2.4.1 to v2.5.0 for PS-LB driver maintaining all existing functionality while adding verified TestUI payload decoding system and enhanced error recovery patterns.
 
 ---
 
 ### Upgrade Changes Applied
-- **Framework v2.2.9**: RSSI/FPort uppercase parameter compatibility and simulated parameter support
-- **Template v2.3.6**: Enhanced try/catch error handling in display functions
-- **Global Storage Recovery**: Fallback patterns for data recovery after driver reload
-- **Display Error Protection**: Error handling prevents UI crashes from display issues
+- **Framework v2.2.9**: Maintained RSSI/FPort uppercase parameter compatibility
+- **Template v2.5.0**: Added verified TestUI payload decoding with decode-back validation
+- **Enhanced Recovery**: Improved lwreload recovery with found_node flag pattern
+- **Payload Verification**: All TestUI scenarios now validate through actual decoding
+- **Static Scenarios**: Fixed Berry keys() iterator bug with static scenario list
 
 ---
-*PS-LB Generation Request v2.0.0 - Framework v2.2.9 + Template v2.3.6*
-*Generated: 2025-08-26 | Status: Template Upgrade Complete*
+*PS-LB Generation Request v3.0.0 - Framework v2.2.9 + Template v2.5.0*
+*Generated: 2025-09-03 | Status: Template v2.5.0 Complete*

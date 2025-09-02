@@ -1,5 +1,5 @@
-# Milesight WS101 Driver Generation Request
-## Version: 2.3.6 | Framework: LwDecode v2.2.9 | Platform: Tasmota Berry
+# Milesight WS101 Generation Request
+## Version: 2.5.0 | Framework: LwDecode v2.2.9 | Platform: Tasmota Berry
 
 ---
 
@@ -9,25 +9,25 @@
 
 ```yaml
 # Milesight WS101 Driver Generation Request
-## Version: 2.3.6 | Framework: LwDecode v2.2.9 | Platform: Tasmota Berry
+## Version: 2.5.0 | Framework: LwDecode v2.2.9 | Platform: Tasmota Berry
 
 ### Request Type
-- [x] REGENERATE - Fresh generation from existing specification
-- [x] MAJOR_UPGRADE - Complete upgrade from v2.1.8 to v2.3.6
+- [x] REGENERATE - Fresh generation from existing MAP file
+- [x] FULL - Complete driver with all features
 
 ### Device Information
 vendor: "Milesight"
 model: "WS101"
 type: "Smart Button"
-description: "LoRaWAN smart button with multiple press types and battery monitoring"
+description: "LoRaWAN smart button with multiple press types, battery monitoring, and configurable LED/buzzer feedback"
 
 ### Official References
 homepage: "https://www.milesight.com/iot/product/lorawan-sensor/ws101"
-userguide: "WS101_LoRaWAN_Smart_Button_UserGuide"
+userguide: "WS101 Datasheet"
 decoder_reference: "Official Milesight Decoder"
 firmware_version: "latest"
 lorawan_version: "1.0.3"
-regions: [EU868, US915, AU915, AS923, KR920, IN865, RU864, CN470]
+regions: ["EU868", "US915", "AU915", "AS923", "KR920", "IN865", "RU864", "CN470"]
 
 ### Feature Selection
 include_features:
@@ -35,202 +35,136 @@ include_features:
   downlink_commands: true
   test_ui_scenarios: true
   node_management: true
-  battery_tracking: true          # Battery-powered device
-  reset_detection: false          # No reset events in spec
+  battery_tracking: true
+  reset_detection: true
   configuration_sync: true
   error_recovery: true
   performance_optimization: true
-  press_detection: true           # Core feature
-  press_statistics: true          # Advanced feature
-  device_info_tracking: true      # Hardware/software versions
 
 ### UI Customization
 display_preferences:
-  single_line_preferred: false    # Multi-line for device info
-  multi_line_for_alerts: true
+  single_line_preferred: true
+  multi_line_for_alerts: false
   custom_emojis: 
     short_press: "👆"
     long_press: "👇"
-    double_press: "✌️"
-    low_battery: "🪫"
+    double_press: "👆👆"
+    button: "🔘"
     power_on: "⚡"
-    device_info: "📟"
-  hide_technical_info: false     # Show hardware/software versions
-  emphasize_alerts: true
-  battery_prominance: "prominent" # Battery-powered device
+  hide_technical_info: false
+  emphasize_alerts: false
+  battery_prominance: "normal"
   rssi_display: "icon"
 
 ### Custom Requirements
 special_requirements:
-  signed_value_handling: []       # No signed values
-  unit_conversions: ["battery_percentage_to_header"] # Special battery formatting
-  threshold_monitoring: []        # No threshold monitoring
-  custom_validation_rules: 
-    - "reporting_interval: 60-64800 seconds"
-    - "button_mode: 1-3 (short/long/double)"
+  signed_value_handling: []
+  unit_conversions: []
+  threshold_monitoring: []
+  custom_validation_rules:
+    - "Button event types (0x01=Short, 0x02=Long, 0x03=Double)"
+    - "Milesight channel+type format parsing"
+    - "Battery level percentage tracking"
+    - "Press history and counters by type"
 
 ### Test Configuration
 custom_test_scenarios:
   - name: "short_press"
-    description: "Short button press with 80% battery level"
-    expected_params: ["button_event", "button_mode", "battery_pct"]
+    description: "Short button press event"
+    expected_params: ["button_mode", "button_event"]
   - name: "long_press"
-    description: "Long button press with 64% battery level"
-    expected_params: ["button_event", "button_mode", "battery_pct"]
+    description: "Long button press event"
+    expected_params: ["button_mode", "button_event"]
   - name: "double_press"
-    description: "Double button press with full battery (255%)"
-    expected_params: ["button_event", "button_mode", "battery_pct"]
+    description: "Double button press event"
+    expected_params: ["button_mode", "button_event"]
+  - name: "battery"
+    description: "Battery level report"
+    expected_params: ["battery"]
   - name: "low_battery"
-    description: "Short press with 20% battery (low battery warning)"
-    expected_params: ["button_event", "battery_pct"]
+    description: "Low battery condition"
+    expected_params: ["battery"]
   - name: "power_on"
-    description: "Power-on event with 80% battery"
-    expected_params: ["power_on_event", "battery_pct"]
+    description: "Power on event"
+    expected_params: ["power_on"]
   - name: "device_info"
-    description: "Complete device information response"
-    expected_params: ["protocol_version", "hw_version", "sw_version", "device_class"]
-  - name: "serial"
-    description: "Device serial number response"
-    expected_params: ["serial_number"]
+    description: "Device version information"
+    expected_params: ["sw_version", "hw_version"]
   - name: "full_info"
-    description: "Combined button press and device information"
-    expected_params: ["button_event", "battery_pct", "protocol_version", "hw_version"]
+    description: "Complete device information"
+    expected_params: ["button_mode", "battery", "sw_version", "power_on"]
 
 ### Additional Notes
-Current Implementation Features (v2.0.0):
+Current Implementation Features (v3.0.0):
 ```
 CRITICAL: Maintain these exact features in regeneration:
 
 1. **Critical Berry Patterns (MANDATORY)**:
-   - Framework v2.2.9 compatibility (RSSI/FPort uppercase, simulated parameter)
-   - Global node storage with persistent data (global.WS101_nodes)
-   - Try/catch error handling with display protection
-   - Nil safety in all comparisons and operations
-   - Keys() method safety (size() on map directly)
-   - Data recovery after lwreload with fallback patterns
+   - Global storage patterns: WS101_nodes for multi-device support
+   - Enhanced lwreload recovery with found_node flag pattern
+   - Display error protection with try/catch wrapper
+   - Template v2.5.0 payload verification system
+   - Static scenario list to avoid keys() iterator bug
 
-2. **Enhanced Button Event Display**:
-   - Multi-press type detection (short, long, double)
-   - Press-specific emoji mapping (👆👇✌️)
-   - Battery percentage integration with header formatting
-   - Press statistics tracking with individual counters
-   - Event-driven display updates
+2. **Enhanced UI Display**:
+   - Single-line format for button events
+   - Button event emoji indicators (👆/👇/👆👆)
+   - Press type identification and display
+   - Device information with version display
+   - Power-on event indication
 
 3. **Robust Error Handling**:
-   - Complete try/catch blocks in decodeUplink and add_web_sensor
-   - Graceful degradation on parse errors
-   - Unknown channel logging without breaking decode
-   - Display error protection with fallback message
+   - Milesight channel+type format validation
+   - Button event type parsing (0x01/0x02/0x03)
+   - Try/catch blocks in all display functions
+   - Enhanced display error protection
 
 4. **Global Storage Patterns**:
-   - Multi-node support with node_id-based storage
-   - Press event tracking with individual counters
-   - Battery level trend tracking (10-point history)
-   - Power-on event counting and timestamps
-   - Persistent data across driver reloads
+   - Multi-node support with persistent WS101_nodes storage
+   - Battery history tracking (last 10 readings)
+   - Button press history (last 50 events with timestamps)
+   - Press counters by type (short/long/double counts)
+   - Node statistics and management commands
 
 5. **All Downlink Commands Working**:
-   - Reporting interval with range validation (60-64800s)
-   - Device reboot with simple command
-   - LED control enable/disable
-   - Double press mode enable/disable
-   - Buzzer control enable/disable
+   - LwWS101Interval: Set reporting interval (60-64800 seconds)
+   - LwWS101Reboot: Device reboot command
+   - LwWS101LED: LED indicator enable/disable
+   - LwWS101DoublePress: Double press mode enable/disable
+   - LwWS101Buzzer: Buzzer feedback enable/disable
 
 6. **Framework Compatibility**:
-   - LwSensorFormatter_cls() method chaining without += errors
-   - Header integration with battery percentage special formatting (100000+%)
-   - Test command with comprehensive button press scenarios
-   - Node management commands (stats, clear)
-   - Complete parameter validation and error messages
+   - Framework v2.2.9: RSSI/FPort uppercase, simulated parameter support
+   - Template v2.5.0: Verified TestUI payload decoding system
+   - Button event tracking with press counters
+   - Enhanced payload verification with decode-back testing
 ```
 
 ### Request Summary
-Request ID: WS101-REQ-20250826
-Submitted: 2025-08-26 15:00:00
-Version Target: v2.0.0
-Upgrade Type: Major (v2.1.8 → v2.3.6)
+Request ID: WS101-REQ-2025-09-03
+Submitted: 2025-09-03 15:00:00
+Version Target: v3.0.0
 Expected Deliverables:
 - [x] Driver file: vendor/milesight/WS101.be
 - [x] Documentation: vendor/milesight/WS101.md
 - [x] Generation report: vendor/milesight/WS101-REPORT.md
 
-*Form Version: 2.3.6 | Compatible with Template Version: 2.3.6*
-*Generated: 2025-08-26 15:00:00 | Framework: LwDecode v2.2.9*
-*Achievement: Smart button with comprehensive press detection*
+*Form Version: 2.5.0 | Compatible with Template Version: 2.5.0*
+*Generated: 2025-09-03 15:00:00 | Framework: LwDecode v2.2.9*
 ```
 
 ## 🎯 OBJECTIVE
-Upgrade the WS101 smart button driver with comprehensive multi-press detection, battery monitoring, and event tracking capabilities.
-
-## 🏆 ACHIEVEMENT SUMMARY
-
-### Button Excellence
-- **WS101 v2.0.0**: Successfully upgraded from v2.1.8 → Framework v2.2.9 + Template v2.3.6
-- **Protocol Coverage**: 8/8 uplinks (100%) + 5/5 downlinks (100%) = 13/13 total channels
-- **Press Detection**: Complete support for short, long, and double press events
-
-### Advanced Features
-- **Multi-Press Support**: Three distinct press types with visual emoji indicators
-- **Press Statistics**: Individual counters for each press type with total tracking
-- **Battery Management**: Percentage-based monitoring with trend analysis
-- **Event Tracking**: Power-on event detection and comprehensive statistics
-
-## 🔧 IMPLEMENTATION HIGHLIGHTS
-
-### Press Detection Excellence
-- **Press Type Mapping**: Automatic conversion from raw modes (1,2,3) to readable strings
-- **Visual Indicators**: Emoji-based press type display (👆👇✌️)
-- **Statistics Tracking**: Individual press counters with last press type and timestamp
-- **Event Integration**: Press events immediately trigger display updates
-
-### Battery Management
-- **Percentage Display**: Direct battery level percentage (0-100%)
-- **Header Integration**: Special formatting for header display (100000 + percentage)
-- **Trend Analysis**: 10-point battery history with automatic cleanup
-- **Low Battery Alerts**: Visual indication when battery level is critically low
-
-### Device Information
-- **Version Tracking**: Hardware and software version display
-- **Protocol Detection**: LoRaWAN protocol version identification
-- **Serial Number**: Device serial number extraction and formatting
-- **Device Class**: LoRaWAN class identification (A/B/C)
-
-## 🎯 REGENERATION REQUIREMENTS
-
-### Critical Patterns (MANDATORY)
-1. **Framework v2.2.9 Compatibility**: RSSI/FPort uppercase, simulated parameter support
-2. **Global Storage**: Persistent node data with multi-device support  
-3. **Error Handling**: Comprehensive try/catch blocks with graceful degradation
-4. **Display Logic**: Multi-line conditional formatting for device information
-5. **Command Coverage**: All 5 downlink commands with validation and help
-
-### Button-Specific Implementation
-1. **Press Detection**: Multi-press type support with emoji mapping
-2. **Battery Integration**: Special header formatting for battery percentage
-3. **Event Tracking**: Press statistics with individual counters and timestamps
-4. **Device Info**: Hardware/software version tracking and display
-5. **Recovery Logic**: Data restoration after driver reload scenarios
-
-## 💎 QUALITY ASSURANCE
-
-### Validation Complete
-- ✅ **Protocol Accuracy**: 100% channel coverage verified against specification
-- ✅ **Berry Compliance**: No reserved words, nil safety throughout
-- ✅ **Framework Integration**: All v2.2.9 patterns implemented correctly
-- ✅ **Template Adherence**: All v2.3.6 requirements satisfied
-- ✅ **Performance**: Optimized for battery-powered device constraints
-
-### Test Coverage
-- ✅ **8 Scenarios**: All press types, battery levels, device info, power events
-- ✅ **Edge Cases**: Low battery, unknown modes, combined information
-- ✅ **Error Conditions**: Unknown channels, malformed payloads, nil handling
-- ✅ **Recovery Patterns**: Data persistence across reload scenarios
+Template upgrade from v2.4.1 to v2.5.0 for WS101 driver maintaining all existing functionality while adding verified TestUI payload decoding system and enhanced error recovery patterns.
 
 ---
 
-**STATUS: COMPLETED** ✅  
-**PRESS DETECTION: 100% Coverage** 👆👇✌️  
-**BATTERY MANAGEMENT: Optimized** 🔋  
-**EVENT TRACKING: Comprehensive** 📊
+### Upgrade Changes Applied
+- **Framework v2.2.9**: Maintained RSSI/FPort uppercase parameter compatibility
+- **Template v2.5.0**: Added verified TestUI payload decoding with decode-back validation
+- **Enhanced Recovery**: Improved lwreload recovery with found_node flag pattern
+- **Payload Verification**: All TestUI scenarios now validate through actual decoding
+- **Static Scenarios**: Fixed Berry keys() iterator bug with static scenario list
 
-*Smart button driver with complete press type detection and battery monitoring capabilities.*
+---
+*WS101 Generation Request v3.0.0 - Framework v2.2.9 + Template v2.5.0*
+*Generated: 2025-09-03 | Status: Template v2.5.0 Complete*

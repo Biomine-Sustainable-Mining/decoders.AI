@@ -1,5 +1,11 @@
+# Milesight AM308L Generation Request
+## Version: 2.5.0 | Framework: LwDecode v2.5.0 | Platform: Tasmota Berry
+
+### Generation Request File (AM308L-REQ.md)
+
+```yaml
 # Milesight AM308L Driver Generation Request
-## Version: 2.3.6 | Framework: LwDecode v2.2.9 | Platform: Tasmota Berry
+## Version: 2.5.0 | Framework: LwDecode v2.5.0 | Platform: Tasmota Berry
 
 ### Request Type
 - [x] REGENERATE - Fresh generation from existing MAP file
@@ -8,13 +14,13 @@
 ### Device Information
 vendor: "Milesight"
 model: "AM308L"
-type: "Ambience Monitoring Sensor"
-description: "Multi-sensor environmental monitoring device with CO2, TVOC, PM2.5/PM10, temperature, humidity, pressure, PIR, and light sensing"
+type: "Environmental Monitoring Sensor"
+description: "Multi-sensor with CO2, TVOC, PM2.5/10, temperature, humidity, pressure, PIR, light"
 
 ### Official References
 homepage: "https://www.milesight.com/iot/product/lorawan-sensor/am319"
 userguide: "https://github.com/Milesight-IoT/SensorDecoders/tree/main/am-series/am308l"
-decoder_reference: "https://github.com/Milesight-IoT/SensorDecoders/blob/main/am-series/am308l/am308l-decoder.js"
+decoder_reference: "https://github.com/Milesight-IoT/SensorDecoders/tree/main/am-series/am308l"
 firmware_version: "latest"
 lorawan_version: "1.0.x"
 regions: ["EU868", "US915", "AS923", "AU915"]
@@ -33,106 +39,86 @@ include_features:
 
 ### UI Customization
 display_preferences:
-  single_line_preferred: false  # Multi-line for comprehensive sensor data
+  single_line_preferred: false
   multi_line_for_alerts: true
   custom_emojis: 
-    co2: "💨"
-    pm25: "🫧"
-    pm10: "🌫️"
-    tvoc: "🌿"
-    pressure: "🔵"
-    motion: "🚶"
+    sensors: ["🌡️", "💧", "💨", "🌬️", "🌫️", "🔵", "💡"]
+    motion: ["🏠", "🚶"]
+    history: "📊"
+    calibration: "⚙️"
   hide_technical_info: false
   emphasize_alerts: true
-  battery_prominance: "normal"
+  battery_prominance: "hidden"
   rssi_display: "icon"
 
 ### Custom Requirements
 special_requirements:
   signed_value_handling: ["temperature"]
-  unit_conversions: 
-    - "temperature: int16/10"
-    - "humidity: uint8/2"
-    - "pressure: uint16/10"
-    - "tvoc_iaq: uint16/100"
-  threshold_monitoring: ["co2", "tvoc", "pm2_5", "pm10"]
-  custom_validation_rules:
-    - "co2: 400-5000 ppm"
-    - "report_interval: 10-86400 seconds"
-    - "timezone: -120 to 140"
+  unit_conversions: ["pressure:Pa→hPa", "tvoc_iaq:/100", "humidity:/2"]
+  threshold_monitoring: ["co2_ppm", "tvoc_iaq", "pm25_ugm3"]
+  custom_validation_rules: ["history_format_detection", "dual_tvoc_units"]
 
 ### Test Configuration
 custom_test_scenarios:
   - name: "normal"
-    description: "Normal environmental readings"
-    expected_params: ["temperature", "humidity", "co2", "tvoc", "pressure", "pm2_5", "pm10"]
-  - name: "alert"
-    description: "High pollution alert conditions"
-    expected_params: ["temperature", "humidity", "co2", "tvoc"]
-  - name: "high"
-    description: "Maximum sensor readings"
-    expected_params: ["temperature", "humidity", "co2", "tvoc", "pressure", "pm2_5", "pm10"]
+    description: "Standard environmental monitoring"
+    expected_params: ["battery_pct", "temperature", "humidity", "co2_ppm"]
   - name: "motion"
-    description: "PIR motion detection"
-    expected_params: ["temperature", "humidity", "pir", "light_level", "co2", "tvoc"]
-  - name: "history"
-    description: "Historical data payload"
-    expected_params: ["history"]
-  - name: "config"
-    description: "Device configuration data"
-    expected_params: ["ipso_version", "hardware_version", "firmware_version", "serial_number", "battery", "device_status"]
+    description: "PIR motion detection active"
+    expected_params: ["pir_motion", "temperature", "air_quality"]
+  - name: "history_iaq"
+    description: "Historical data in IAQ format"
+    expected_params: ["timestamp", "history_type", "tvoc_iaq"]
+  - name: "device_info"
+    description: "Device information and versions"
+    expected_params: ["firmware_version", "serial_number"]
 
 ### Additional Notes
-Current Implementation Features (v1.0.0):
+Current Implementation Features (v1.2.0):
 ```
 CRITICAL: Maintain these exact features in regeneration:
 
-1. **Critical Berry Patterns (MANDATORY)**:
-   - Channel-based decoding with complete coverage
-   - Dual TVOC unit support (IAQ and µg/m³)
-   - History data decoding for both formats
-   - Proper signed temperature handling
+1. **Dual TVOC Unit Support**:
+   - IAQ index format (type 0x7D)
+   - µg/m³ concentration format (type 0xE6)
+   - History data format detection
 
-2. **Enhanced UI Display**:
-   - Multi-line display for comprehensive sensor data
-   - Air quality grouping (PM2.5, PM10, pressure)
-   - Status events line (motion, buzzer, reset)
-   - Device info line for configuration data
+2. **Historical Data Decoding**:
+   - 20-byte IAQ format (0x20:0xCE)
+   - 20-byte µg/m³ format (0x21:0xCE)
+   - Timestamp extraction and parsing
 
-3. **Robust Error Handling**:
-   - Try/catch in display function
-   - Global storage recovery patterns
-   - Unknown channel logging
+3. **Complete Device Info Support**:
+   - Firmware/hardware versions
+   - Serial number extraction
+   - LoRaWAN class identification
+   - Reset event detection
 
-4. **Global Storage Patterns**:
-   - AM308L_nodes global storage
-   - Battery trend tracking
-   - Reset event counting
-   - Node data persistence
+4. **CO2 Calibration Commands**:
+   - Factory/ABC/Manual/Background/Zero modes
+   - Manual calibration with PPM values
+   - Comprehensive parameter validation
 
 5. **All Downlink Commands Working**:
-   - 22 complete downlink commands implemented
-   - Device reboot, buzzer control, status query
-   - Configuration: report interval, time sync, time zone
-   - TVOC unit switching, PM2.5 collection interval
-   - CO2 calibration (ABC and manual)
-   - LED indicator, child lock, retransmit settings
-   - History management commands
-
-6. **Framework Compatibility**:
-   - LwDecode v2.2.9 integration
-   - Template v2.3.6 compliance
-   - SendDownlink and SendDownlinkMap usage
+   - LwAM308LReboot - Device restart
+   - LwAM308LBuzzer - Audio control
+   - LwAM308LInterval - Report timing
+   - LwAM308LTimeSync - Time synchronization
+   - LwAM308LTimeZone - UTC offset
+   - LwAM308LTVOCUnit - Unit selection
+   - LwAM308LCO2Cal - Calibration modes
+   - LwAM308LHistory - History management
 ```
 
 ### Request Summary
-Request ID: AM308L-REQ-2025-08-26
-Submitted: 2025-08-26 16:53:42
-Version Target: v1.0.0
+Request ID: AM308L-REQ-2025-09-02
+Submitted: 2025-09-02 20:30:00
+Version Target: v1.2.0
 Expected Deliverables:
 - [x] Driver file: vendor/milesight/AM308L.be
 - [x] Documentation: vendor/milesight/AM308L.md
 - [x] Generation report: vendor/milesight/AM308L-REPORT.md
 
-*Form Version: 2.3.6 | Compatible with Template Version: 2.3.6*
-*Generated: 2025-08-26 16:53:42 | Framework: LwDecode v2.2.9*
+*Form Version: 2.5.0 | Compatible with Template Version: 2.5.0*
+*Generated: 2025-09-02 20:30:00 | Framework: LwDecode v2.5.0*
+```

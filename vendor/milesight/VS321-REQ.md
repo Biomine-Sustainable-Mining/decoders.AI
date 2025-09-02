@@ -1,5 +1,15 @@
-# VS321 REQ-REQ Generation Request
-## Version: 2.4.0 | Framework: LwDecode v2.2.9 | Platform: Tasmota Berry
+# Milesight VS321 Generation Request
+## Version: 2.5.0 | Framework: LwDecode v2.2.9 | Platform: Tasmota Berry
+
+---
+
+### Generation Request File (VS321-REQ.md)
+
+**Purpose**: Document current implementation for future regeneration
+
+```yaml
+# Milesight VS321 Driver Generation Request
+## Version: 2.5.0 | Framework: LwDecode v2.2.9 | Platform: Tasmota Berry
 
 ### Request Type
 - [x] REGENERATE - Fresh generation from existing MAP file
@@ -9,20 +19,20 @@
 vendor: "Milesight"
 model: "VS321"
 type: "AI Occupancy Sensor"
-description: "AI-powered occupancy sensor with people counting, temperature, humidity, and desk detection"
+description: "LoRaWAN AI-powered occupancy sensor with people counting, desk occupancy detection, temperature/humidity monitoring, and illumination sensing"
 
 ### Official References
-homepage: "https://www.milesight.com/iot/product/lorawan-sensor/vs321"
-userguide: "https://resource.milesight.com/milesight/document/vs321-datasheet.pdf"
-decoder_reference: "https://github.com/Milesight-IoT/SensorDecoders/tree/master/VS_Series"
+homepage: "https://support.milesight-iot.com"
+userguide: "VS321_User_Guide.pdf"
+decoder_reference: "Official Milesight Decoder"
 firmware_version: "latest"
-lorawan_version: "1.0.4"
-regions: ["EU868", "US915", "AS923"]
+lorawan_version: "V1.0.2/V1.0.3"
+regions: ["EU868", "US915", "AU915"]
 
 ### Feature Selection
 include_features:
   uplink_decoding: true
-  downlink_commands: false
+  downlink_commands: true
   test_ui_scenarios: true
   node_management: true
   battery_tracking: true
@@ -33,112 +43,145 @@ include_features:
 
 ### UI Customization
 display_preferences:
-  single_line_preferred: false
+  single_line_preferred: false  # Multi-line for occupancy data
   multi_line_for_alerts: true
-  custom_emojis: {
-    "people": "👥",
-    "occupancy_occupied": "🟢", 
-    "occupancy_vacant": "⭕",
-    "light_bright": "☀️",
-    "light_dim": "🌙",
-    "temp_alarm": "🚨",
-    "reset": "🔄"
-  }
-  hide_technical_info: true
+  custom_emojis: 
+    people: "👥"
+    desk: "🪑"
+    temperature: "🌡️"
+    humidity: "💧"
+    illumination_bright: "☀️"
+    illumination_dim: "🌙"
+    status_normal: "✅"
+    status_error: "⚠️"
+  hide_technical_info: false
   emphasize_alerts: true
   battery_prominance: "normal"
   rssi_display: "icon"
 
 ### Custom Requirements
 special_requirements:
-  signed_value_handling: ["temperature", "temp_threshold"]
-  unit_conversions: []
-  threshold_monitoring: ["temp_alarm", "humidity_alarm"]
-  custom_validation_rules: ["people_count_range", "desk_bitmap_validation"]
+  signed_value_handling: ["temperature", "temperature_threshold"]
+  unit_conversions: 
+    - "temperature: /10.0 (°C)"
+    - "humidity: /2.0 (%RH)"
+    - "battery: direct (%)"
+  threshold_monitoring: ["temperature_threshold", "humidity_threshold"]
+  custom_validation_rules:
+    - "Milesight channel+type format parsing"
+    - "Little endian multi-byte values"
+    - "Desk occupancy bit field processing (16 positions)"
+    - "People counting with trend tracking"
+    - "Historical data entry parsing"
 
 ### Test Configuration
 custom_test_scenarios:
   - name: "normal"
-    description: "Normal operation with 3 people, 27.2°C, bright light"
-    expected_params: ["temperature", "humidity", "people_count", "occupancy", "illuminance"]
-  - name: "occupied" 
-    description: "High occupancy with 5 people, warm temperature"
-    expected_params: ["people_count", "occupancy", "temperature"]
-  - name: "vacant"
-    description: "Empty space with 0 people, dim light"
-    expected_params: ["people_count", "occupancy", "illuminance"]
-  - name: "hot"
-    description: "Temperature alarm triggered at 40°C"
-    expected_params: ["temp_threshold", "temp_alarm"]
-  - name: "humid"
-    description: "Humidity alarm triggered at 50%"
-    expected_params: ["humidity_threshold", "humidity_alarm"] 
+    description: "Normal operation with all sensors"
+    expected_params: ["battery", "temperature", "humidity", "people_count", "occupancy_status", "illumination"]
+  - name: "occupied"
+    description: "High occupancy scenario"
+    expected_params: ["people_count", "occupancy_status", "temperature"]
+  - name: "low_battery"
+    description: "Low battery warning condition"
+    expected_params: ["battery", "people_count", "detection_status"]
+  - name: "empty"
+    description: "Empty room scenario"
+    expected_params: ["people_count", "illumination", "temperature"]
+  - name: "alarm"
+    description: "Threshold alarm conditions"
+    expected_params: ["temp_threshold", "temp_alarm", "humidity_threshold", "humidity_alarm"]
+  - name: "device_info"
+    description: "Device information and version data"
+    expected_params: ["fw_version", "hw_version", "serial_number", "power_on"]
+  - name: "historical"
+    description: "Historical data entry"
+    expected_params: ["hist_timestamp", "hist_data_type"]
   - name: "reset"
-    description: "Device reset event with low battery"
-    expected_params: ["device_reset", "battery_pct"]
-  - name: "lowbatt"
-    description: "Low battery warning at 10%"
-    expected_params: ["battery_pct", "battery_v"]
-  - name: "config"
-    description: "Device configuration info"
-    expected_params: ["device_type", "fw_version", "hw_version", "serial_number"]
-  - name: "desks"
-    description: "Desk sensor with 10 regions, 4 occupied"
-    expected_params: ["desk_enabled", "desk_occupied", "vacant_regions", "total_regions"]
-  - name: "powerup"
-    description: "Power-on event with high battery"
-    expected_params: ["power_on", "battery_pct"]
+    description: "Power on and reset events"
+    expected_params: ["power_on", "reset_report"]
 
 ### Additional Notes
-Current Implementation Features (v1.0.0):
-
+Current Implementation Features (v2.0.0):
+```
 CRITICAL: Maintain these exact features in regeneration:
 
 1. **Critical Berry Patterns (MANDATORY)**:
-   - Fixed keys() iterator bug with explicit key arrays
-   - Safe data recovery after lwreload
-   - Global node storage with VS321_nodes
-   - Multi-line UI formatting with event management
-   - Try/catch error protection in add_web_sensor()
+   - Global storage patterns: VS321_nodes for multi-device support
+   - Enhanced lwreload recovery with found_node flag pattern
+   - Display error protection with try/catch wrapper
+   - Template v2.5.0 payload verification system
+   - Static scenario list to avoid keys() iterator bug
 
 2. **Enhanced UI Display**:
-   - Multi-line format: temp/humidity/status | people/light | events
-   - Persistent sensor values between payloads
-   - Event-only display for alarms/resets
-   - Conditional line building to avoid empty lines
+   - Multi-line format for occupancy sensor data
+   - People counting with trend tracking and display
+   - Desk occupancy bit field parsing (16 positions) with "occupied/total" format
+   - Temperature/humidity with threshold alarm indicators
+   - Illumination status (Bright/Dim) with appropriate emoji
+   - Detection status monitoring (Normal/Undetectable)
+   - Device info display with firmware/hardware versions
 
 3. **Robust Error Handling**:
-   - Try/catch blocks in all critical methods
-   - Graceful fallback for missing data
-   - Console error logging with context
-   - Safe payload parsing with bounds checking
+   - Milesight channel+type format validation
+   - Little endian multi-byte value parsing
+   - Signed temperature value handling
+   - Try/catch blocks in all display functions
+   - Enhanced display error protection
 
 4. **Global Storage Patterns**:
-   - VS321_nodes for multi-device support
-   - Data persistence across driver reloads
-   - Historical data tracking for trends
-   - Reset/alarm event management
+   - Multi-node support with persistent VS321_nodes storage
+   - Battery history tracking (last 10 readings with trend analysis)
+   - People count history tracking (last 10 readings for occupancy trends)
+   - Node statistics and management commands for maintenance
 
-5. **All Test Scenarios Working**:
-   - 10 diverse scenarios covering all device states
-   - Realistic payloads with proper channel structure
-   - Comprehensive coverage of all channels
-   - Creative scenarios beyond basic operation
+5. **All Downlink Commands Working**:
+   - LwVS321Interval: Set reporting interval (2-1440 minutes) with validation
+   - LwVS321DetectionInterval: Set detection interval (2-60 minutes)
+   - LwVS321ReportMode: Set reporting mode (from now/on the dot)
+   - LwVS321DetectionMode: Set detection mode (auto/always)
+   - LwVS321Detect: Immediate detection trigger
+   - LwVS321Reset: Device reset command
+   - LwVS321Reboot: Device reboot command
+   - LwVS321Storage: Data storage enable/disable
+   - LwVS321Retransmit: Data retransmission enable/disable
+   - LwVS321RetransmitInterval: Set retransmission interval (30-1200 seconds)
+   - LwVS321ADR: ADR mode enable/disable
 
 6. **Framework Compatibility**:
-   - Framework v2.2.9 integration
-   - People formatter added to LwDecode.be
-   - Standard command patterns (LwVS321TestUI)
-   - Proper driver registration
+   - Framework v2.2.9: RSSI/FPort uppercase, simulated parameter support
+   - Template v2.5.0: Verified TestUI payload decoding system
+   - Milesight channel+type protocol parsing
+   - Multi-byte little endian value processing
+   - Historical data entry parsing with timestamps
+   - Enhanced payload verification with decode-back testing
+```
 
 ### Request Summary
-Request ID: VS321-REQ-20250902
-Submitted: 2025-09-02 16:45:00
-Version Target: v1.0.0
+Request ID: VS321-REQ-2025-09-03
+Submitted: 2025-09-03 14:45:00
+Version Target: v2.0.0
 Expected Deliverables:
 - [x] Driver file: vendor/milesight/VS321.be
-- [x] Documentation: vendor/milesight/VS321.md  
+- [x] Documentation: vendor/milesight/VS321.md
 - [x] Generation report: vendor/milesight/VS321-REPORT.md
 
-*Form Version: 2.4.0 | Compatible with Template Version: 2.4.0*
-*Generated: 2025-09-02 16:45:00 | Framework: LwDecode v2.2.9*
+*Form Version: 2.5.0 | Compatible with Template Version: 2.5.0*
+*Generated: 2025-09-03 14:45:00 | Framework: LwDecode v2.2.9*
+```
+
+## 🎯 OBJECTIVE
+Template upgrade from v2.4.1 to v2.5.0 for VS321 driver maintaining all existing functionality while adding verified TestUI payload decoding system and enhanced error recovery patterns.
+
+---
+
+### Upgrade Changes Applied
+- **Framework v2.2.9**: Maintained RSSI/FPort uppercase parameter compatibility
+- **Template v2.5.0**: Added verified TestUI payload decoding with decode-back validation
+- **Enhanced Recovery**: Improved lwreload recovery with found_node flag pattern
+- **Payload Verification**: All TestUI scenarios now validate through actual decoding
+- **Static Scenarios**: Fixed Berry keys() iterator bug with static scenario list
+
+---
+*VS321 Generation Request v2.0.0 - Framework v2.2.9 + Template v2.5.0*
+*Generated: 2025-09-03 | Status: Template v2.5.0 Complete*

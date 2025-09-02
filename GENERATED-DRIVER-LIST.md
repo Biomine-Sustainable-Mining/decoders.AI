@@ -27,7 +27,7 @@ This document maintains a comprehensive list of all AI-generated drivers for the
 ### Milesight
 | Model | Version | Date | Channels | Model Version | Prompt Ver | Description |
 |-------|---------|------|----------|---------------|------------|-------------|
-| [AM300](vendor/milesight/AM300.md) | [1.3.0](vendor/milesight/AM300.be) | 2025-09-02 | 20/20 | AM300(L) Series | [v2.4.1](vendor/milesight/AM300-REPORT.md) | [9-in-1 indoor air quality monitor with WELL certification](vendor/milesight/AM300-REQ.md) |
+| [AM300](vendor/milesight/AM300.md) | [1.4.0](vendor/milesight/AM300.be) | 2025-09-02 | 20/20 | AM300(L) Series | [v2.5.0](vendor/milesight/AM300-REPORT.md) | [9-in-1 indoor air quality monitor with WELL certification](vendor/milesight/AM300-REQ.md) |
 | [AM308L](vendor/milesight/AM308L.md) | [1.1.0](vendor/milesight/AM308L.be) | 2025-09-02 | 22/22 | AM308L | [v2.4.1](vendor/milesight/AM308L-REPORT.md) | [Environmental monitoring sensor with CO2, TVOC, PM2.5/10, temperature, humidity, pressure, PIR, and light](vendor/milesight/AM308L-REQ.md) |
 | [VS321](vendor/milesight/VS321.md) | [1.0.0](vendor/milesight/VS321.be) | 2025-09-02 | 17/17 | VS321 | [v2.4.1](vendor/milesight/VS321-REPORT.md) | [AI Occupancy Sensor with people counting & desk detection](vendor/milesight/VS321-REQ.md) |
 | [WS101](vendor/milesight/WS101.md) | [2.1.0](vendor/milesight/WS101.be) | 2025-09-02 | 8/8 | WS101 | [v2.4.1](vendor/milesight/WS101-REPORT.md) | [Smart button with multiple press types](vendor/milesight/WS101-REQ.md) |

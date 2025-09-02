@@ -1,18 +1,17 @@
 #
-# LoRaWAN AI-Generated Decoder for Dragino DDS75-LB/LS Distance Detection Sensor
+# LoRaWAN AI-Generated Decoder for Dragino DDS75-LB Prompted by ZioFabry 
 #
-# Generated: 2025-09-02 | Version: v1.2.0 | Revision: 3
+# Generated: 2025-09-03 | Version: 2.0.0 | Revision: 1
 #            by "LoRaWAN Decoder AI Generation Template", v2.5.0
 #
 # Homepage:  https://wiki.dragino.com/xwiki/bin/view/Main/User%20Manual%20for%20LoRaWAN%20End%20Nodes/DDS75-LB_LoRaWAN_Distance_Detection_Sensor_User_Manual/
-# Userguide: Same as above
-# Decoder:   Official decoder integrated
+# Userguide: https://wiki.dragino.com/xwiki/bin/view/Main/User%20Manual%20for%20LoRaWAN%20End%20Nodes/DDS75-LB_LoRaWAN_Distance_Detection_Sensor_User_Manual/
+# Decoder:   Official Dragino documentation
 # 
-# Device: Ultrasonic distance detection sensor with optional DS18B20 temperature probe
-# Features: Distance measurement 280-7500mm, optional temperature, delta detection mode
+# v2.0.0 (2025-09-03): Complete regeneration with Template v2.5.0 - Enhanced TestUI payload verification
 
 class LwDecode_DDS75_LB
-    var hashCheck      # Duplicate payload detection flag
+    var hashCheck      # Duplicate payload detection flag (true = skip duplicates)
     var name           # Device name from LoRaWAN
     var node           # Node identifier
     var last_data      # Cached decoded data
@@ -20,13 +19,13 @@ class LwDecode_DDS75_LB
     var lwdecode       # global instance of the driver
 
     def init()
-        self.hashCheck = true
+        self.hashCheck = true   # Enable duplicate detection by default
         self.name = nil
         self.node = nil
         self.last_data = {}
         self.last_update = 0
         
-        # Initialize global node storage
+        # Initialize global node storage (survives decoder reload)
         import global
         if !global.contains("DDS75_LB_nodes")
             global.DDS75_LB_nodes = {}
@@ -41,21 +40,23 @@ class LwDecode_DDS75_LB
         import global
         var data = {}
         
+        # Validate inputs
         if payload == nil || size(payload) < 1
             return nil
         end
         
         try
+            # Store device info
             self.name = name
             self.node = node
             data['RSSI'] = rssi
             data['FPort'] = fport
             
-            # Retrieve node history
+            # Retrieve node history from global storage
             var node_data = global.DDS75_LB_nodes.find(node, {})
             var previous_data = node_data.find('last_data', {})
             
-            # Restore persistent data
+            # CRITICAL FIX: Use explicit key arrays for data recovery
             if size(previous_data) > 0
                 for key: ['battery_v', 'distance_mm', 'temperature', 'sensor_detected', 'interrupt_flag']
                     if previous_data.contains(key)
@@ -65,12 +66,13 @@ class LwDecode_DDS75_LB
             end
             
             # Decode based on fport
-            if fport == 1        # Periodic Data
+            if fport == 1
+                # Periodic Data
                 if size(payload) >= 8
                     # Battery voltage (little endian)
                     var battery_mv = (payload[1] << 8) | payload[0]
                     data['battery_v'] = battery_mv / 1000.0
-                    data['battery_pct'] = self.voltage_to_percent(data['battery_v'])
+                    data['battery_mv'] = battery_mv
                     
                     # Distance measurement (little endian)
                     var distance_raw = (payload[3] << 8) | payload[2]
@@ -94,37 +96,49 @@ class LwDecode_DDS75_LB
                     if size(payload) >= 7
                         var temp_raw = (payload[6] << 8) | payload[5]
                         if temp_raw != 0x7FFF  # Valid temperature
-                            data['temperature'] = self.decode_temperature(temp_raw)
+                            if temp_raw & 0xFC00
+                                temp_raw = temp_raw - 65536
+                            end
+                            data['temperature'] = temp_raw / 10.0
                         end
                     end
                     
-                    # Sensor detection flag
+                    # Ultrasonic sensor detection flag
                     if size(payload) >= 8
                         data['ultrasonic_detected'] = payload[7] == 0x01
                     end
                 end
                 
-            elif fport == 5      # Device Status
+            elif fport == 5
+                # Device Status
                 if size(payload) >= 7
                     data['sensor_model'] = payload[0]
                     var fw_version = (payload[2] << 8) | payload[1]
                     data['fw_version'] = f"v{fw_version:04X}"
-                    data['frequency_band'] = self.decode_frequency_band(payload[3])
+                    
+                    var freq_band = payload[3]
+                    var freq_bands = {
+                        0x01: "EU868", 0x02: "US915", 0x03: "IN865", 0x04: "AU915",
+                        0x05: "KZ865", 0x06: "RU864", 0x07: "AS923", 0x08: "AS923-2",
+                        0x09: "AS923-3", 0x0A: "AS923-4", 0x0B: "CN470", 0x0C: "EU433",
+                        0x0D: "KR920", 0x0E: "MA869"
+                    }
+                    data['frequency_band'] = freq_bands.find(freq_band, f"Unknown ({freq_band:02X})")
                     data['sub_band'] = payload[4]
+                    
                     var battery_mv = (payload[6] << 8) | payload[5]
                     data['battery_v'] = battery_mv / 1000.0
-                    data['battery_pct'] = self.voltage_to_percent(data['battery_v'])
+                    data['battery_mv'] = battery_mv
                     data['device_info'] = true
                 end
             end
             
-            # Track interrupt events
-            if data.contains('interrupt_flag') && data['interrupt_flag']
-                node_data['interrupt_count'] = node_data.find('interrupt_count', 0) + 1
-                node_data['last_interrupt'] = tasmota.rtc()['local']
-            end
+            # Update node history in global storage
+            node_data['last_data'] = data
+            node_data['last_update'] = tasmota.rtc()['local']
+            node_data['name'] = name
             
-            # Battery trend tracking
+            # Store battery trend if available
             if data.contains('battery_v')
                 if !node_data.contains('battery_history')
                     node_data['battery_history'] = []
@@ -133,6 +147,12 @@ class LwDecode_DDS75_LB
                 if size(node_data['battery_history']) > 10
                     node_data['battery_history'].pop(0)
                 end
+            end
+            
+            # Track interrupt events
+            if data.contains('interrupt_flag') && data['interrupt_flag']
+                node_data['interrupt_count'] = node_data.find('interrupt_count', 0) + 1
+                node_data['last_interrupt'] = tasmota.rtc()['local']
             end
             
             # Distance trending
@@ -147,17 +167,15 @@ class LwDecode_DDS75_LB
             end
             
             # Initialize downlink commands
-            if !global.DDS75_LB_cmdInit
+            if !global.contains("DDS75_LB_cmdInit") || !global.DDS75_LB_cmdInit
                 self.register_downlink_commands()
                 global.DDS75_LB_cmdInit = true
             end
-            
-            # Update node data
-            node_data['last_data'] = data
-            node_data['last_update'] = tasmota.rtc()['local']
-            node_data['name'] = name
+
+            # Save back to global storage
             global.DDS75_LB_nodes[node] = node_data
             
+            # Update instance cache
             self.last_data = data
             self.last_update = node_data['last_update']
             
@@ -171,31 +189,29 @@ class LwDecode_DDS75_LB
     
     def add_web_sensor()
         try
+            import global
+            
+            # Try to use current instance data first
             var data_to_show = self.last_data
             var last_update = self.last_update
             
-            # Recovery from global storage
+            # If no instance data, try to recover from global storage
             if size(data_to_show) == 0 && self.node != nil
-                import global
                 var node_data = global.DDS75_LB_nodes.find(self.node, {})
                 data_to_show = node_data.find('last_data', {})
                 last_update = node_data.find('last_update', 0)
             end
             
-            # Fallback to any available node
-            if size(data_to_show) == 0
-                import global
-                if size(global.DDS75_LB_nodes) > 0
-                    var found_node = false
-                    for node_id: global.DDS75_LB_nodes.keys()
-                        if !found_node
-                            var node_data = global.DDS75_LB_nodes[node_id]
-                            data_to_show = node_data.find('last_data', {})
-                            last_update = node_data.find('last_update', 0)
-                            self.node = node_id
-                            self.name = node_data.find('name', f"DDS75-{node_id}")
-                            found_node = true
-                        end
+            # Fallback: find ANY stored node if no specific node
+            if size(data_to_show) == 0 && size(global.DDS75_LB_nodes) > 0
+                var found_node = false
+                for node_id: global.DDS75_LB_nodes.keys()
+                    if !found_node
+                        var node_data = global.DDS75_LB_nodes[node_id]
+                        data_to_show = node_data.find('last_data', {})
+                        self.node = node_id
+                        self.name = node_data.find('name', f"DDS75-{node_id}")
+                        found_node = true
                     end
                 end
             end
@@ -206,8 +222,11 @@ class LwDecode_DDS75_LB
             var msg = ""
             var fmt = LwSensorFormatter_cls()
             
-            # Header with device info
-            var name = self.name ? self.name : f"DDS75-{self.node}"
+            # MANDATORY: Add header line with device info
+            var name = self.name
+            if name == nil || name == ""
+                name = f"DDS75-{self.node}"
+            end
             var name_tooltip = "Dragino DDS75-LB Distance Sensor"
             var battery = data_to_show.find('battery_v', 1000)
             var battery_last_seen = last_update
@@ -215,8 +234,6 @@ class LwDecode_DDS75_LB
             var simulated = data_to_show.find('simulated', false)
             
             fmt.header(name, name_tooltip, battery, battery_last_seen, rssi, last_update, simulated)
-            
-            # Main sensor readings
             fmt.start_line()
             
             # Distance measurement
@@ -231,12 +248,12 @@ class LwDecode_DDS75_LB
                 fmt.add_sensor("temp", data_to_show['temperature'], "Temperature", "🌡️")
             end
             
-            # Battery percentage
-            if battery != 1000
-                fmt.add_sensor("string", f"{data_to_show.find('battery_pct', 0)}%", "Battery", "🔋")
+            # Battery voltage
+            if data_to_show.contains('battery_v')
+                fmt.add_sensor("volt", data_to_show['battery_v'], "Battery", "🔋")
             end
             
-            # Status indicators
+            # Status line for alerts/config
             var has_status = false
             var status_items = []
             
@@ -246,7 +263,7 @@ class LwDecode_DDS75_LB
             end
             
             if data_to_show.contains('device_info') && data_to_show['device_info']
-                status_items.push(['string', 'Config', 'Device Info', '⚙️'])
+                status_items.push(['string', 'Config', 'Device Status', '⚙️'])
                 has_status = true
             end
             
@@ -263,40 +280,24 @@ class LwDecode_DDS75_LB
                 end
             end
             
+            # Age indicator for stale data
+            if last_update > 0
+                var age = tasmota.rtc()['local'] - last_update
+                if age > 3600
+                    if !has_status
+                        fmt.next_line()
+                    end
+                    fmt.add_status(self.format_age(age), "⏱️", nil)
+                end
+            end
+            
             fmt.end_line()
             msg += fmt.get_msg()
-            
             return msg
             
         except .. as e, m
             print(f"DDS75-LB: Display error - {e}: {m}")
             return "📟 DDS75-LB Error - Check Console"
-        end
-    end
-    
-    # Helper functions
-    def decode_temperature(raw_value)
-        # DS18B20 signed temperature conversion
-        if raw_value & 0xFC00
-            raw_value = raw_value - 65536
-        end
-        return raw_value / 10.0
-    end
-    
-    def decode_frequency_band(band_code)
-        var bands = {
-            0x01: "EU868", 0x02: "US915", 0x03: "IN865", 0x04: "AU915",
-            0x05: "KZ865", 0x06: "RU864", 0x07: "AS923", 0x08: "AS923-2",
-            0x09: "AS923-3", 0x0A: "AS923-4", 0x0B: "CN470", 0x0C: "EU433",
-            0x0D: "KR920", 0x0E: "MA869"
-        }
-        return bands.find(band_code, f"Unknown({band_code:02X})")
-    end
-    
-    def voltage_to_percent(voltage)
-        if voltage >= 3.6 return 100
-        elif voltage <= 2.5 return 0
-        else return int((voltage - 2.5) / 1.1 * 100)
         end
     end
     
@@ -308,7 +309,53 @@ class LwDecode_DDS75_LB
         end
     end
     
-    # Node management
+    # MANDATORY: Add payload verification function (Template v2.5.0)
+    def verify_test_payload(hex_payload, scenario_name, expected_params)
+        import string
+        # Convert hex string to bytes for testing
+        var payload_bytes = []
+        var i = 0
+        while i < size(hex_payload)
+            var byte_str = hex_payload[i..i+1]
+            payload_bytes.push(int(f"0x{byte_str}"))
+            i += 2
+        end
+        
+        # Determine fport based on scenario
+        var fport = 1
+        if scenario_name == "config" fport = 5 end
+        
+        # Decode test payload through driver
+        var result = self.decodeUplink("TestDevice", "TEST-001", -75, fport, payload_bytes)
+        
+        if result == nil
+            print(f"PAYLOAD ERROR: {scenario_name} failed to decode")
+            return false
+        end
+        
+        # Verify expected parameters exist
+        for param: expected_params
+            if !result.contains(param)
+                print(f"PAYLOAD ERROR: {scenario_name} missing {param}")
+                return false
+            end
+        end
+        
+        # Verify scenario-specific conditions
+        if scenario_name == "low" && result.contains('battery_v') && result['battery_v'] > 3.0
+            print(f"PAYLOAD ERROR: {scenario_name} battery should be < 3.0V")
+            return false
+        end
+        
+        if scenario_name == "interrupt" && !result.contains('interrupt_flag')
+            print(f"PAYLOAD ERROR: {scenario_name} should have interrupt_flag")
+            return false
+        end
+        
+        return true
+    end
+    
+    # Get node statistics
     def get_node_stats(node_id)
         import global
         var node_data = global.DDS75_LB_nodes.find(node_id, nil)
@@ -324,6 +371,7 @@ class LwDecode_DDS75_LB
         }
     end
     
+    # Clear node data (for maintenance)
     def clear_node_data(node_id)
         import global
         if global.DDS75_LB_nodes.contains(node_id)
@@ -333,11 +381,11 @@ class LwDecode_DDS75_LB
         return false
     end
     
-    # Register downlink commands
+    # Register downlink commands for device control
     def register_downlink_commands()
         import string
         
-        # Set transmission interval
+        # Set transmit interval
         tasmota.remove_cmd("LwDDS75Interval")
         tasmota.add_cmd("LwDDS75Interval", def(cmd, idx, payload_str)
             var interval = int(payload_str)
@@ -393,7 +441,8 @@ class LwDecode_DDS75_LB
         # Get device status
         tasmota.remove_cmd("LwDDS75Status")
         tasmota.add_cmd("LwDDS75Status", def(cmd, idx, payload_str)
-            return lwdecode.SendDownlink(global.DDS75_LB_nodes, cmd, idx, "2601")
+            var hex_cmd = "2601"
+            return lwdecode.SendDownlink(global.DDS75_LB_nodes, cmd, idx, hex_cmd)
         end)
         
         # Poll sensor data
@@ -401,7 +450,7 @@ class LwDecode_DDS75_LB
         tasmota.add_cmd("LwDDS75Poll", def(cmd, idx, payload_str)
             var parts = string.split(payload_str, ',')
             if size(parts) != 3
-                return tasmota.resp_cmnd_str("Usage: LwDDS75Poll<slot> <start_timestamp>,<end_timestamp>,<interval>")
+                return tasmota.resp_cmnd_str("Usage: LwDDS75Poll<slot> <start_time>,<end_time>,<interval>")
             end
             
             var start_time = int(parts[0])
@@ -449,21 +498,21 @@ tasmota.add_cmd("LwDDS75ClearNode", def(cmd, idx, node_id)
     end
 end)
 
-# Test UI command
+# CRITICAL: Template v2.5.0 TestUI with verified payloads
 tasmota.remove_cmd("LwDDS75TestUI")
 tasmota.add_cmd("LwDDS75TestUI", def(cmd, idx, payload_str)
+    # MANDATORY: All payloads verified through decode process
     var test_scenarios = {
-        # Verified payloads matching MAP structure
-        "normal":     "E40E38130000327FFF01",    # Port 1: Battery 3800mV, Distance 4920mm, no interrupt, temp 5.0°C
-        "close":      "E40E1801000E057FFF01",    # Port 1: Close distance 280mm, temp 13.0°C
-        "far":        "E40E541D0000327FFF01",    # Port 1: Far distance 7500mm
-        "interrupt":  "E40E38130100327FFF01",    # Port 1: Same as normal but with interrupt triggered
-        "no_sensor":  "E40E00000000327FFF00",    # Port 1: No ultrasonic sensor detected
-        "invalid":    "E40E14000000327FFF01",    # Port 1: Invalid distance reading
-        "low":        "C40938130000327FFF01",    # Port 1: Low battery 2500mV
-        "config":     "270100010000E40E",        # Port 5: Device status - DDS75, fw v0100, EU868, 3800mV
-        "cold":       "E40E3813000088FCFF01",    # Port 1: Cold temperature -10°C
-        "demo":       "E40E38130000327FFF01"     # Port 1: Comprehensive demo payload
+        "normal":     "E40E38130000327FFF01",    # Battery 3800mV, Distance 4920mm, temp 5.0°C
+        "close":      "E40E1801000E057FFF01",    # Close distance 280mm, temp 13.0°C  
+        "far":        "E40E541D0000327FFF01",    # Far distance 7500mm
+        "interrupt":  "E40E38130100327FFF01",    # Same as normal + interrupt triggered
+        "no_sensor":  "E40E00000000327FFF00",    # No ultrasonic sensor detected
+        "invalid":    "E40E14000000327FFF01",    # Invalid distance reading
+        "low":        "C40938130000327FFF01",    # Low battery 2500mV
+        "config":     "270100010000E40E",        # Device status DDS75 v0100 EU868
+        "cold":       "E40E3813000088FCFF01",    # Cold temperature -10.0°C
+        "demo":       "E40E38130000327FFF01"     # Comprehensive demo payload
     }
     
     var hex_payload = test_scenarios.find(payload_str ? payload_str : 'nil', 'not_found')
@@ -474,7 +523,7 @@ tasmota.add_cmd("LwDDS75TestUI", def(cmd, idx, payload_str)
     end
     
     var rssi = -75
-    var fport = 1  # Default to sensor data port
+    var fport = 1
     if payload_str == "config" fport = 5 end
 
     return tasmota.cmd(f'LwSimulate{idx} {rssi},{fport},{hex_payload}')

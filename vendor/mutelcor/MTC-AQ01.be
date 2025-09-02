@@ -1,13 +1,14 @@
 #
 # LoRaWAN AI-Generated Decoder for Mutelcor MTC-AQ01 Prompted by ZioFabry
 #
-# Generated: 2025-08-20 | Version: 1.0.0 | Revision: 1
-#            by "LoRaWAN Decoder AI Generation Template", v2.3.3
+# Generated: 2025-09-02 | Version: 1.3.0 | Revision: 2
+#            by "LoRaWAN Decoder AI Generation Template", v2.4.1
 #
 # Homepage:  https://mutelcor.com/lora-air-quality-sensor/
 # Userguide: https://mutelcor.com/wp-content/uploads/2025/05/MUTELCOR_Datasheet_LoRa*Air*Quality_Sensor.pdf
 # Decoder:   https://mutelcor.com/wp-content/uploads/2025/05/Mutelcor-LoRaWAN-Payload-1.6.0.pdf
 # 
+# v1.3.0 (2025-09-02): CRITICAL FIX - Berry keys() iterator bug preventing type_error after lwreload
 # v1.0.0 (2025-08-20): Initial generation from payload specification
 
 class LwDecode_MTC_AQ01
@@ -421,11 +422,9 @@ tasmota.add_cmd("LwMTC_AQ01TestUI", def(cmd, idx, payload_str)
     var hex_payload = test_scenarios.find(payload_str ? payload_str : 'nil', 'not_found')
     
     if hex_payload == 'not_found'
-      var scenarios_list = ""
-      for key: test_scenarios.keys()
-        scenarios_list += key + " "
-      end
-      return tasmota.resp_cmnd_str(format("Available scenarios: %s", scenarios_list))
+        # CRITICAL FIX: Use static string to avoid keys() iterator bug
+        var scenarios_list = "heartbeat normal cold hot dry humid low_battery threshold pressure_high pressure_low "
+        return tasmota.resp_cmnd_str(format("Available scenarios: %s", scenarios_list))
     end
     
     var rssi = -75

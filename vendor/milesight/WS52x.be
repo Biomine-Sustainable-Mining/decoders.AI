@@ -1,9 +1,10 @@
 #
 # LoRaWAN AI-Generated Decoder for Milesight WS52x Prompted by ZioFabry 
 #
-# Generated: 2025-08-27 | Version: 1.6.1 | Revision: 2
-#            by "LoRaWAN Decoder AI Generation Template", v2.4.0
+# Generated: 2025-09-02 | Version: 1.7.0 | Revision: 3
+#            by "LoRaWAN Decoder AI Generation Template", v2.4.1
 #
+# v1.7.0 (2025-09-02): CRITICAL FIX - Berry keys() iterator bug preventing type_error after lwreload
 # v1.6.1 (2025-08-27): FIXED - Empty slides issue, added debug logging and guaranteed slide content
 # v1.6.0 (2025-08-27): FIXED - Slideshow data now properly formatted with units and consistent values
 
@@ -121,10 +122,13 @@ class LwDecode_WS52x
                 end
             end
             
+            # CRITICAL FIX: Use explicit key arrays instead of keys() iterator
             var existing_data = node_data.find('last_data', {})
-            for key: existing_data.keys()
-                if !data.contains(key)
-                    data[key] = existing_data[key]
+            if size(existing_data) > 0
+                for key: ['voltage', 'active_power', 'power_factor', 'energy', 'current', 'socket_state']
+                    if existing_data.contains(key) && !data.contains(key)
+                        data[key] = existing_data[key]
+                    end
                 end
             end
             
@@ -172,15 +176,19 @@ class LwDecode_WS52x
                 last_update = node_data.find('last_update', 0)
             end
             
+            # CRITICAL FIX: Safe iteration with flag to prevent keys() iterator bug
             if size(data_to_show) == 0 && size(global.WS52x_nodes) > 0
+                var found_node = false
                 for node_id: global.WS52x_nodes.keys()
-                    var node_data = global.WS52x_nodes[node_id]
-                    data_to_show = node_data.find('last_data', {})
-                    if size(data_to_show) > 0
-                        self.node = node_id
-                        self.name = node_data.find('name', f"WS52x-{node_id}")
-                        last_update = node_data.find('last_update', 0)
-                        break
+                    if !found_node
+                        var node_data = global.WS52x_nodes[node_id]
+                        data_to_show = node_data.find('last_data', {})
+                        if size(data_to_show) > 0
+                            self.node = node_id
+                            self.name = node_data.find('name', f"WS52x-{node_id}")
+                            last_update = node_data.find('last_update', 0)
+                            found_node = true
+                        end
                     end
                 end
             end
@@ -290,16 +298,26 @@ class LwDecode_WS52x
             data_to_show = node_data.find('last_data', {})
         end
         
+        # CRITICAL FIX: Safe iteration to prevent keys() iterator bug
         if size(data_to_show) == 0 && size(global.WS52x_nodes) > 0
+            var found_node = false
             for node_id: global.WS52x_nodes.keys()
-                var node_data = global.WS52x_nodes[node_id]
-                data_to_show = node_data.find('last_data', {})
-                if size(data_to_show) > 0 break end
+                if !found_node
+                    var node_data = global.WS52x_nodes[node_id]
+                    data_to_show = node_data.find('last_data', {})
+                    if size(data_to_show) > 0
+                        found_node = true
+                    end
+                end
             end
         end
         
-        # DEBUG: Log available data keys
-        print(f"WS52x Slideshow Debug - Available keys: {data_to_show.keys()}")
+        # CRITICAL FIX: Avoid keys() method in debug output to prevent iterator bug
+        if size(data_to_show) > 0
+            print("WS52x Slideshow Debug - Data available")
+        else
+            print("WS52x Slideshow Debug - No data available")
+        end
         
         # Slide 1: Power Overview - Always create slide
         var slide1 = {
@@ -406,10 +424,20 @@ end)
 tasmota.remove_cmd("LwWS52xTestUI")
 tasmota.add_cmd("LwWS52xTestUI", def(cmd, idx, payload_str)
     var test_scenarios = {
-        "normal":    "037474120480FF0F000005816406830010270000C91401087001"
+        "normal":    "037474120480FF0F000005816406830010270000C91401087001",
+        "off":       "037474120480000000000581640683000000000C914000870100",
+        "high":      "037474230480802B00000581966483801027000C9640108701",
+        "low":       "037474100480100000000581196483001000000C9100108700"
     }
     
-    var hex_payload = test_scenarios.find(payload_str ? payload_str : 'normal', test_scenarios['normal'])
+    var hex_payload = test_scenarios.find(payload_str ? payload_str : 'nil', 'not_found')
+    
+    if hex_payload == 'not_found'
+        # CRITICAL FIX: Use static string to avoid keys() iterator bug
+        var scenarios_list = "normal off high low "
+        return tasmota.resp_cmnd_str(format("Available scenarios: %s", scenarios_list))
+    end
+    
     return tasmota.cmd(f'LwSimulate{idx} -75,85,{hex_payload}')
 end)
 

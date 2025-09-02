@@ -9,11 +9,12 @@
 - **Official Reference**: https://wiki.dragino.com/xwiki/bin/view/Main/User%20Manual%20for%20LoRaWAN%20End%20Nodes/DDS75%20-%20LoRaWAN%20Distance%20Detection%20Sensor/
 
 ## Implementation Details
-- **Driver Version**: 2.0.0
-- **Generated**: 2025-08-26
+- **Driver Version**: 2.1.0
+- **Generated**: 2025-09-02
 - **Coverage**: 8/8 uplinks implemented, 9/9 downlinks implemented
-- **Framework**: v2.2.9
-- **Template**: v2.3.6
+- **Framework**: v2.4.1
+- **Template**: v2.4.1
+- **Critical Fix**: Berry keys() iterator bug resolved
 
 ## Expected UI Examples
 
@@ -73,6 +74,11 @@ Based on the device capabilities and typical usage scenarios:
 │ 📊 Delta 0.15m ⏰ Triggered         │
 └─────────────────────────────────────┘
 ```
+
+## Framework Upgrade
+- **Version**: 2.0.0 → 2.1.0 (2025-09-02)
+- **Critical Fix**: Berry keys() iterator bug resolved
+- **Enhanced**: Data recovery patterns and error handling
 
 ## Command Reference
 

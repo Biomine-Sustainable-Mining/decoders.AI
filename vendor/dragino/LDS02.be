@@ -1,13 +1,14 @@
 #
 # LoRaWAN AI-Generated Decoder for Dragino LDS02 Prompted by ZioFabry
 #
-# Generated: 2025-08-26 | Version: 2.0.0 | Revision: 1
-#            by "LoRaWAN Decoder AI Generation Template", v2.3.6
+# Generated: 2025-09-02 | Version: 2.1.0 | Revision: 2
+#            by "LoRaWAN Decoder AI Generation Template", v2.4.1
 #
 # Homepage:  https://wiki.dragino.com/xwiki/bin/view/Main/User%20Manual%20for%20LoRaWAN%20End%20Nodes/LDS02%20-%20LoRaWAN%20Door%20Sensor%20User%20Manual/
 # Userguide: LDS02_LoRaWAN_Door_Sensor_User_Manual v1.8.2
 # Decoder:   Official Dragino Decoder
 # 
+# v2.1.0 (2025-09-02): Framework v2.4.1 upgrade - CRITICAL BERRY KEYS() ITERATOR BUG FIX
 # v2.0.0 (2025-08-26): Framework v2.2.9 + Template v2.3.6 upgrade with enhanced error handling
 # v1.0.0 (2025-08-16): Initial generation from PDF specification
 
@@ -56,6 +57,17 @@ class LwDecode_LDS02
             
             # Retrieve node history from global storage
             var node_data = global.LDS02_nodes.find(node, {})
+            var previous_data = node_data.find('last_data', {})
+            
+            # CRITICAL FIX: Use explicit key arrays for data recovery
+            if size(previous_data) > 0
+                for key: ['battery_v', 'door_open', 'door_status', 'total_events', 'last_duration_min', 
+                         'alarm_active', 'event_count', 'edc_mode']
+                    if previous_data.contains(key)
+                        data[key] = previous_data[key]
+                    end
+                end
+            end
             
             if fport == 10  # Sensor Data
                 if size(payload) >= 10
@@ -186,14 +198,18 @@ class LwDecode_LDS02
             end
             
             # Fallback: find ANY stored node if no specific node
+            # CRITICAL FIX: Use safe iteration with flag
             if size(data_to_show) == 0 && size(global.LDS02_nodes) > 0
+                var found_node = false
                 for node_id: global.LDS02_nodes.keys()
-                    var node_data = global.LDS02_nodes[node_id]
-                    data_to_show = node_data.find('last_data', {})
-                    last_update = node_data.find('last_update', 0)
-                    self.node = node_id  # Update instance
-                    self.name = node_data.find('name', f"LDS02-{node_id}")
-                    break  # Use first found
+                    if !found_node
+                        var node_data = global.LDS02_nodes[node_id]
+                        data_to_show = node_data.find('last_data', {})
+                        last_update = node_data.find('last_update', 0)
+                        self.node = node_id
+                        self.name = node_data.find('name', f"LDS02-{node_id}")
+                        found_node = true
+                    end
                 end
             end
             
@@ -507,10 +523,8 @@ tasmota.add_cmd("LwLDS02TestUI", def(cmd, idx, payload_str)
     var hex_payload = test_scenarios.find(payload_str ? payload_str : 'nil', 'not_found')
     
     if hex_payload == 'not_found'
-      var scenarios_list = ""
-      for key: test_scenarios.keys()
-        scenarios_list += key + " "
-      end
+      # CRITICAL FIX: Use static string to avoid keys() iterator bug
+      var scenarios_list = "normal_closed normal_open alarm low_battery many_events edc_open edc_close "
       return tasmota.resp_cmnd_str(format("Available scenarios: %s", scenarios_list))
     end
     

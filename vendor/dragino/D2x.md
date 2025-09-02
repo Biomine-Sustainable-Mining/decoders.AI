@@ -5,7 +5,12 @@
 - **Model**: D2x Series (D20/D22/D23-LB/LS)
 - **Type**: Multi-probe Temperature Sensor
 - **Coverage**: 15/15 uplinks, 8/8 downlinks
-- **Framework**: v2.2.9 + Template v2.3.6
+- **Framework**: v2.4.1 + Template v2.4.1
+
+## Driver Version
+- **Version**: 1.2.0 (2025-09-02)
+- **Critical Fix**: Berry keys() iterator bug resolved
+- **Framework Upgrade**: Enhanced error handling and data recovery
 
 ## Command Reference
 | Command | Description | Usage |
@@ -20,3 +25,4 @@
 - Temperature alarms with configurable thresholds
 - Datalog functionality with timestamps
 - Battery monitoring and PA8 level detection
+- Enhanced data recovery after driver reload

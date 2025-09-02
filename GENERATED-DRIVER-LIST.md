@@ -15,7 +15,7 @@ This document maintains a comprehensive list of all AI-generated drivers for the
 ### Dragino
 | Model | Version | Date | Channels | Model Version | Prompt Ver | Description |
 |-------|---------|------|----------|---------------|------------|-------------|
-| [D2x](vendor/dragino/D2x.md) | [1.1.0](vendor/dragino/D2x.be) | 2025-08-26 | 15/15 | D20/D20S/D22/D23-LB/LS | [v2.3.6](vendor/dragino/D2x-REPORT.md) | [Multi-probe temperature sensor series](vendor/dragino/D2x-REQ.md) |
+| [D2x](vendor/dragino/D2x.md) | [1.2.0](vendor/dragino/D2x.be) | 2025-09-02 | 15/15 | D20/D20S/D22/D23-LB/LS | [v2.4.1](vendor/dragino/D2x-REPORT.md) | [Multi-probe temperature sensor series](vendor/dragino/D2x-REQ.md) |
 | [DDS75-LB](vendor/dragino/DDS75-LB.md) | [2.0.0](vendor/dragino/DDS75-LB.be) | 2025-08-26 | 8/8 | DDS75-LB/LS | [v2.3.6](vendor/dragino/DDS75-LB-REPORT.md) | [Ultrasonic distance detection sensor](vendor/dragino/DDS75-LB-REQ.md) |
 | [LDS02](vendor/dragino/LDS02.md) | [2.0.0](vendor/dragino/LDS02.be) | 2025-08-26 | 8/8 | LDS02 | [v2.3.6](vendor/dragino/LDS02-REPORT.md) | [Magnetic door sensor with event counting](vendor/dragino/LDS02-REQ.md) |
 | [LHT52](vendor/dragino/LHT52.md) | [2.0.0](vendor/dragino/LHT52.be) | 2025-08-26 | 16/16 | LHT52 | [v2.3.6](vendor/dragino/LHT52-REPORT.md) | [Temperature & humidity sensor with datalog & alarm features](vendor/dragino/LHT52-REQ.md) |
@@ -86,10 +86,11 @@ This document maintains a comprehensive list of all AI-generated drivers for the
 ### Framework Upgrade Status
 #### Current Framework: v2.3.0 | Current Template: v2.4.0
 
-**🟢 Fully Current (Framework v2.3.0 + Template v2.4.0)**: 1 driver
+**🟢 Fully Current (Framework v2.4.1 + Template v2.4.1)**: 2 drivers
 - VS321 v1.0.0 (NEW)
+- D2x v1.2.0 (UPGRADED)
 
-**🟡 Framework v2.2.9 + Template v2.3.6**: 18 drivers
+**🟡 Framework v2.2.9 + Template v2.3.6**: 17 drivers
 - All 18 existing drivers are at previous stable versions
 - Enhanced error handling and framework compatibility maintained
 - Ready for next framework upgrade cycle

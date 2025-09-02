@@ -1,13 +1,14 @@
 #
 # LoRaWAN AI-Generated Decoder for Dragino D2x Prompted by ZioFabry 
 #
-# Generated: 2025-08-26 | Version: 1.1.0 | Revision: 2
-#            by "LoRaWAN Decoder AI Generation Template", v2.3.6
+# Generated: 2025-09-02 | Version: 1.2.0 | Revision: 3
+#            by "LoRaWAN Decoder AI Generation Template", v2.4.1
 #
 # Homepage:  http://wiki.dragino.com/xwiki/bin/view/Main/User Manual for LoRaWAN End Nodes/D20-LBD22-LBD23-LB_LoRaWAN_Temperature_Sensor_User_Manual/
 # Userguide: http://wiki.dragino.com/xwiki/bin/view/Main/User Manual for LoRaWAN End Nodes/D20-LBD22-LBD23-LB_LoRaWAN_Temperature_Sensor_User_Manual/
 # Decoder:   Official Dragino documentation
 # 
+# v1.2.0 (2025-09-02): Framework v2.4.1 upgrade - CRITICAL BERRY KEYS() ITERATOR BUG FIX
 # v1.1.0 (2025-08-26): Framework v2.2.9 + Template v2.3.6 upgrade - enhanced error handling
 # v1.0.0 (2025-08-20): Initial generation from MAP specification
 
@@ -55,6 +56,18 @@ class LwDecode_D2x
             
             # Retrieve node history from global storage
             var node_data = global.D2x_nodes.find(node, {})
+            var previous_data = node_data.find('last_data', {})
+            
+            # CRITICAL FIX: Use explicit key arrays for data recovery
+            if size(previous_data) > 0
+                # Define persistent keys explicitly (avoid keys() iterator)
+                for key: ['temp_red_white', 'temp_white', 'temp_black', 'battery_v', 'battery_mv', 
+                         'sensor_model', 'fw_version', 'frequency_band', 'alarm_flag', 'pa8_level']
+                    if previous_data.contains(key)
+                        data[key] = previous_data[key]
+                    end
+                end
+            end
             
             # Decode based on fport
             if fport == 5
@@ -224,13 +237,17 @@ class LwDecode_D2x
             end
             
             # Fallback: find ANY stored node if no specific node
+            # CRITICAL FIX: Use safe iteration with flag (recommended)
             if size(data_to_show) == 0 && size(global.D2x_nodes) > 0
+                var found_node = false
                 for node_id: global.D2x_nodes.keys()
-                    var node_data = global.D2x_nodes[node_id]
-                    data_to_show = node_data.find('last_data', {})
-                    self.node = node_id  # Update instance
-                    self.name = node_data.find('name', f"D2x-{node_id}")
-                    break  # Use first found
+                    if !found_node
+                        var node_data = global.D2x_nodes[node_id]
+                        data_to_show = node_data.find('last_data', {})
+                        self.node = node_id  # Update instance
+                        self.name = node_data.find('name', f"D2x-{node_id}")
+                        found_node = true
+                    end
                 end
             end
             
@@ -535,10 +552,8 @@ tasmota.add_cmd("LwD2xTestUI", def(cmd, idx, payload_str)
     var hex_payload = test_scenarios.find(payload_str ? payload_str : 'nil', 'not_found')
     
     if hex_payload == 'not_found'
-      var scenarios_list = ""
-      for key: test_scenarios.keys()
-        scenarios_list += key + " "
-      end
+      # CRITICAL FIX: Use static string to avoid keys() iterator bug
+      var scenarios_list = "normal multi alarm low cold status datalog "
       return tasmota.resp_cmnd_str(format("Available scenarios: %s", scenarios_list))
     end
     

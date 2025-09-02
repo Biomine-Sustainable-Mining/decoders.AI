@@ -1,5 +1,5 @@
 # LoRaWAN Driver Generation Request Form
-## Version: 2.3.3 | Framework: LwDecode | Platform: Tasmota Berry
+## Version: 2.4.0 | Framework: LwDecode v2.3.0 | Platform: Tasmota Berry
 
 ---
 
@@ -154,6 +154,7 @@ integration_needs:
 ```yaml
 test_configuration:
   realistic_test_data: true      # Generate realistic test payloads
+  comprehensive_demo: false      # Include comprehensive demo scenario (all sensors + events)
   stress_test_payloads: false    # Include edge-case test data
   regression_test_suite: true    # Full test suite for validation
   performance_benchmarks: false # Include performance test scenarios
@@ -170,6 +171,14 @@ custom_test_scenarios:          # Define custom test cases
   - name: "low_battery"
     description: "Battery below 20%"
     expected_params: ["battery_v", "low_battery_flag"]
+    
+  - name: "demo"              # Optional comprehensive demo
+    description: "All sensors, events, device info display"
+    expected_params: ["all_sensors", "all_events", "device_info"]
+    multi_line_display: true    # Enable multi-line UI for demo
+    include_device_info: true   # Show firmware, hardware, serial
+    include_all_events: true    # Show all possible events
+    include_thresholds: true    # Show alarm thresholds
 ```
 
 ### Validation Requirements
@@ -291,5 +300,6 @@ Examples:
 
 ---
 
-*Form Version: 2.3.3 | Compatible with Template Version: 2.3.3*  
-*Generated: [TIMESTAMP] | Framework: LwDecode*
+*Form Version: 2.4.0 | Compatible with Template Version: 2.4.1*  
+*Generated: [TIMESTAMP] | Framework: LwDecode v2.3.0*
+*Note: Template v2.4.1 includes critical Berry keys() iterator fix for data recovery*

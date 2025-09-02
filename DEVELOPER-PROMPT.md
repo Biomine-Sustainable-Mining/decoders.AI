@@ -1,5 +1,5 @@
 # LoRaWAN Decoder AI Generation Template
-## Version: 2.3.6 | Framework: LwDecode | Platform: Tasmota Berry
+## Version: 2.4.1 | Framework: LwDecode v2.3.0 | Platform: Tasmota Berry
 
 ---
 
@@ -164,7 +164,49 @@ MANDATORY: Every uplink/downlink type in PDF MUST be implemented
 - Acknowledgment uplinks must be decoded
 ```
 
-### 2. CRITICAL BERRY LANGUAGE PATTERNS (v2.3.5)
+### 2. CRITICAL BERRY LANGUAGE PATTERNS (v2.4.1)
+
+#### Berry Keys() Iterator Bug Fix (MANDATORY)
+```berry
+# ❌ WRONG - keys() returns iterator, causes type_error: nil > int
+for key: previous_data.keys()
+    if key != 'RSSI' && key != 'FPort'
+        data[key] = previous_data[key]  # ERROR after lwreload
+    end
+end
+
+# ✅ CORRECT - Use explicit key arrays or safe iteration
+# Method 1: Explicit key array (preferred for data recovery)
+if size(previous_data) > 0
+    for key: ['temperature', 'humidity', 'battery_v', 'occupancy']
+        if previous_data.contains(key)
+            data[key] = previous_data[key]
+        end
+    end
+end
+
+# Method 2: Safe iteration with size() check
+if size(global.MODEL_nodes) > 0
+    for node_id: global.MODEL_nodes.keys()  # Safe in recovery context
+        var node_data = global.MODEL_nodes[node_id]
+        # Process node_data
+        break  # Use first found
+    end
+end
+```
+
+#### Test Scenario List Generation
+```berry
+# ❌ WRONG - keys() iteration in test commands
+var scenarios_list = ""
+for key: test_scenarios.keys()
+    scenarios_list += key + " "
+end
+
+# ✅ CORRECT - Static string list
+var scenarios_list = "normal occupied vacant hot humid reset config "
+# Fixed: Avoid Berry keys() iterator bug in test scenarios
+```
 
 #### Keys() Method Safety
 ```berry
@@ -205,7 +247,7 @@ def add_web_sensor()
 end
 ```
 
-#### Data Recovery After lwreload
+#### Data Recovery After lwreload (CRITICAL FIX)
 ```berry
 def add_web_sensor()
     var data_to_show = self.last_data
@@ -217,15 +259,41 @@ def add_web_sensor()
     end
     
     # Fallback: find ANY stored node if no specific node
+    # CRITICAL FIX: Use explicit array instead of keys() iterator
     if size(data_to_show) == 0 && size(global.<MODEL>_nodes) > 0
+        # Method 1: Safe iteration with flag (recommended)
+        var found_node = false
         for node_id: global.<MODEL>_nodes.keys()
-            var node_data = global.<MODEL>_nodes[node_id]
-            data_to_show = node_data.find('last_data', {})
-            self.node = node_id  # Update instance
-            self.name = node_data.find('name', f"<MODEL>-{node_id}")
-            break  # Use first found
+            if !found_node
+                var node_data = global.<MODEL>_nodes[node_id]
+                data_to_show = node_data.find('last_data', {})
+                self.node = node_id  # Update instance
+                self.name = node_data.find('name', f"<MODEL>-{node_id}")
+                found_node = true
+            end
         end
     end
+end
+```
+
+#### Data Persistence Patterns (CRITICAL FIX)
+```berry
+def decodeUplink(name, node, rssi, fport, payload)
+    var node_data = global.<MODEL>_nodes.find(node, {})
+    var previous_data = node_data.find('last_data', {})
+    
+    # CRITICAL FIX: Use explicit key arrays for data recovery
+    if size(previous_data) > 0
+        # Define persistent keys explicitly (avoid keys() iterator)
+        for key: ['temperature', 'humidity', 'people_count', 'occupancy', 
+                 'battery_pct', 'battery_v', 'illuminance', 'detection_status']
+            if previous_data.contains(key)
+                data[key] = previous_data[key]
+            end
+        end
+    end
+    
+    # Process new payload data...
 end
 ```
 
@@ -640,16 +708,15 @@ tasmota.add_cmd("Lw[MODEL]TestUI", def(cmd, idx, payload_str)
         "high":      "[HIGH_VALUES_HEX_PAYLOAD]", # High values/alerts  
         "alert":     "[ALERT_HEX_PAYLOAD]",       # Alert conditions
         "config":    "[CONFIG_HEX_PAYLOAD]",      # Configuration response
-        "info":      "[INFO_HEX_PAYLOAD]"         # Device information
+        "info":      "[INFO_HEX_PAYLOAD]",        # Device information
+        "demo":      "[COMPREHENSIVE_DEMO_PAYLOAD]" # All sensors + events (optional)
     }
     
     var hex_payload = test_scenarios.find(payload_str ? payload_str : 'nil', 'not_found')
     
     if hex_payload == 'not_found'
-      var scenarios_list = ""
-      for key: test_scenarios.keys()
-        scenarios_list += key + " "
-      end
+      # CRITICAL FIX: Use static string to avoid keys() iterator bug
+      var scenarios_list = "normal low high alert config info demo "
       return tasmota.resp_cmnd_str(format("Available scenarios: %s", scenarios_list))
     end
     
@@ -1807,7 +1874,7 @@ This template ensures:
 Remember: The goal is a **perfect, complete decoder** that handles **100% of the device's capabilities** as documented in the manufacturer's PDF, including ALL uplink decoding and ALL downlink command generation.
 
 ---
-*Template Version: 2.3.6 | Last Updated: 2025-08-25*
+*Template Version: 2.4.1 | Last Updated: 2025-09-02*
 
 ---
 

@@ -400,6 +400,121 @@ class LwDecode_D2x
             return lwdecode.SendDownlink(global.D2x_nodes, cmd, idx, hex_cmd)
         end)
         
+        # Set alarm interval
+        tasmota.remove_cmd("LwD2xAlarmInterval")
+        tasmota.add_cmd("LwD2xAlarmInterval", def(cmd, idx, payload_str)
+            var interval = int(payload_str)
+            if interval < 1 || interval > 65535
+                return tasmota.resp_cmnd_str("Invalid: range 1-65535 minutes")
+            end
+            
+            var hex_cmd = f"0D{interval & 0xFF:02X}{(interval >> 8) & 0xFF:02X}"
+            return lwdecode.SendDownlink(global.D2x_nodes, cmd, idx, hex_cmd)
+        end)
+        
+        # Set interrupt mode
+        tasmota.remove_cmd("LwD2xInterrupt")
+        tasmota.add_cmd("LwD2xInterrupt", def(cmd, idx, payload_str)
+            return lwdecode.SendDownlinkMap(global.D2x_nodes, cmd, idx, payload_str, {
+                '0|DISABLE': ['06000000', 'Disabled'],
+                '1|FALL': ['06010000', 'Falling Edge'],
+                '2|RISE': ['06020000', 'Rising Edge'], 
+                '3|BOTH': ['06030000', 'Both Edges']
+            })
+        end)
+        
+        # Set power output duration
+        tasmota.remove_cmd("LwD2xPowerDuration")
+        tasmota.add_cmd("LwD2xPowerDuration", def(cmd, idx, payload_str)
+            var duration = int(payload_str)
+            if duration < 0 || duration > 65535
+                return tasmota.resp_cmnd_str("Invalid: range 0-65535 milliseconds")
+            end
+            
+            var hex_cmd = f"07{duration & 0xFF:02X}{(duration >> 8) & 0xFF:02X}"
+            return lwdecode.SendDownlink(global.D2x_nodes, cmd, idx, hex_cmd)
+        end)
+        
+        # Poll historical data
+        tasmota.remove_cmd("LwD2xPollHistory")
+        tasmota.add_cmd("LwD2xPollHistory", def(cmd, idx, payload_str)
+            var parts = string.split(payload_str, ',')
+            if size(parts) != 2
+                return tasmota.resp_cmnd_str("Usage: LwD2xPollHistory<slot> <start_timestamp>,<end_timestamp>")
+            end
+            
+            var start_time = int(parts[0])
+            var end_time = int(parts[1])
+            
+            var hex_cmd = f"31{start_time & 0xFF:02X}{(start_time >> 8) & 0xFF:02X}"
+            hex_cmd += f"{(start_time >> 16) & 0xFF:02X}{(start_time >> 24) & 0xFF:02X}"
+            hex_cmd += f"{end_time & 0xFF:02X}{(end_time >> 8) & 0xFF:02X}"
+            hex_cmd += f"{(end_time >> 16) & 0xFF:02X}{(end_time >> 24) & 0xFF:02X}"
+            
+            return lwdecode.SendDownlink(global.D2x_nodes, cmd, idx, hex_cmd)
+        end)
+        
+        print("D2x: Downlink commands registered")
+    end
+end
+
+# Global instance
+LwDeco = LwDecode_D2x()
+
+# Node management commands
+tasmota.remove_cmd("LwD2xNodeStats")
+tasmota.add_cmd("LwD2xNodeStats", def(cmd, idx, node_id)
+    var stats = LwDeco.get_node_stats(node_id)
+    if stats != nil
+        import json
+        tasmota.resp_cmnd(json.dump(stats))
+    else
+        tasmota.resp_cmnd_str("Node not found")
+    end
+end)
+
+tasmota.remove_cmd("LwD2xClearNode")
+tasmota.add_cmd("LwD2xClearNode", def(cmd, idx, node_id)
+    if LwDeco.clear_node_data(node_id)
+        tasmota.resp_cmnd_done()
+    else
+        tasmota.resp_cmnd_str("Node not found")
+    end
+end)
+
+# Test UI command
+tasmota.remove_cmd("LwD2xTestUI")
+tasmota.add_cmd("LwD2xTestUI", def(cmd, idx, payload_str)
+    var test_scenarios = {
+        # Verified payloads matching MAP structure
+        "normal":     "0FA01A02FF7FFF00FF7FFF7FFF",    # Port 2: Battery 4000mV, Red temp 26.6°C, normal operation
+        "alarm":      "0FA01A04FF7FFF01FF7FFF7FFF",    # Port 2: Same temps with alarm flag set
+        "multi":      "0FA01A040C80FF000C80FF80",      # Port 2: Three probes active (20°C each)
+        "low":        "0BB81A04FF7FFF00FF7FFF7FFF",    # Port 2: Low battery 3000mV, same temp
+        "config":     "1901000100FA0",                  # Port 5: Device status - D2x, fw 1.0.0, EU868, 4000mV
+        "historical": "0C800C801A040000000061A0B580",  # Port 3: Historical data with timestamp
+        "cold":       "0FA0FF38FF7FFF00FF7FFF7FFF",    # Port 2: -20°C temperature reading
+        "demo":       "0FA01A040C800C800C80"           # Port 2: All three probes at 20°C
+    }
+    
+    var hex_payload = test_scenarios.find(payload_str ? payload_str : 'nil', 'not_found')
+    
+    if hex_payload == 'not_found'
+        var scenarios_list = "normal alarm multi low config historical cold demo "
+        return tasmota.resp_cmnd_str(f"Available scenarios: {scenarios_list}")
+    end
+    
+    var rssi = -75
+    var fport = 2  # Default to sensor data port
+    if payload_str == "config" fport = 5 end
+    if payload_str == "historical" fport = 3 end
+
+    return tasmota.cmd(f'LwSimulate{idx} {rssi},{fport},{hex_payload}')
+end)
+
+# Register driver for web UI integration
+tasmota.add_driver(LwDeco)d)
+        
         # Get device status
         tasmota.remove_cmd("LwD2xGetStatus")
         tasmota.add_cmd("LwD2xGetStatus", def(cmd, idx, payload_str)

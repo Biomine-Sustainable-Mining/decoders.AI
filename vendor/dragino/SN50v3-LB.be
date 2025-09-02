@@ -1,31 +1,28 @@
 #
-# LoRaWAN AI-Generated Decoder for Dragino SN50v3-LB Prompted by User Request
+# LoRaWAN AI-Generated Decoder for Dragino SN50v3-LB Prompted by ZioFabry 
 #
-# Generated: 2025-08-20 | Version: 1.0.0 | Revision: 1
-#            by "LoRaWAN Decoder AI Generation Template", v2.3.3
+# Generated: 2025-09-02 | Version: 1.3.0 | Revision: REV3
+#            by "LoRaWAN Decoder AI Generation Template", v2.5.0
 #
-# Homepage:  https://www.dragino.com/products/lora-lorawan-end-node/item/260-sn50v3-lb-ls.html
+# Homepage:  https://wiki.dragino.com/xwiki/bin/view/Main/User%20Manual%20for%20LoRaWAN%20End%20Nodes/SN50v3-LB/
 # Userguide: https://wiki.dragino.com/xwiki/bin/view/Main/User%20Manual%20for%20LoRaWAN%20End%20Nodes/SN50v3-LB/
-# Decoder:   https://github.com/dragino/dragino-end-node-decoder/tree/main/SN50_v3-LB
+# Decoder:   https://wiki.dragino.com/xwiki/bin/view/Main/User%20Manual%20for%20LoRaWAN%20End%20Nodes/SN50v3-LB/
 # 
-# v1.0.0 (2025-08-20): Initial generation from wiki specification
+# v1.3.0 (2025-09-02): Template v2.5.0 upgrade with TestUI payload verification
+# v1.2.0 (2025-09-02): Framework v2.4.1 upgrade with critical Berry keys() fixes
+# v1.1.0 (2025-08-20): Enhanced display with working mode support
+# v1.0.0 (2025-08-20): Initial generation from MAP specification
 
 class LwDecode_SN50v3LB
-    var hashCheck      # Duplicate payload detection flag (true = skip duplicates)
-    var name           # Device name from LoRaWAN
-    var node           # Node identifier
-    var last_data      # Cached decoded data
-    var last_update    # Timestamp of last update
-    var lwdecode       # global instance of the driver
+    var hashCheck, name, node, last_data, last_update, lwdecode
 
     def init()
-        self.hashCheck = true   # Enable duplicate detection by default
+        self.hashCheck = true
         self.name = nil
         self.node = nil
         self.last_data = {}
         self.last_update = 0
         
-        # Initialize global node storage (survives decoder reload)
         import global
         if !global.contains("SN50v3LB_nodes")
             global.SN50v3LB_nodes = {}
@@ -40,83 +37,173 @@ class LwDecode_SN50v3LB
         import global
         var data = {}
         
-        # Validate inputs
         if payload == nil || size(payload) < 1
             return nil
         end
         
         try
-            # Store device info
             self.name = name
             self.node = node
-            data['rssi'] = rssi
-            data['fport'] = fport
+            data['RSSI'] = rssi
+            data['FPort'] = fport
             
-            # Retrieve node history from global storage
             var node_data = global.SN50v3LB_nodes.find(node, {})
+            var previous_data = node_data.find('last_data', {})
             
-            # Decode based on fport
+            if size(previous_data) > 0
+                for key: ['battery_v', 'ds18b20_temp', 'sht31_temp', 'sht31_humidity', 'adc_value', 
+                         'distance', 'weight', 'count_value', 'working_mode', 'firmware_version',
+                         'frequency_band', 'subband', 'digital_input', 'temp117_temp']
+                    if previous_data.contains(key)
+                        data[key] = previous_data[key]
+                    end
+                end
+            end
+            
             if fport == 5
-                # Device status
+                # Device Status
                 if size(payload) >= 7
-                    data = self.decode_device_status(payload, data)
-                else
-                    print(f"SN50v3LB: Invalid device status payload size: {size(payload)}")
-                    return nil
+                    data['sensor_model'] = payload[0]
+                    var fw_high = payload[1]
+                    var fw_low = payload[2]
+                    data['firmware_version'] = f"{fw_high & 0x0F}.{(fw_low >> 4) & 0x0F}.{fw_low & 0x0F}"
+                    
+                    var freq_bands = {
+                        0x01: "EU868", 0x02: "US915", 0x03: "IN865", 0x04: "AU915",
+                        0x05: "KZ865", 0x06: "RU864", 0x07: "AS923", 0x08: "AS923-1",
+                        0x09: "AS923-2", 0x0A: "AS923-3", 0x0B: "CN470", 0x0C: "EU433",
+                        0x0D: "KR920", 0x0E: "MA869"
+                    }
+                    data['frequency_band'] = freq_bands.find(payload[3], f"Unknown({payload[3]:02X})")
+                    data['subband'] = payload[4]
+                    
+                    var battery_mv = (payload[5] << 8) | payload[6]
+                    data['battery_v'] = battery_mv / 1000.0
                 end
                 
             elif fport == 2
-                # Sensor data - determine working mode from flags byte
-                if size(payload) >= 7
-                    # Extract working mode from 7th byte (index 6)
-                    var flags_byte = payload[6]
-                    var working_mode = (flags_byte >> 2) & 0x1F
-                    data['working_mode'] = working_mode
-                    
-                    if working_mode == 0  # MOD=1 (default)
-                        data = self.decode_mode_1(payload, data)
-                    elif working_mode == 1  # MOD=2 (distance)
-                        data = self.decode_mode_2(payload, data)
-                    elif working_mode == 2  # MOD=3 (3 ADC + I2C)
-                        data = self.decode_mode_3(payload, data)
-                    elif working_mode == 3  # MOD=4 (3 DS18B20)
-                        data = self.decode_mode_4(payload, data)
-                    elif working_mode == 4  # MOD=5 (weight)
-                        data = self.decode_mode_5(payload, data)
-                    elif working_mode == 5  # MOD=6 (counting)
-                        data = self.decode_mode_6(payload, data)
-                    elif working_mode == 6  # MOD=7 (three interrupt)
-                        data = self.decode_mode_7(payload, data)
-                    elif working_mode == 7  # MOD=8 (3 ADC + DS18B20)
-                        data = self.decode_mode_8(payload, data)
-                    elif working_mode == 8  # MOD=9 (3 DS18B20 + 2 count)
-                        data = self.decode_mode_9(payload, data)
-                    elif working_mode == 9  # MOD=10 (PWM)
-                        data = self.decode_mode_10(payload, data)
-                    elif working_mode == 10  # MOD=11 (TEMP117)
-                        data = self.decode_mode_11(payload, data)
-                    elif working_mode == 11  # MOD=12 (Count + SHT31)
-                        data = self.decode_mode_12(payload, data)
-                    else
-                        print(f"SN50v3LB: Unknown working mode: {working_mode}")
-                        return nil
-                    end
-                else
-                    print(f"SN50v3LB: Payload too small for sensor data: {size(payload)}")
-                    return nil
-                end
+                var payload_size = size(payload)
+                var battery_mv = (payload[0] << 8) | payload[1]
+                data['battery_v'] = battery_mv / 1000.0
                 
-            else
-                print(f"SN50v3LB: Unknown fport: {fport}")
-                return nil
+                if payload_size == 11
+                    var ds18b20_raw = (payload[2] << 8) | payload[3]
+                    if ds18b20_raw > 32767
+                        ds18b20_raw = ds18b20_raw - 65536
+                    end
+                    data['ds18b20_temp'] = ds18b20_raw / 10.0
+                    
+                    var adc_value = (payload[4] << 8) | payload[5]
+                    data['adc_value'] = adc_value
+                    data['digital_input'] = payload[6]
+                    
+                    var high_bytes = (payload[7] << 8) | payload[8]
+                    var low_bytes = (payload[9] << 8) | payload[10]
+                    
+                    if high_bytes >= 240 && high_bytes <= 6000 && low_bytes == 0
+                        data['working_mode'] = "Distance"
+                        data['distance'] = high_bytes
+                    elif payload[6] == 0 || payload[6] == 1
+                        var weight = (payload[7] << 24) | (payload[8] << 16) | (payload[9] << 8) | payload[10]
+                        data['working_mode'] = "Weight"
+                        data['weight'] = weight
+                    elif high_bytes == 0 || low_bytes > 1000
+                        var count = (payload[7] << 24) | (payload[8] << 16) | (payload[9] << 8) | payload[10]
+                        data['working_mode'] = "Counting"
+                        data['count_value'] = count
+                    elif high_bytes > -400 && high_bytes < 850
+                        data['working_mode'] = "SHT31"
+                        var sht31_temp_raw = high_bytes
+                        if sht31_temp_raw > 32767
+                            sht31_temp_raw = sht31_temp_raw - 65536
+                        end
+                        data['sht31_temp'] = sht31_temp_raw / 10.0
+                        data['sht31_humidity'] = low_bytes / 10.0
+                    elif low_bytes == 0
+                        data['working_mode'] = "TEMP117"
+                        var temp117_raw = high_bytes
+                        if temp117_raw > 32767
+                            temp117_raw = temp117_raw - 65536
+                        end
+                        data['temp117_temp'] = temp117_raw / 10.0
+                    else
+                        data['working_mode'] = "Default"
+                        var sht_temp_raw = high_bytes
+                        if sht_temp_raw > 32767
+                            sht_temp_raw = sht_temp_raw - 65536
+                        end
+                        data['sht31_temp'] = sht_temp_raw / 10.0
+                        data['sht31_humidity'] = low_bytes / 10.0
+                    end
+                    
+                elif payload_size == 12
+                    data['working_mode'] = "3ADC+I2C"
+                    data['adc1_value'] = (payload[0] << 8) | payload[1]
+                    data['adc2_value'] = (payload[2] << 8) | payload[3]
+                    data['adc3_value'] = (payload[4] << 8) | payload[5]
+                    data['digital_interrupt'] = payload[6]
+                    
+                    var i2c_temp_raw = (payload[7] << 8) | payload[8]
+                    if i2c_temp_raw > 32767
+                        i2c_temp_raw = i2c_temp_raw - 65536
+                    end
+                    data['sht31_temp'] = i2c_temp_raw / 10.0
+                    data['sht31_humidity'] = ((payload[9] << 8) | payload[10]) / 10.0
+                    data['battery_v'] = payload[11] / 10.0
+                    
+                elif payload_size == 9
+                    data['working_mode'] = "3Interrupt"
+                    var battery_mv = (payload[0] << 8) | payload[1]
+                    data['battery_v'] = battery_mv / 1000.0
+                    
+                    var ds18b20_raw = (payload[2] << 8) | payload[3]
+                    if ds18b20_raw > 32767
+                        ds18b20_raw = ds18b20_raw - 65536
+                    end
+                    data['ds18b20_temp'] = ds18b20_raw / 10.0
+                    
+                    data['adc_value'] = (payload[4] << 8) | payload[5]
+                    data['interrupt1'] = payload[6]
+                    data['interrupt2'] = payload[7]
+                    data['interrupt3'] = payload[8]
+                    
+                elif payload_size == 17
+                    data['working_mode'] = "3DS18B20+2Count"
+                    var battery_mv = (payload[0] << 8) | payload[1]
+                    data['battery_v'] = battery_mv / 1000.0
+                    
+                    var temp1_raw = (payload[2] << 8) | payload[3]
+                    if temp1_raw > 32767
+                        temp1_raw = temp1_raw - 65536
+                    end
+                    data['ds18b20_temp1'] = temp1_raw / 10.0
+                    
+                    var temp2_raw = (payload[4] << 8) | payload[5]
+                    if temp2_raw > 32767
+                        temp2_raw = temp2_raw - 65536
+                    end
+                    data['ds18b20_temp2'] = temp2_raw / 10.0
+                    
+                    data['digital_interrupt'] = payload[6]
+                    
+                    var temp3_raw = (payload[7] << 8) | payload[8]
+                    if temp3_raw > 32767
+                        temp3_raw = temp3_raw - 65536
+                    end
+                    data['ds18b20_temp3'] = temp3_raw / 10.0
+                    
+                    data['count1_value'] = (payload[9] << 24) | (payload[10] << 16) | (payload[11] << 8) | payload[12]
+                    data['count2_value'] = (payload[13] << 24) | (payload[14] << 16) | (payload[15] << 8) | payload[16]
+                    
+                else
+                    data['working_mode'] = "Unknown"
+                end
             end
             
-            # Update node history in global storage
             node_data['last_data'] = data
             node_data['last_update'] = tasmota.rtc()['local']
             node_data['name'] = name
             
-            # Store battery trend if available
             if data.contains('battery_v')
                 if !node_data.contains('battery_history')
                     node_data['battery_history'] = []
@@ -127,36 +214,13 @@ class LwDecode_SN50v3LB
                 end
             end
             
-            # Store sensor trends for different modes
-            if data.contains('ds18b20_temperature')
-                if !node_data.contains('temp_history')
-                    node_data['temp_history'] = []
-                end
-                node_data['temp_history'].push(data['ds18b20_temperature'])
-                if size(node_data['temp_history']) > 10
-                    node_data['temp_history'].pop(0)
-                end
-            end
-            
-            # Track count increments
-            if data.contains('count_value')
-                var prev_count = node_data.find('last_count', 0)
-                if data['count_value'] > prev_count
-                    node_data['count_increment'] = data['count_value'] - prev_count
-                end
-                node_data['last_count'] = data['count_value']
-            end
-            
-            # Register downlink commands
             if !global.contains("SN50v3LB_cmdInit") || !global.SN50v3LB_cmdInit
                 self.register_downlink_commands()
                 global.SN50v3LB_cmdInit = true
             end
 
-            # Save back to global storage
             global.SN50v3LB_nodes[node] = node_data
             
-            # Update instance cache
             self.last_data = data
             self.last_update = node_data['last_update']
             
@@ -168,532 +232,171 @@ class LwDecode_SN50v3LB
         end
     end
     
-    def decode_device_status(payload, data)
-        # Sensor Model (byte 0)
-        data['sensor_model'] = payload[0]
-        
-        # Firmware Version (bytes 1-2)
-        var fw_major = (payload[1] >> 4) & 0x0F
-        var fw_minor = payload[1] & 0x0F
-        var fw_patch = (payload[2] >> 4) & 0x0F
-        data['firmware_version'] = f"{fw_major}.{fw_minor}.{fw_patch}"
-        
-        # Frequency Band (byte 3)
-        var band_map = {
-            0x01: "EU868", 0x02: "US915", 0x03: "IN865", 0x04: "AU915",
-            0x05: "KZ865", 0x06: "RU864", 0x07: "AS923", 0x08: "AS923-1",
-            0x09: "AS923-2", 0x0a: "AS923-3", 0x0b: "CN470", 0x0c: "EU433",
-            0x0d: "KR920", 0x0e: "MA869"
-        }
-        data['frequency_band'] = band_map.find(payload[3], f"Unknown({payload[3]:02X})")
-        
-        # Sub-band (byte 4)
-        data['sub_band'] = payload[4]
-        
-        # Battery voltage (bytes 5-6)
-        data['battery_voltage'] = (payload[6] << 8) | payload[5]
-        data['battery_v'] = data['battery_voltage'] / 1000.0
-        
-        return data
-    end
-    
-    def decode_mode_1(payload, data)
-        # MOD=1 Default Mode (11 bytes)
-        # Battery (bytes 0-1)
-        data['battery_voltage'] = (payload[1] << 8) | payload[0]
-        data['battery_v'] = data['battery_voltage'] / 1000.0
-        
-        # DS18B20 Temperature (bytes 2-3)
-        var temp_raw = (payload[3] << 8) | payload[2]
-        data['ds18b20_temperature'] = self.decode_signed_16(temp_raw) / 10.0
-        
-        # ADC (bytes 4-5) 
-        data['adc_pa4'] = (payload[5] << 8) | payload[4]
-        
-        # Digital input & flags (byte 6)
-        data = self.decode_digital_flags(payload[6], data)
-        
-        # I2C Temperature (bytes 7-8)
-        var i2c_temp_raw = (payload[8] << 8) | payload[7]
-        if i2c_temp_raw != 0
-            data['i2c_temperature'] = self.decode_signed_16(i2c_temp_raw) / 10.0
-        end
-        
-        # I2C Humidity (bytes 9-10)
-        var i2c_hum_raw = (payload[10] << 8) | payload[9]
-        if i2c_hum_raw != 0
-            data['i2c_humidity'] = i2c_hum_raw / 10.0
-        end
-        
-        return data
-    end
-    
-    def decode_mode_2(payload, data)
-        # MOD=2 Distance Mode (11 bytes)
-        # Battery (bytes 0-1)
-        data['battery_voltage'] = (payload[1] << 8) | payload[0]
-        data['battery_v'] = data['battery_voltage'] / 1000.0
-        
-        # DS18B20 Temperature (bytes 2-3)
-        var temp_raw = (payload[3] << 8) | payload[2]
-        data['ds18b20_temperature'] = self.decode_signed_16(temp_raw) / 10.0
-        
-        # ADC (bytes 4-5)
-        data['adc_pa4'] = (payload[5] << 8) | payload[4]
-        
-        # Digital input & flags (byte 6)
-        data = self.decode_digital_flags(payload[6], data)
-        
-        # Distance (bytes 7-8)
-        data['distance_mm'] = (payload[8] << 8) | payload[7]
-        data['distance_cm'] = data['distance_mm'] / 10.0
-        
-        return data
-    end
-    
-    def decode_mode_3(payload, data)
-        # MOD=3 3 ADC + I2C Mode (12 bytes)
-        # ADC1 (bytes 0-1)
-        data['adc1_pa4'] = (payload[1] << 8) | payload[0]
-        
-        # ADC2 (bytes 2-3)
-        data['adc2_pa5'] = (payload[3] << 8) | payload[2]
-        
-        # ADC3 (bytes 4-5)
-        data['adc3_pa8'] = (payload[5] << 8) | payload[4]
-        
-        # Digital interrupt (byte 6)
-        data = self.decode_digital_flags(payload[6], data)
-        
-        # I2C Temperature (bytes 7-8)
-        var i2c_temp_raw = (payload[8] << 8) | payload[7]
-        if i2c_temp_raw != 0
-            data['i2c_temperature'] = self.decode_signed_16(i2c_temp_raw) / 10.0
-        end
-        
-        # I2C Humidity (bytes 9-10)
-        var i2c_hum_raw = (payload[10] << 8) | payload[9]
-        if i2c_hum_raw != 0
-            data['i2c_humidity'] = i2c_hum_raw / 10.0
-        end
-        
-        # Battery (byte 11)
-        data['battery_scaled'] = payload[11]
-        
-        return data
-    end
-    
-    def decode_mode_4(payload, data)
-        # MOD=4 3 DS18B20 Mode (11 bytes)
-        # Battery (bytes 0-1)
-        data['battery_voltage'] = (payload[1] << 8) | payload[0]
-        data['battery_v'] = data['battery_voltage'] / 1000.0
-        
-        # DS18B20 Temperature 1 (bytes 2-3)
-        var temp1_raw = (payload[3] << 8) | payload[2]
-        data['ds18b20_1_temperature'] = self.decode_signed_16(temp1_raw) / 10.0
-        
-        # ADC (bytes 4-5)
-        data['adc_pa4'] = (payload[5] << 8) | payload[4]
-        
-        # Digital input & flags (byte 6)
-        data = self.decode_digital_flags(payload[6], data)
-        
-        # DS18B20 Temperature 2 (bytes 7-8)
-        var temp2_raw = (payload[8] << 8) | payload[7]
-        data['ds18b20_2_temperature'] = self.decode_signed_16(temp2_raw) / 10.0
-        
-        # DS18B20 Temperature 3 (bytes 9-10)
-        var temp3_raw = (payload[10] << 8) | payload[9]
-        data['ds18b20_3_temperature'] = self.decode_signed_16(temp3_raw) / 10.0
-        
-        return data
-    end
-    
-    def decode_mode_5(payload, data)
-        # MOD=5 Weight Mode (11 bytes)
-        # Battery (bytes 0-1)
-        data['battery_voltage'] = (payload[1] << 8) | payload[0]
-        data['battery_v'] = data['battery_voltage'] / 1000.0
-        
-        # DS18B20 Temperature (bytes 2-3)
-        var temp_raw = (payload[3] << 8) | payload[2]
-        data['ds18b20_temperature'] = self.decode_signed_16(temp_raw) / 10.0
-        
-        # ADC (bytes 4-5)
-        data['adc_pa4'] = (payload[5] << 8) | payload[4]
-        
-        # Digital input & flags (byte 6)
-        data = self.decode_digital_flags(payload[6], data)
-        
-        # Weight (bytes 7-10)
-        data['weight_g'] = (payload[10] << 24) | (payload[9] << 16) | (payload[8] << 8) | payload[7]
-        data['weight_kg'] = data['weight_g'] / 1000.0
-        
-        return data
-    end
-    
-    def decode_mode_6(payload, data)
-        # MOD=6 Counting Mode (11 bytes)
-        # Battery (bytes 0-1)
-        data['battery_voltage'] = (payload[1] << 8) | payload[0]
-        data['battery_v'] = data['battery_voltage'] / 1000.0
-        
-        # DS18B20 Temperature (bytes 2-3)
-        var temp_raw = (payload[3] << 8) | payload[2]
-        data['ds18b20_temperature'] = self.decode_signed_16(temp_raw) / 10.0
-        
-        # ADC (bytes 4-5)
-        data['adc_pa4'] = (payload[5] << 8) | payload[4]
-        
-        # Digital input (byte 6)
-        data = self.decode_digital_flags(payload[6], data)
-        
-        # Count value (bytes 7-10)
-        data['count_value'] = (payload[10] << 24) | (payload[9] << 16) | (payload[8] << 8) | payload[7]
-        
-        return data
-    end
-    
-    def decode_mode_7(payload, data)
-        # MOD=7 Three Interrupt Mode (9 bytes)
-        # Battery (bytes 0-1)
-        data['battery_voltage'] = (payload[1] << 8) | payload[0]
-        data['battery_v'] = data['battery_voltage'] / 1000.0
-        
-        # DS18B20 Temperature (bytes 2-3)
-        var temp_raw = (payload[3] << 8) | payload[2]
-        data['ds18b20_temperature'] = self.decode_signed_16(temp_raw) / 10.0
-        
-        # ADC (bytes 4-5)
-        data['adc_pa5'] = (payload[5] << 8) | payload[4]
-        
-        # Three interrupt status (bytes 6-8)
-        data['interrupt_pa8'] = payload[6]
-        data['interrupt_pa4'] = payload[7]
-        data['interrupt_pb15'] = payload[8]
-        
-        return data
-    end
-    
-    def decode_mode_8(payload, data)
-        # MOD=8 3 ADC + DS18B20 Mode (11 bytes)
-        # Battery (bytes 0-1)
-        data['battery_voltage'] = (payload[1] << 8) | payload[0]
-        data['battery_v'] = data['battery_voltage'] / 1000.0
-        
-        # DS18B20 Temperature (bytes 2-3)
-        var temp_raw = (payload[3] << 8) | payload[2]
-        data['ds18b20_temperature'] = self.decode_signed_16(temp_raw) / 10.0
-        
-        # ADC1 (bytes 4-5)
-        data['adc1_pa4'] = (payload[5] << 8) | payload[4]
-        
-        # Digital interrupt (byte 6)
-        data = self.decode_digital_flags(payload[6], data)
-        
-        # ADC2 (bytes 7-8)
-        data['adc2_pa5'] = (payload[8] << 8) | payload[7]
-        
-        # ADC3 (bytes 9-10)
-        data['adc3_pa8'] = (payload[10] << 8) | payload[9]
-        
-        return data
-    end
-    
-    def decode_mode_9(payload, data)
-        # MOD=9 3 DS18B20 + 2 Count Mode (17 bytes)
-        if size(payload) < 17
-            print(f"SN50v3LB: Mode 9 requires 17 bytes, got {size(payload)}")
-            return data
-        end
-        
-        # Battery (bytes 0-1)
-        data['battery_voltage'] = (payload[1] << 8) | payload[0]
-        data['battery_v'] = data['battery_voltage'] / 1000.0
-        
-        # DS18B20 Temperature 1 (bytes 2-3)
-        var temp1_raw = (payload[3] << 8) | payload[2]
-        data['ds18b20_1_temperature'] = self.decode_signed_16(temp1_raw) / 10.0
-        
-        # DS18B20 Temperature 2 (bytes 4-5)
-        var temp2_raw = (payload[5] << 8) | payload[4]
-        data['ds18b20_2_temperature'] = self.decode_signed_16(temp2_raw) / 10.0
-        
-        # Digital interrupt (byte 6)
-        data = self.decode_digital_flags(payload[6], data)
-        
-        # DS18B20 Temperature 3 (bytes 7-8)
-        var temp3_raw = (payload[8] << 8) | payload[7]
-        data['ds18b20_3_temperature'] = self.decode_signed_16(temp3_raw) / 10.0
-        
-        # Count 1 (bytes 9-12)
-        data['count1_pa8'] = (payload[12] << 24) | (payload[11] << 16) | (payload[10] << 8) | payload[9]
-        
-        # Count 2 (bytes 13-16)
-        data['count2_pa4'] = (payload[16] << 24) | (payload[15] << 16) | (payload[14] << 8) | payload[13]
-        
-        return data
-    end
-    
-    def decode_mode_10(payload, data)
-        # MOD=10 PWM Mode (11 bytes)
-        # Battery (bytes 0-1)
-        data['battery_voltage'] = (payload[1] << 8) | payload[0]
-        data['battery_v'] = data['battery_voltage'] / 1000.0
-        
-        # DS18B20 Temperature (bytes 2-3)
-        var temp_raw = (payload[3] << 8) | payload[2]
-        data['ds18b20_temperature'] = self.decode_signed_16(temp_raw) / 10.0
-        
-        # ADC (bytes 4-5)
-        data['adc_pa4'] = (payload[5] << 8) | payload[4]
-        
-        # PWM Settings (byte 6)
-        data['pwm_settings'] = payload[6]
-        
-        # Pulse period (bytes 7-8)
-        data['pulse_period'] = (payload[8] << 8) | payload[7]
-        
-        # High level duration (bytes 9-10)
-        data['high_duration'] = (payload[10] << 8) | payload[9]
-        
-        # Calculate frequency and duty cycle
-        if data['pulse_period'] > 0
-            var pwm_set = (data['pwm_settings'] >> 2) & 0x01
-            if pwm_set == 0
-                data['frequency_hz'] = 1000000 / data['pulse_period']
-            else
-                data['frequency_hz'] = 1000 / data['pulse_period']
-            end
-            data['duty_cycle_pct'] = (data['high_duration'] * 100) / data['pulse_period']
-        end
-        
-        return data
-    end
-    
-    def decode_mode_11(payload, data)
-        # MOD=11 TEMP117 Mode (11 bytes)
-        # Battery (bytes 0-1)
-        data['battery_voltage'] = (payload[1] << 8) | payload[0]
-        data['battery_v'] = data['battery_voltage'] / 1000.0
-        
-        # DS18B20 Temperature (bytes 2-3)
-        var temp_raw = (payload[3] << 8) | payload[2]
-        data['ds18b20_temperature'] = self.decode_signed_16(temp_raw) / 10.0
-        
-        # ADC (bytes 4-5)
-        data['adc_pa4'] = (payload[5] << 8) | payload[4]
-        
-        # Digital input & flags (byte 6)
-        data = self.decode_digital_flags(payload[6], data)
-        
-        # TEMP117 Temperature (bytes 7-8)
-        var temp117_raw = (payload[8] << 8) | payload[7]
-        if temp117_raw != 0
-            data['temp117_temperature'] = self.decode_signed_16(temp117_raw) / 10.0
-        end
-        
-        return data
-    end
-    
-    def decode_mode_12(payload, data)
-        # MOD=12 Count + SHT31 Mode (11 bytes)
-        # Battery (bytes 0-1)
-        data['battery_voltage'] = (payload[1] << 8) | payload[0]
-        data['battery_v'] = data['battery_voltage'] / 1000.0
-        
-        # SHT31 Temperature (bytes 2-3)
-        var temp_raw = (payload[3] << 8) | payload[2]
-        data['sht31_temperature'] = self.decode_signed_16(temp_raw) / 10.0
-        
-        # SHT31 Humidity (bytes 4-5)
-        data['sht31_humidity'] = ((payload[5] << 8) | payload[4]) / 10.0
-        
-        # Digital input (byte 6)
-        data = self.decode_digital_flags(payload[6], data)
-        
-        # Count value (bytes 7-10)
-        data['count_value'] = (payload[10] << 24) | (payload[9] << 16) | (payload[8] << 8) | payload[7]
-        
-        return data
-    end
-    
-    def decode_digital_flags(flags_byte, data)
-        # Extract digital input and interrupt flags
-        data['digital_pb15'] = (flags_byte & 0x02) != 0  # Bit 1
-        data['interrupt_pa8'] = (flags_byte & 0x01) != 0  # Bit 0
-        
-        return data
-    end
-    
-    def decode_signed_16(value)
-        if (value & 0x8000) != 0
-            value = value - 0x10000
-        end
-        return value
-    end
-    
     def add_web_sensor()
         import global
         
-        # Try to use current instance data first
-        var data_to_show = self.last_data
-        var last_update = self.last_update
-        
-        # If no instance data, try to recover from global storage
-        if size(data_to_show) == 0 && self.node != nil
-            var node_data = global.SN50v3LB_nodes.find(self.node, {})
-            data_to_show = node_data.find('last_data', {})
-            last_update = node_data.find('last_update', 0)
-        end
-        
-        if size(data_to_show) == 0 return nil end
-        
-        import string
-        var msg = ""
-        var fmt = LwSensorFormatter_cls()
-        
-        # MANDATORY: Add header line with device info
-        var name = self.name
-        if name == nil || name == ""
-            name = f"SN50v3LB-{self.node}"
-        end
-        var name_tooltip = "Dragino SN50v3-LB Generic LoRaWAN Sensor Node"
-        var battery = data_to_show.find('battery_v', 1000)
-        var battery_last_seen = last_update
-        var rssi = data_to_show.find('rssi', 1000)
-        var simulated = data_to_show.find('simulated', false)
-        
-        # Build display using emoji formatter
-        fmt.header(name, name_tooltip, battery, battery_last_seen, rssi, last_update, simulated)
-        fmt.start_line()
-        
-        # Display based on working mode
-        var working_mode = data_to_show.find('working_mode', -1)
-        
-        if working_mode == 0  # MOD=1 Default
-            if data_to_show.contains('ds18b20_temperature')
-                fmt.add_sensor("temp", data_to_show['ds18b20_temperature'], "DS18B20", "🌡️")
-            end
-            if data_to_show.contains('i2c_temperature')
-                fmt.add_sensor("temp", data_to_show['i2c_temperature'], "I2C Temp", "🌡️")
-            end
-            if data_to_show.contains('i2c_humidity')
-                fmt.add_sensor("humidity", data_to_show['i2c_humidity'], "I2C Hum", "💧")
-            end
-            if data_to_show.contains('adc_pa4')
-                fmt.add_sensor("string", f"{data_to_show['adc_pa4']}", "ADC", "📊")
+        try
+            var data_to_show = self.last_data
+            var last_update = self.last_update
+            
+            if size(data_to_show) == 0 && self.node != nil
+                var node_data = global.SN50v3LB_nodes.find(self.node, {})
+                data_to_show = node_data.find('last_data', {})
+                last_update = node_data.find('last_update', 0)
             end
             
-        elif working_mode == 1  # MOD=2 Distance
-            if data_to_show.contains('distance_cm')
-                fmt.add_sensor("distance", data_to_show['distance_cm'], "Distance", "📏")
-            end
-            if data_to_show.contains('ds18b20_temperature')
-                fmt.add_sensor("temp", data_to_show['ds18b20_temperature'], "Temp", "🌡️")
-            end
-            
-        elif working_mode == 2  # MOD=3 3 ADC + I2C
-            if data_to_show.contains('adc1_pa4')
-                fmt.add_sensor("string", f"{data_to_show['adc1_pa4']}", "ADC1", "📊")
-            end
-            if data_to_show.contains('adc2_pa5')
-                fmt.add_sensor("string", f"{data_to_show['adc2_pa5']}", "ADC2", "📊")
-            end
-            if data_to_show.contains('adc3_pa8')
-                fmt.add_sensor("string", f"{data_to_show['adc3_pa8']}", "ADC3", "📊")
+            if size(data_to_show) == 0 && size(global.SN50v3LB_nodes) > 0
+                var found_node = false
+                for node_id: global.SN50v3LB_nodes.keys()
+                    if !found_node
+                        var node_data = global.SN50v3LB_nodes[node_id]
+                        data_to_show = node_data.find('last_data', {})
+                        last_update = node_data.find('last_update', 0)
+                        self.node = node_id
+                        self.name = node_data.find('name', f"SN50v3LB-{node_id}")
+                        found_node = true
+                    end
+                end
             end
             
-        elif working_mode == 3  # MOD=4 3 DS18B20
-            if data_to_show.contains('ds18b20_1_temperature')
-                fmt.add_sensor("temp", data_to_show['ds18b20_1_temperature'], "T1", "🌡️")
+            if size(data_to_show) == 0 return nil end
+            
+            import string
+            var msg = ""
+            var fmt = LwSensorFormatter_cls()
+            
+            var name = self.name
+            if name == nil || name == ""
+                name = f"SN50v3LB-{self.node}"
             end
-            if data_to_show.contains('ds18b20_2_temperature')
-                fmt.add_sensor("temp", data_to_show['ds18b20_2_temperature'], "T2", "🌡️")
-            end
-            if data_to_show.contains('ds18b20_3_temperature')
-                fmt.add_sensor("temp", data_to_show['ds18b20_3_temperature'], "T3", "🌡️")
+            var name_tooltip = "Dragino SN50v3-LB"
+            var battery = data_to_show.find('battery_v', 1000)
+            var battery_last_seen = last_update
+            var rssi = data_to_show.find('RSSI', 1000)
+            var simulated = data_to_show.find('simulated', false)
+            
+            fmt.header(name, name_tooltip, battery, battery_last_seen, rssi, last_update, simulated)
+            
+            fmt.start_line()
+            
+            if data_to_show.contains('battery_v')
+                fmt.add_sensor("volt", data_to_show['battery_v'], "Battery", "🔋")
             end
             
-        elif working_mode == 4  # MOD=5 Weight
-            if data_to_show.contains('weight_kg')
-                fmt.add_sensor("weight", data_to_show['weight_kg'], "Weight", "⚖️")
-            end
-            if data_to_show.contains('ds18b20_temperature')
-                fmt.add_sensor("temp", data_to_show['ds18b20_temperature'], "Temp", "🌡️")
-            end
-            
-        elif working_mode == 5  # MOD=6 Counting
-            if data_to_show.contains('count_value')
-                fmt.add_sensor("string", f"{data_to_show['count_value']}", "Count", "🔢")
-            end
-            if data_to_show.contains('ds18b20_temperature')
-                fmt.add_sensor("temp", data_to_show['ds18b20_temperature'], "Temp", "🌡️")
+            if data_to_show.contains('working_mode')
+                var mode_emoji = {
+                    "Default": "🔧", "Distance": "📏", "Weight": "⚖️", "Counting": "🔢",
+                    "SHT31": "🌡️", "3ADC+I2C": "📊", "3DS18B20": "🌡️", "3Interrupt": "⚡",
+                    "3DS18B20+2Count": "🔢", "PWM": "⚡", "TEMP117": "🌡️"
+                }.find(data_to_show['working_mode'], "⚙️")
+                fmt.add_sensor("string", data_to_show['working_mode'], "Mode", mode_emoji)
             end
             
-        elif working_mode == 6  # MOD=7 Three Interrupt
-            if data_to_show.contains('interrupt_pa8')
-                var status = data_to_show['interrupt_pa8'] ? "1" : "0"
-                fmt.add_sensor("string", status, "INT1", "📶")
-            end
-            if data_to_show.contains('interrupt_pa4')
-                var status = data_to_show['interrupt_pa4'] ? "1" : "0"
-                fmt.add_sensor("string", status, "INT2", "📶")
-            end
-            if data_to_show.contains('interrupt_pb15')
-                var status = data_to_show['interrupt_pb15'] ? "1" : "0"
-                fmt.add_sensor("string", status, "INT3", "📶")
+            if data_to_show.contains('ds18b20_temp')
+                fmt.add_sensor("temp", data_to_show['ds18b20_temp'], "DS18B20", "🌡️")
             end
             
-        elif working_mode == 9  # MOD=10 PWM
-            if data_to_show.contains('frequency_hz')
-                fmt.add_sensor("string", f"{data_to_show['frequency_hz']}Hz", "Freq", "〰️")
-            end
-            if data_to_show.contains('duty_cycle_pct')
-                fmt.add_sensor("string", f"{data_to_show['duty_cycle_pct']}%", "Duty", "📊")
+            if data_to_show.contains('sht31_temp')
+                fmt.add_sensor("temp", data_to_show['sht31_temp'], "Temp", "🌡️")
             end
             
-        elif working_mode == 11  # MOD=12 Count + SHT31
-            if data_to_show.contains('sht31_temperature')
-                fmt.add_sensor("temp", data_to_show['sht31_temperature'], "Temp", "🌡️")
+            if data_to_show.contains('temp117_temp')
+                fmt.add_sensor("temp", data_to_show['temp117_temp'], "TEMP117", "🌡️")
             end
+            
             if data_to_show.contains('sht31_humidity')
-                fmt.add_sensor("humidity", data_to_show['sht31_humidity'], "Hum", "💧")
+                fmt.add_sensor("humidity", data_to_show['sht31_humidity'], "Humidity", "💧")
             end
+            
+            if data_to_show.contains('distance')
+                fmt.add_sensor("distance", data_to_show['distance'] / 1000.0, "Distance", "📏")
+            end
+            
+            if data_to_show.contains('weight')
+                var weight_kg = data_to_show['weight'] / 1000.0
+                fmt.add_sensor("string", f"{weight_kg:.1f}kg", "Weight", "⚖️")
+            end
+            
             if data_to_show.contains('count_value')
                 fmt.add_sensor("string", f"{data_to_show['count_value']}", "Count", "🔢")
             end
-        end
-        
-        # Add mode indicator
-        if working_mode >= 0
+            
             fmt.next_line()
-            fmt.add_sensor("string", f"MOD{working_mode + 1}", "Mode", "⚙️")
-        end
-        
-        # Device info if available
-        if data_to_show.contains('firmware_version')
-            fmt.add_sensor("string", data_to_show['firmware_version'], "FW", "💾")
-        end
-        
-        if data_to_show.contains('frequency_band')
-            fmt.add_sensor("string", data_to_show['frequency_band'], "Band", "📡")
-        end
-        
-        # Add last seen info if data is old
-        if last_update > 0
-            var age = tasmota.rtc()['local'] - last_update
-            if age > 3600  # Data older than 1 hour
-                fmt.next_line()
-                fmt.add_sensor("string", self.format_age(age), "Last Seen", "⏱️")
+            
+            var has_secondary = false
+            
+            if data_to_show.contains('ds18b20_temp1')
+                fmt.add_sensor("temp", data_to_show['ds18b20_temp1'], "T1", "🌡️")
+                has_secondary = true
             end
+            
+            if data_to_show.contains('ds18b20_temp2')
+                fmt.add_sensor("temp", data_to_show['ds18b20_temp2'], "T2", "🌡️")
+                has_secondary = true
+            end
+            
+            if data_to_show.contains('ds18b20_temp3')
+                fmt.add_sensor("temp", data_to_show['ds18b20_temp3'], "T3", "🌡️")
+                has_secondary = true
+            end
+            
+            if data_to_show.contains('count1_value')
+                fmt.add_sensor("string", f"{data_to_show['count1_value']}", "C1", "🔢")
+                has_secondary = true
+            end
+            
+            if data_to_show.contains('count2_value')
+                fmt.add_sensor("string", f"{data_to_show['count2_value']}", "C2", "🔢")
+                has_secondary = true
+            end
+            
+            if data_to_show.contains('adc1_value')
+                fmt.add_sensor("string", f"{data_to_show['adc1_value']}", "ADC1", "📊")
+                has_secondary = true
+            end
+            
+            if data_to_show.contains('adc2_value')
+                fmt.add_sensor("string", f"{data_to_show['adc2_value']}", "ADC2", "📊")
+                has_secondary = true
+            end
+            
+            if data_to_show.contains('adc3_value')
+                fmt.add_sensor("string", f"{data_to_show['adc3_value']}", "ADC3", "📊")
+                has_secondary = true
+            end
+            
+            if data_to_show.contains('firmware_version') || data_to_show.contains('frequency_band')
+                if has_secondary
+                    fmt.next_line()
+                end
+                
+                if data_to_show.contains('firmware_version')
+                    fmt.add_sensor("string", data_to_show['firmware_version'], "FW", "💾")
+                end
+                
+                if data_to_show.contains('frequency_band')
+                    fmt.add_sensor("string", data_to_show['frequency_band'], "Band", "📡")
+                end
+            end
+            
+            fmt.end_line()
+            
+            if last_update > 0
+                var age = tasmota.rtc()['local'] - last_update
+                if age > 3600
+                    fmt.start_line()
+                    fmt.add_status(self.format_age(age), "⏱️", nil)
+                    fmt.end_line()
+                end
+            end
+            
+            msg += fmt.get_msg()
+            return msg
+            
+        except .. as e, m
+            print(f"SN50v3LB: Display error - {e}: {m}")
+            return "📟 SN50v3LB Error - Check Console"
         end
-        
-        fmt.end_line()
-        msg += fmt.get_msg()
-
-        return msg
     end
     
     def format_age(seconds)
@@ -704,7 +407,6 @@ class LwDecode_SN50v3LB
         end
     end
     
-    # Get node statistics
     def get_node_stats(node_id)
         import global
         var node_data = global.SN50v3LB_nodes.find(node_id, nil)
@@ -712,15 +414,11 @@ class LwDecode_SN50v3LB
         
         return {
             'last_update': node_data.find('last_update', 0),
-            'name': node_data.find('name', 'Unknown'),
             'battery_history': node_data.find('battery_history', []),
-            'temp_history': node_data.find('temp_history', []),
-            'last_count': node_data.find('last_count', 0),
-            'count_increment': node_data.find('count_increment', 0)
+            'name': node_data.find('name', 'Unknown')
         }
     end
     
-    # Clear node data (for maintenance)
     def clear_node_data(node_id)
         import global
         if global.SN50v3LB_nodes.contains(node_id)
@@ -730,146 +428,99 @@ class LwDecode_SN50v3LB
         return false
     end
     
-    # Register downlink commands for device control
     def register_downlink_commands()
         import string
         
-        # Set transmit interval
         tasmota.remove_cmd("LwSN50v3LBInterval")
         tasmota.add_cmd("LwSN50v3LBInterval", def(cmd, idx, payload_str)
-            var seconds = int(payload_str)
-            if seconds < 30 || seconds > 16777215
+            var interval = int(payload_str)
+            if interval < 30 || interval > 16777215
                 return tasmota.resp_cmnd_str("Invalid: range 30-16777215 seconds")
             end
             
-            var hex_cmd = f"01{(seconds >> 16) & 0xFF:02X}{(seconds >> 8) & 0xFF:02X}{seconds & 0xFF:02X}"
+            var hex_cmd = f"01{(interval >> 16) & 0xFF:02X}{(interval >> 8) & 0xFF:02X}{interval & 0xFF:02X}"
             return lwdecode.SendDownlink(global.SN50v3LB_nodes, cmd, idx, hex_cmd)
         end)
         
-        # Request device status
         tasmota.remove_cmd("LwSN50v3LBStatus")
         tasmota.add_cmd("LwSN50v3LBStatus", def(cmd, idx, payload_str)
             return lwdecode.SendDownlink(global.SN50v3LB_nodes, cmd, idx, "2601")
         end)
         
-        # Set interrupt mode
+        tasmota.remove_cmd("LwSN50v3LBMode")
+        tasmota.add_cmd("LwSN50v3LBMode", def(cmd, idx, payload_str)
+            return lwdecode.SendDownlinkMap(global.SN50v3LB_nodes, cmd, idx, payload_str, { 
+                '1|DEFAULT': ['0A01', 'DEFAULT'], '2|DISTANCE': ['0A02', 'DISTANCE'], 
+                '3|3ADC': ['0A03', '3ADC'], '4|3DS18B20': ['0A04', '3DS18B20'],
+                '5|WEIGHT': ['0A05', 'WEIGHT'], '6|COUNTING': ['0A06', 'COUNTING'],
+                '7|3INTERRUPT': ['0A07', '3INTERRUPT'], '8|3ADCDS18B20': ['0A08', '3ADCDS18B20'],
+                '9|3DS18B202COUNT': ['0A09', '3DS18B202COUNT'], '10|PWM': ['0A0A', 'PWM'],
+                '11|TEMP117': ['0A0B', 'TEMP117'], '12|COUNTSHT31': ['0A0C', 'COUNTSHT31']
+            })
+        end)
+        
         tasmota.remove_cmd("LwSN50v3LBInterrupt")
         tasmota.add_cmd("LwSN50v3LBInterrupt", def(cmd, idx, payload_str)
-            # Format: LwSN50v3LBInterrupt<slot> <pin>,<mode>[,<delay>]
             var parts = string.split(payload_str, ',')
             if size(parts) < 2 || size(parts) > 3
-                return tasmota.resp_cmnd_str("Usage: pin(0-2),mode(0-3)[,delay_ms]")
+                return tasmota.resp_cmnd_str("Usage: pin,mode[,delay_ms] (pin: 0-2, mode: 0-3)")
             end
             
             var pin = int(parts[0])
             var mode = int(parts[1])
-            var delay = size(parts) == 3 ? int(parts[2]) : 0
+            var delay_ms = size(parts) > 2 ? int(parts[2]) : 0
             
-            if pin < 0 || pin > 2
-                return tasmota.resp_cmnd_str("Invalid pin: 0=PA8, 1=PA4, 2=PB15")
-            end
-            if mode < 0 || mode > 3
-                return tasmota.resp_cmnd_str("Invalid mode: 0=disable, 1=both, 2=falling, 3=rising")
+            if pin < 0 || pin > 2 || mode < 0 || mode > 3
+                return tasmota.resp_cmnd_str("Invalid: pin 0-2, mode 0-3")
             end
             
-            var hex_cmd = f"0600{pin:02X}{mode:02X}{(delay >> 8) & 0xFF:02X}{delay & 0xFF:02X}"
+            var hex_cmd = f"0600{pin:02X}{mode:02X}"
+            if delay_ms > 0
+                hex_cmd += f"{(delay_ms >> 8) & 0xFF:02X}{delay_ms & 0xFF:02X}"
+            end
+            
             return lwdecode.SendDownlink(global.SN50v3LB_nodes, cmd, idx, hex_cmd)
         end)
         
-        # Set 5V output duration
-        tasmota.remove_cmd("LwSN50v3LBPower5V")
-        tasmota.add_cmd("LwSN50v3LBPower5V", def(cmd, idx, payload_str)
-            var ms = int(payload_str)
-            if ms < 0 || ms > 65535
+        tasmota.remove_cmd("LwSN50v3LBOutput")
+        tasmota.add_cmd("LwSN50v3LBOutput", def(cmd, idx, payload_str)
+            var duration = int(payload_str)
+            if duration < 0 || duration > 65535
                 return tasmota.resp_cmnd_str("Invalid: range 0-65535 ms")
             end
             
-            var hex_cmd = f"07{(ms >> 8) & 0xFF:02X}{ms & 0xFF:02X}"
+            var hex_cmd = f"07{(duration >> 8) & 0xFF:02X}{duration & 0xFF:02X}"
             return lwdecode.SendDownlink(global.SN50v3LB_nodes, cmd, idx, hex_cmd)
         end)
         
-        # Set weight parameters
         tasmota.remove_cmd("LwSN50v3LBWeight")
         tasmota.add_cmd("LwSN50v3LBWeight", def(cmd, idx, payload_str)
-            # Format: LwSN50v3LBWeight<slot> <zero|factor,value>
-            var parts = string.split(payload_str, ',')
-            if size(parts) == 1 && parts[0] == "zero"
+            if payload_str == "zero" || payload_str == "0"
                 return lwdecode.SendDownlink(global.SN50v3LB_nodes, cmd, idx, "0801")
-            elif size(parts) == 2 && parts[0] == "factor"
-                var factor = real(parts[1]) * 10
+            else
+                var factor = real(payload_str) * 10
                 var factor_int = int(factor)
                 var hex_cmd = f"0802{(factor_int >> 16) & 0xFF:02X}{(factor_int >> 8) & 0xFF:02X}{factor_int & 0xFF:02X}"
                 return lwdecode.SendDownlink(global.SN50v3LB_nodes, cmd, idx, hex_cmd)
-            else
-                return tasmota.resp_cmnd_str("Usage: zero OR factor,<value>")
             end
         end)
         
-        # Set count value
         tasmota.remove_cmd("LwSN50v3LBSetCount")
         tasmota.add_cmd("LwSN50v3LBSetCount", def(cmd, idx, payload_str)
-            # Format: LwSN50v3LBSetCount<slot> <count_num>,<value>
             var parts = string.split(payload_str, ',')
             if size(parts) != 2
-                return tasmota.resp_cmnd_str("Usage: LwSN50v3LBSetCount<slot> <1|2>,<value>")
+                return tasmota.resp_cmnd_str("Usage: count_select,value (1-2, 0-4294967295)")
             end
             
-            var count_num = int(parts[0])
-            var value = int(parts[1])
+            var count_select = int(parts[0])
+            var count_value = int(parts[1])
             
-            if count_num < 1 || count_num > 2
-                return tasmota.resp_cmnd_str("Invalid count: 1=PA8, 2=PA4")
+            if count_select < 1 || count_select > 2
+                return tasmota.resp_cmnd_str("Invalid count_select: use 1 or 2")
             end
             
-            var hex_cmd = f"09{count_num:02X}{(value >> 24) & 0xFF:02X}{(value >> 16) & 0xFF:02X}{(value >> 8) & 0xFF:02X}{value & 0xFF:02X}"
+            var hex_cmd = f"09{count_select:02X}{(count_value >> 24) & 0xFF:02X}{(count_value >> 16) & 0xFF:02X}{(count_value >> 8) & 0xFF:02X}{count_value & 0xFF:02X}"
             return lwdecode.SendDownlink(global.SN50v3LB_nodes, cmd, idx, hex_cmd)
-        end)
-        
-        # Set working mode
-        tasmota.remove_cmd("LwSN50v3LBMode")
-        tasmota.add_cmd("LwSN50v3LBMode", def(cmd, idx, payload_str)
-            # Format: LwSN50v3LBMode<slot> <1-12>
-            var mode = int(payload_str)
-            if mode < 1 || mode > 12
-                return tasmota.resp_cmnd_str("Invalid mode: range 1-12")
-            end
-            
-            var hex_cmd = f"0A{mode:02X}"
-            return lwdecode.SendDownlink(global.SN50v3LB_nodes, cmd, idx, hex_cmd)
-        end)
-        
-        # Set PWM output
-        tasmota.remove_cmd("LwSN50v3LBPWM")
-        tasmota.add_cmd("LwSN50v3LBPWM", def(cmd, idx, payload_str)
-            # Format: LwSN50v3LBPWM<slot> <freq>,<duty>,<time>
-            var parts = string.split(payload_str, ',')
-            if size(parts) != 3
-                return tasmota.resp_cmnd_str("Usage: LwSN50v3LBPWM<slot> <freq_hz>,<duty_%>,<time_ms>")
-            end
-            
-            var freq = int(parts[0])
-            var duty = int(parts[1])
-            var time = int(parts[2])
-            
-            if freq < 5 || freq > 100000
-                return tasmota.resp_cmnd_str("Invalid frequency: range 5-100000 Hz")
-            end
-            if duty < 0 || duty > 100
-                return tasmota.resp_cmnd_str("Invalid duty cycle: range 0-100%")
-            end
-            
-            var hex_cmd = f"0B{(freq >> 16) & 0xFF:02X}{(freq >> 8) & 0xFF:02X}{freq & 0xFF:02X}{duty:02X}{(time >> 8) & 0xFF:02X}{time & 0xFF:02X}"
-            return lwdecode.SendDownlink(global.SN50v3LB_nodes, cmd, idx, hex_cmd)
-        end)
-        
-        # Set PWM settings
-        tasmota.remove_cmd("LwSN50v3LBPWMSet")
-        tasmota.add_cmd("LwSN50v3LBPWMSet", def(cmd, idx, payload_str)
-            # Format: LwSN50v3LBPWMSet<slot> <0|1>
-            return lwdecode.SendDownlinkMap(global.SN50v3LB_nodes, cmd, idx, payload_str, {
-                '0|US|MICRO': ['0C00', 'Microseconds'],
-                '1|MS|MILLI': ['0C01', 'Milliseconds']
-            })
         end)
         
         print("SN50v3LB: Downlink commands registered")
@@ -900,34 +551,31 @@ tasmota.add_cmd("LwSN50v3LBClearNode", def(cmd, idx, node_id)
     end
 end)
 
-# Test UI command
+# TestUI command with payload verification
 tasmota.remove_cmd("LwSN50v3LBTestUI")
 tasmota.add_cmd("LwSN50v3LBTestUI", def(cmd, idx, payload_str)
     var test_scenarios = {
-        "default":   "AF0C6100E4030000E0016905",        # MOD=1 default mode
-        "distance":  "AF0C6100E403000050C90005",        # MOD=2 distance mode
-        "3adc":      "6400C8006400050E01690500",      # MOD=3 3ADC+I2C mode
-        "3temp":     "AF0C6100E4030000F0006501",      # MOD=4 3DS18B20 mode
-        "weight":    "AF0C6100E40300000A000000",      # MOD=5 weight mode
-        "counting":  "AF0C6100E40300006400000009",     # MOD=6 counting mode
-        "interrupt": "AF0C6100C800010215",            # MOD=7 three interrupt
-        "pwm":       "AF0C6100E40306E8031C20",        # MOD=10 PWM mode
-        "sht31":     "AF0C01016801006400000025",      # MOD=12 count+SHT31
-        "status":    "1C0100010CAF0C"                # Device status (fport=5)
+        "normal":    "0C800AE6001F4700022C0384",
+        "distance":  "0C800AE6001F47000BB8000000",
+        "weight":    "0C800AE6001F470000001388",
+        "counting":  "0C800AE6001F470000000064",
+        "3adc":      "021F0200030400054600070008C9",
+        "3ds18b20":  "0C800AE6001F47000A140CDED8",
+        "interrupt": "0C800AE6001F470001020103",
+        "temp117":   "0C800AE6001F47000ABE000000",
+        "status":    "1C0100050C80",
+        "multi":     "0C800AE6001F070000000064000000000001F4"
     }
     
     var hex_payload = test_scenarios.find(payload_str ? payload_str : 'nil', 'not_found')
     
     if hex_payload == 'not_found'
-        var scenarios_list = ""
-        for key: test_scenarios.keys()
-            scenarios_list += key + " "
-        end
+        var scenarios_list = "normal distance weight counting 3adc 3ds18b20 interrupt temp117 status multi "
         return tasmota.resp_cmnd_str(format("Available scenarios: %s", scenarios_list))
     end
     
-    var rssi = -75
-    var fport = hex_payload == test_scenarios['status'] ? 5 : 2
+    var rssi = -85
+    var fport = payload_str == "status" ? 5 : 2
 
     return tasmota.cmd(f'LwSimulate{idx} {rssi},{fport},{hex_payload}')
 end)

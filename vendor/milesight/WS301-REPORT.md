@@ -1,16 +1,13 @@
-# WS301 Driver Generation Report
+# WS301 Framework Upgrade Report
 
-**Model**: WS301 v1.4.0
-**Date**: 2025-08-26
-**Framework**: v2.2.9 + Template v2.3.6
+## Driver Upgrade Complete
+- **Driver**: WS301 v1.5.0 (Milesight)
+- **Framework**: v2.2.9 → v2.4.1
+- **Date**: 2025-09-02
 
-## Upgrades
-- Framework v2.2.9: RSSI/FPort uppercase, simulated parameter
-- Template v2.3.6: Enhanced error handling with try/catch
-- Global storage recovery patterns
-- Display error protection
+## Critical Fixes Applied
+- Berry keys() iterator bug resolved
+- Explicit key arrays: ['battery_level', 'battery_v', 'door_state', 'door_open', 'tamper_detected', 'device_installed']
+- Safe iteration patterns implemented
 
-## Coverage
-- Uplinks: 10/10 (100%)
-- Downlinks: 2/2 (100%)
-- Door state tracking, tamper detection, battery monitoring
+## Coverage: 10/10 uplinks, 2/2 downlinks

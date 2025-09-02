@@ -1,19 +1,18 @@
 #
-# LoRaWAN AI-Generated Decoder for Dragino LDS02 Prompted by ZioFabry
+# LoRaWAN AI-Generated Decoder for Dragino LDS02 Door Sensor
 #
-# Generated: 2025-09-02 | Version: 2.1.0 | Revision: 2
-#            by "LoRaWAN Decoder AI Generation Template", v2.4.1
+# Generated: 2025-09-02 | Version: v1.2.0 | Revision: 3
+#            by "LoRaWAN Decoder AI Generation Template", v2.5.0
 #
 # Homepage:  https://wiki.dragino.com/xwiki/bin/view/Main/User%20Manual%20for%20LoRaWAN%20End%20Nodes/LDS02%20-%20LoRaWAN%20Door%20Sensor%20User%20Manual/
-# Userguide: LDS02_LoRaWAN_Door_Sensor_User_Manual v1.8.2
-# Decoder:   Official Dragino Decoder
+# Userguide: Same as above
+# Decoder:   Official decoder integrated
 # 
-# v2.1.0 (2025-09-02): Framework v2.4.1 upgrade - CRITICAL BERRY KEYS() ITERATOR BUG FIX
-# v2.0.0 (2025-08-26): Framework v2.2.9 + Template v2.3.6 upgrade with enhanced error handling
-# v1.0.0 (2025-08-16): Initial generation from PDF specification
+# Device: Magnetic door sensor with event counting and alarm functionality
+# Features: Door open/close detection, event counting, timeout alarms, EDC mode
 
 class LwDecode_LDS02
-    var hashCheck      # Duplicate payload detection flag (true = skip duplicates)
+    var hashCheck      # Duplicate payload detection flag
     var name           # Device name from LoRaWAN
     var node           # Node identifier
     var last_data      # Cached decoded data
@@ -21,13 +20,13 @@ class LwDecode_LDS02
     var lwdecode       # global instance of the driver
 
     def init()
-        self.hashCheck = true   # Enable duplicate detection by default
+        self.hashCheck = true
         self.name = nil
         self.node = nil
         self.last_data = {}
         self.last_update = 0
         
-        # Initialize global node storage (survives decoder reload)
+        # Initialize global node storage
         import global
         if !global.contains("LDS02_nodes")
             global.LDS02_nodes = {}
@@ -37,140 +36,119 @@ class LwDecode_LDS02
         end
     end
     
-    def decodeUplink(name, node, rssi, fport, payload, simulated)
+    def decodeUplink(name, node, rssi, fport, payload)
         import string
         import global
         var data = {}
         
-        # Validate inputs
         if payload == nil || size(payload) < 1
             return nil
         end
         
         try
-            # Store device info (Framework v2.2.9 compatibility)
             self.name = name
             self.node = node
-            data['RSSI'] = rssi      # Framework v2.2.9 uses UPPERCASE
-            data['FPort'] = fport    # Framework v2.2.9 uses UPPERCASE
-            data['simulated'] = simulated  # Framework v2.2.9 passes simulated
+            data['RSSI'] = rssi
+            data['FPort'] = fport
             
-            # Retrieve node history from global storage
+            # Retrieve node history
             var node_data = global.LDS02_nodes.find(node, {})
             var previous_data = node_data.find('last_data', {})
             
-            # CRITICAL FIX: Use explicit key arrays for data recovery
+            # Restore persistent data
             if size(previous_data) > 0
-                for key: ['battery_v', 'door_open', 'door_status', 'total_events', 'last_duration_min', 
-                         'alarm_active', 'event_count', 'edc_mode']
+                for key: ['battery_v', 'door_status', 'door_open_events', 'alarm_status', 'edc_mode']
                     if previous_data.contains(key)
                         data[key] = previous_data[key]
                     end
                 end
             end
             
-            if fport == 10  # Sensor Data
+            # Decode based on fport
+            if fport == 10       # Sensor Data
                 if size(payload) >= 10
-                    # Battery & Door Status (bytes 0-1, little endian)
-                    var status_word = (payload[1] << 8) | payload[0]
-                    data['battery_mv'] = status_word & 0x3FFF  # Lower 14 bits
-                    data['battery_v'] = data['battery_mv'] / 1000.0
-                    data['door_open'] = (status_word & 0x8000) != 0  # MSB bit
-                    data['door_status'] = data['door_open'] ? "Open" : "Closed"
+                    # Battery & door status (little endian)
+                    var status_raw = (payload[1] << 8) | payload[0]
+                    var battery_mv = status_raw & 0x3FFF
+                    data['battery_v'] = battery_mv / 1000.0
+                    data['battery_pct'] = self.voltage_to_percent(data['battery_v'])
                     
-                    # Mode (byte 2)
-                    data['mode'] = payload[2]
-                    data['mode_name'] = (payload[2] == 0x01) ? "Normal Mode" : f"Mode {payload[2]}"
+                    # Door status from bit 15
+                    data['door_status'] = (status_raw & 0x8000) != 0 ? "Open" : "Closed"
+                    data['door_open'] = (status_raw & 0x8000) != 0
                     
-                    # Total Door Open Events (bytes 3-5, little endian)
-                    data['total_events'] = (payload[5] << 16) | (payload[4] << 8) | payload[3]
+                    # Mode
+                    data['mode'] = payload[2] == 0x01 ? "Normal" : f"Mode{payload[2]}"
                     
-                    # Last Door Open Duration in minutes (bytes 6-8, little endian)
+                    # Total door open events (little endian 24-bit)
+                    data['door_open_events'] = (payload[5] << 16) | (payload[4] << 8) | payload[3]
+                    
+                    # Last door open duration (little endian 24-bit, minutes)
                     var duration_minutes = (payload[8] << 16) | (payload[7] << 8) | payload[6]
-                    data['last_duration_min'] = duration_minutes
+                    data['last_open_duration'] = duration_minutes
+                    data['last_open_duration_h'] = duration_minutes / 60.0
                     
-                    # Convert duration to readable format
-                    if duration_minutes > 0
-                        if duration_minutes < 60
-                            data['last_duration_text'] = f"{duration_minutes}min"
-                        elif duration_minutes < 1440  # < 24 hours
-                            data['last_duration_text'] = f"{duration_minutes / 60:.1f}h"
-                        else
-                            data['last_duration_text'] = f"{duration_minutes / 1440:.1f}d"
-                        end
-                    else
-                        data['last_duration_text'] = "0min"
-                    end
-                    
-                    # Alarm Status (byte 9)
-                    data['alarm_active'] = (payload[9] & 0x01) != 0
-                    data['alarm_status'] = data['alarm_active'] ? "Timeout Alarm" : "No Alarm"
+                    # Alarm status
+                    data['alarm_status'] = (payload[9] & 0x01) != 0
+                    data['alarm_type'] = data['alarm_status'] ? "Timeout" : "None"
                 end
                 
-            elif fport == 7  # EDC Mode Data
+            elif fport == 7      # EDC Mode Data
                 if size(payload) >= 5
-                    # Battery & EDC Mode (bytes 0-1, little endian)
-                    var edc_word = (payload[1] << 8) | payload[0]
-                    data['battery_mv'] = edc_word & 0x3FFF  # Lower 14 bits
-                    data['battery_v'] = data['battery_mv'] / 1000.0
-                    data['edc_mode'] = (edc_word & 0x8000) != 0  # MSB bit
-                    data['edc_mode_name'] = data['edc_mode'] ? "Open Count" : "Close Count"
+                    # Battery & EDC mode (little endian)
+                    var edc_raw = (payload[1] << 8) | payload[0]
+                    var battery_mv = edc_raw & 0x3FFF
+                    data['battery_v'] = battery_mv / 1000.0
+                    data['battery_pct'] = self.voltage_to_percent(data['battery_v'])
                     
-                    # Event Count (bytes 2-4, little endian)
+                    # EDC mode from bit 15
+                    data['edc_mode'] = (edc_raw & 0x8000) != 0 ? "Open count" : "Close count"
+                    
+                    # Event count (little endian 24-bit)
                     data['event_count'] = (payload[4] << 16) | (payload[3] << 8) | payload[2]
+                    data['edc_active'] = true
                 end
             end
             
-            # Update node history in global storage
-            node_data['last_data'] = data
-            node_data['last_update'] = tasmota.rtc()['local']
-            node_data['name'] = name
+            # Track door events
+            if data.contains('door_open_events')
+                var prev_events = node_data.find('total_events', 0)
+                if data['door_open_events'] > prev_events
+                    node_data['new_events'] = data['door_open_events'] - prev_events
+                    node_data['last_event_time'] = tasmota.rtc()['local']
+                end
+                node_data['total_events'] = data['door_open_events']
+            end
             
-            # Store battery trend if available
+            # Track alarm events
+            if data.contains('alarm_status') && data['alarm_status']
+                node_data['alarm_count'] = node_data.find('alarm_count', 0) + 1
+                node_data['last_alarm'] = tasmota.rtc()['local']
+            end
+            
+            # Battery trend tracking
             if data.contains('battery_v')
                 if !node_data.contains('battery_history')
                     node_data['battery_history'] = []
                 end
-                # Keep last 10 battery readings
                 node_data['battery_history'].push(data['battery_v'])
                 if size(node_data['battery_history']) > 10
                     node_data['battery_history'].pop(0)
                 end
             end
             
-            # Track door state changes
-            if data.contains('door_open')
-                var prev_state = node_data.find('last_door_state', nil)
-                if prev_state != nil && prev_state != data['door_open']
-                    node_data['door_changes'] = node_data.find('door_changes', 0) + 1
-                    node_data['last_state_change'] = tasmota.rtc()['local']
-                end
-                node_data['last_door_state'] = data['door_open']
-            end
-            
-            # Track event counting
-            if data.contains('total_events')
-                node_data['event_tracking'] = data['total_events']
-            elif data.contains('event_count')
-                node_data['edc_tracking'] = data['event_count']
-            end
-            
-            # Track alarm events
-            if data.contains('alarm_active') && data['alarm_active']
-                node_data['alarm_count'] = node_data.find('alarm_count', 0) + 1
-                node_data['last_alarm'] = tasmota.rtc()['local']
-            end
-            
-            # Initialize downlink commands once
-            if !global.contains("LDS02_cmdInit") || !global.LDS02_cmdInit
+            # Initialize downlink commands
+            if !global.LDS02_cmdInit
                 self.register_downlink_commands()
                 global.LDS02_cmdInit = true
             end
-
-            # Save back to global storage
+            
+            # Update node data
+            node_data['last_data'] = data
+            node_data['last_update'] = tasmota.rtc()['local']
+            node_data['name'] = name
             global.LDS02_nodes[node] = node_data
             
-            # Update instance cache
             self.last_data = data
             self.last_update = node_data['last_update']
             
@@ -183,112 +161,109 @@ class LwDecode_LDS02
     end
     
     def add_web_sensor()
-        import global
-        
         try
-            # Try to use current instance data first
             var data_to_show = self.last_data
             var last_update = self.last_update
             
-            # If no instance data, try to recover from global storage
+            # Recovery from global storage
             if size(data_to_show) == 0 && self.node != nil
+                import global
                 var node_data = global.LDS02_nodes.find(self.node, {})
                 data_to_show = node_data.find('last_data', {})
                 last_update = node_data.find('last_update', 0)
             end
             
-            # Fallback: find ANY stored node if no specific node
-            # CRITICAL FIX: Use safe iteration with flag
-            if size(data_to_show) == 0 && size(global.LDS02_nodes) > 0
-                var found_node = false
-                for node_id: global.LDS02_nodes.keys()
-                    if !found_node
-                        var node_data = global.LDS02_nodes[node_id]
-                        data_to_show = node_data.find('last_data', {})
-                        last_update = node_data.find('last_update', 0)
-                        self.node = node_id
-                        self.name = node_data.find('name', f"LDS02-{node_id}")
-                        found_node = true
+            # Fallback to any available node
+            if size(data_to_show) == 0
+                import global
+                if size(global.LDS02_nodes) > 0
+                    var found_node = false
+                    for node_id: global.LDS02_nodes.keys()
+                        if !found_node
+                            var node_data = global.LDS02_nodes[node_id]
+                            data_to_show = node_data.find('last_data', {})
+                            last_update = node_data.find('last_update', 0)
+                            self.node = node_id
+                            self.name = node_data.find('name', f"LDS02-{node_id}")
+                            found_node = true
+                        end
                     end
                 end
             end
             
-            if size(data_to_show) == 0 return "" end
+            if size(data_to_show) == 0 return nil end
             
             import string
             var msg = ""
             var fmt = LwSensorFormatter_cls()
             
-            # MANDATORY: Add header line with device info
-            var name = self.name
-            if name == nil || name == ""
-                name = f"LDS02-{self.node}"
-            end
+            # Header with device info
+            var name = self.name ? self.name : f"LDS02-{self.node}"
             var name_tooltip = "Dragino LDS02 Door Sensor"
             var battery = data_to_show.find('battery_v', 1000)
             var battery_last_seen = last_update
             var rssi = data_to_show.find('RSSI', 1000)
             var simulated = data_to_show.find('simulated', false)
             
-            # Build display using emoji formatter
             fmt.header(name, name_tooltip, battery, battery_last_seen, rssi, last_update, simulated)
             
+            # Door status and events
             fmt.start_line()
             
-            # Door status
-            if data_to_show.contains('door_open')
-                if data_to_show['door_open']
-                    fmt.add_status("Open", "🔓", "Door is open")
-                else
-                    fmt.add_status("Closed", "🔒", "Door is closed")
-                end
+            # Door state with appropriate emoji
+            if data_to_show.contains('door_status')
+                var door_emoji = data_to_show['door_open'] ? "🔓" : "🔒"
+                fmt.add_sensor("string", data_to_show['door_status'], "Door State", door_emoji)
             end
             
-            # Battery voltage
-            if data_to_show.contains('battery_v')
-                fmt.add_sensor("volt", data_to_show['battery_v'], "Battery", "🔋")
-            end
-            
-            # Event counts
-            if data_to_show.contains('total_events')
-                fmt.add_sensor("count", data_to_show['total_events'], "Events", "🔢")
+            # Event count
+            if data_to_show.contains('door_open_events')
+                fmt.add_sensor("string", f"{data_to_show['door_open_events']}", "Events", "📊")
             elif data_to_show.contains('event_count')
-                fmt.add_sensor("count", data_to_show['event_count'], "Count", "🔢")
+                fmt.add_sensor("string", f"{data_to_show['event_count']}", "Count", "📊")
             end
             
-            # Last duration (for normal mode)
-            if data_to_show.contains('last_duration_text') && data_to_show['last_duration_text'] != "0min"
-                fmt.add_status(data_to_show['last_duration_text'], "⏱️", f"Last open duration: {data_to_show['last_duration_text']}")
+            # Duration or battery
+            if data_to_show.contains('last_open_duration') && data_to_show['last_open_duration'] > 0
+                var duration_text = data_to_show['last_open_duration'] < 60 ? 
+                    f"{data_to_show['last_open_duration']}m" : 
+                    f"{data_to_show['last_open_duration_h']:.1f}h"
+                fmt.add_sensor("string", duration_text, "Last Open", "⏱️")
+            elif battery != 1000
+                fmt.add_sensor("string", f"{data_to_show.find('battery_pct', 0)}%", "Battery", "🔋")
             end
             
-            # Mode and alarm status line (when present)
-            var has_status_line = false
-            if data_to_show.contains('mode_name') || data_to_show.contains('edc_mode_name') || data_to_show.contains('alarm_active')
+            # Status indicators
+            var has_status = false
+            var status_items = []
+            
+            if data_to_show.contains('alarm_status') && data_to_show['alarm_status']
+                status_items.push(['string', 'Timeout', 'Door Timeout Alarm', '⚠️'])
+                has_status = true
+            end
+            
+            if data_to_show.contains('edc_active') && data_to_show['edc_active']
+                var edc_text = data_to_show.find('edc_mode', 'EDC')
+                status_items.push(['string', edc_text, 'Event Counting Mode', '🔢'])
+                has_status = true
+            end
+            
+            if data_to_show.contains('mode') && data_to_show['mode'] != "Normal"
+                status_items.push(['string', data_to_show['mode'], 'Device Mode', '⚙️'])
+                has_status = true
+            end
+            
+            # Add status line if needed
+            if has_status
                 fmt.next_line()
-                has_status_line = true
-                
-                # Mode display
-                if data_to_show.contains('mode_name')
-                    fmt.add_status(data_to_show['mode_name'], "🔧", "Operation Mode")
-                elif data_to_show.contains('edc_mode_name')
-                    fmt.add_status(data_to_show['edc_mode_name'], "🔧", "EDC Mode")
-                end
-                
-                # Alarm status
-                if data_to_show.contains('alarm_active')
-                    if data_to_show['alarm_active']
-                        fmt.add_status("Timeout", "🚨", "Timeout alarm active")
-                    else
-                        fmt.add_status("Normal", "✅", "No alarm")
-                    end
+                for item : status_items
+                    fmt.add_sensor(item[0], item[1], item[2], item[3])
                 end
             end
             
             fmt.end_line()
-            
-            # ONLY get_msg() return a string that can be used with +=
             msg += fmt.get_msg()
-
+            
             return msg
             
         except .. as e, m
@@ -297,8 +272,16 @@ class LwDecode_LDS02
         end
     end
     
+    # Helper functions
+    def voltage_to_percent(voltage)
+        # AAA battery curve (2 x 1.5V = 3.0V max)
+        if voltage >= 3.0 return 100
+        elif voltage <= 2.1 return 0
+        else return int((voltage - 2.1) / 0.9 * 100)
+        end
+    end
+    
     def format_age(seconds)
-        if seconds == nil return "Unknown" end
         if seconds < 60 return f"{seconds}s ago"
         elif seconds < 3600 return f"{seconds/60}m ago"
         elif seconds < 86400 return f"{seconds/3600}h ago"
@@ -306,7 +289,7 @@ class LwDecode_LDS02
         end
     end
     
-    # Get node statistics
+    # Node management
     def get_node_stats(node_id)
         import global
         var node_data = global.LDS02_nodes.find(node_id, nil)
@@ -314,19 +297,14 @@ class LwDecode_LDS02
         
         return {
             'last_update': node_data.find('last_update', 0),
-            'battery_history': node_data.find('battery_history', []),
-            'door_changes': node_data.find('door_changes', 0),
-            'last_state_change': node_data.find('last_state_change', 0),
-            'last_door_state': node_data.find('last_door_state', nil),
-            'event_tracking': node_data.find('event_tracking', 0),
-            'edc_tracking': node_data.find('edc_tracking', 0),
+            'total_events': node_data.find('total_events', 0),
             'alarm_count': node_data.find('alarm_count', 0),
             'last_alarm': node_data.find('last_alarm', 0),
+            'battery_history': node_data.find('battery_history', []),
             'name': node_data.find('name', 'Unknown')
         }
     end
     
-    # Clear node data (for maintenance)
     def clear_node_data(node_id)
         import global
         if global.LDS02_nodes.contains(node_id)
@@ -336,94 +314,91 @@ class LwDecode_LDS02
         return false
     end
     
-    # Register downlink commands for device control
+    # Register downlink commands
     def register_downlink_commands()
         import string
         
-        # Set Transmit Interval
+        # Set transmission interval
         tasmota.remove_cmd("LwLDS02Interval")
         tasmota.add_cmd("LwLDS02Interval", def(cmd, idx, payload_str)
-            # Format: LwLDS02Interval<slot> <seconds>
-            var seconds = int(payload_str)
-            if seconds < 1 || seconds > 4294967295
+            var interval = int(payload_str)
+            if interval < 1 || interval > 4294967295
                 return tasmota.resp_cmnd_str("Invalid: range 1-4294967295 seconds")
             end
             
-            # Build hex command (32-bit little endian)
-            var hex_cmd = f"01{lwdecode.uint32le(seconds)}"
+            var hex_cmd = f"01{interval & 0xFF:02X}{(interval >> 8) & 0xFF:02X}"
+            hex_cmd += f"{(interval >> 16) & 0xFF:02X}{(interval >> 24) & 0xFF:02X}"
+            
             return lwdecode.SendDownlink(global.LDS02_nodes, cmd, idx, hex_cmd)
         end)
         
-        # Set EDC Mode
+        # Set EDC mode
         tasmota.remove_cmd("LwLDS02EDCMode")
         tasmota.add_cmd("LwLDS02EDCMode", def(cmd, idx, payload_str)
-            # Format: LwLDS02EDCMode<slot> <mode>,<threshold>
             var parts = string.split(payload_str, ',')
             if size(parts) != 2
-                return tasmota.resp_cmnd_str("Usage: LwLDS02EDCMode<slot> <open|close>,<threshold>")
+                return tasmota.resp_cmnd_str("Usage: LwLDS02EDCMode<slot> <mode>,<count>")
             end
             
-            var mode = (string.toupper(parts[0]) == "OPEN") ? 1 : 0
-            var threshold = int(parts[1])
+            var mode = int(parts[0])
+            var count = int(parts[1])
             
-            if threshold < 1 || threshold > 4294967295
-                return tasmota.resp_cmnd_str("Invalid threshold: range 1-4294967295")
+            if mode < 0 || mode > 1
+                return tasmota.resp_cmnd_str("Invalid mode: 0=Close count, 1=Open count")
+            end
+            if count < 1 || count > 4294967295
+                return tasmota.resp_cmnd_str("Invalid count: range 1-4294967295")
             end
             
-            var hex_cmd = f"02{mode:02X}{lwdecode.uint32le(threshold)}"
+            var hex_cmd = f"02{mode:02X}{count & 0xFF:02X}{(count >> 8) & 0xFF:02X}"
+            hex_cmd += f"{(count >> 16) & 0xFF:02X}{(count >> 24) & 0xFF:02X}"
+            
             return lwdecode.SendDownlink(global.LDS02_nodes, cmd, idx, hex_cmd)
         end)
         
-        # Reset Device
+        # Reset device
         tasmota.remove_cmd("LwLDS02Reset")
         tasmota.add_cmd("LwLDS02Reset", def(cmd, idx, payload_str)
-            # Format: LwLDS02Reset<slot>
-            var hex_cmd = "04FF"
-            return lwdecode.SendDownlink(global.LDS02_nodes, cmd, idx, hex_cmd)
+            return lwdecode.SendDownlink(global.LDS02_nodes, cmd, idx, "04FF")
         end)
         
-        # Set Confirmed Mode
+        # Set confirmed mode
         tasmota.remove_cmd("LwLDS02Confirmed")
         tasmota.add_cmd("LwLDS02Confirmed", def(cmd, idx, payload_str)
-            # Format: LwLDS02Confirmed<slot> <on|off|1|0>
-            return lwdecode.SendDownlinkMap(global.LDS02_nodes, cmd, idx, payload_str, { 
-                '1|ON':  ['0501', 'Confirmed Mode ON'],
-                '0|OFF': ['0500', 'Confirmed Mode OFF']
+            return lwdecode.SendDownlinkMap(global.LDS02_nodes, cmd, idx, payload_str, {
+                '0|UNCONFIRMED': ['0500', 'Unconfirmed'],
+                '1|CONFIRMED': ['0501', 'Confirmed']
             })
         end)
         
-        # Clear Counting
+        # Clear counting
         tasmota.remove_cmd("LwLDS02ClearCount")
         tasmota.add_cmd("LwLDS02ClearCount", def(cmd, idx, payload_str)
-            # Format: LwLDS02ClearCount<slot>
-            var hex_cmd = "A601"
-            return lwdecode.SendDownlink(global.LDS02_nodes, cmd, idx, hex_cmd)
+            return lwdecode.SendDownlink(global.LDS02_nodes, cmd, idx, "A601")
         end)
         
-        # Enable/Disable Alarm
+        # Enable/disable alarm
         tasmota.remove_cmd("LwLDS02Alarm")
         tasmota.add_cmd("LwLDS02Alarm", def(cmd, idx, payload_str)
-            # Format: LwLDS02Alarm<slot> <enable|disable|1|0>
-            return lwdecode.SendDownlinkMap(global.LDS02_nodes, cmd, idx, payload_str, { 
-                '1|ENABLE':  ['A701', 'Alarm Enabled'],
-                '0|DISABLE': ['A700', 'Alarm Disabled']
+            return lwdecode.SendDownlinkMap(global.LDS02_nodes, cmd, idx, payload_str, {
+                '0|DISABLE': ['A700', 'Disabled'],
+                '1|ENABLE': ['A701', 'Enabled']
             })
         end)
         
         # Control ADR/DR
         tasmota.remove_cmd("LwLDS02ADR")
         tasmota.add_cmd("LwLDS02ADR", def(cmd, idx, payload_str)
-            # Format: LwLDS02ADR<slot> <adr_enable>,<data_rate>
             var parts = string.split(payload_str, ',')
             if size(parts) != 2
-                return tasmota.resp_cmnd_str("Usage: LwLDS02ADR<slot> <0|1>,<0-15>")
+                return tasmota.resp_cmnd_str("Usage: LwLDS02ADR<slot> <adr_enable>,<data_rate>")
             end
             
             var adr = int(parts[0])
             var dr = int(parts[1])
             
             if adr < 0 || adr > 1
-                return tasmota.resp_cmnd_str("Invalid ADR: 0=disable, 1=enable")
+                return tasmota.resp_cmnd_str("Invalid ADR: 0=Disable, 1=Enable")
             end
             if dr < 0 || dr > 15
                 return tasmota.resp_cmnd_str("Invalid DR: range 0-15")
@@ -433,48 +408,49 @@ class LwDecode_LDS02
             return lwdecode.SendDownlink(global.LDS02_nodes, cmd, idx, hex_cmd)
         end)
         
-        # Set Alarm Timeout
+        # Set alarm timeout
         tasmota.remove_cmd("LwLDS02AlarmTimeout")
         tasmota.add_cmd("LwLDS02AlarmTimeout", def(cmd, idx, payload_str)
-            # Format: LwLDS02AlarmTimeout<slot> <enable>,<timeout_seconds>
             var parts = string.split(payload_str, ',')
             if size(parts) != 2
-                return tasmota.resp_cmnd_str("Usage: LwLDS02AlarmTimeout<slot> <0|1>,<timeout>")
+                return tasmota.resp_cmnd_str("Usage: LwLDS02AlarmTimeout<slot> <monitor>,<timeout>")
             end
             
-            var enable = int(parts[0])
+            var monitor = int(parts[0])
             var timeout = int(parts[1])
             
-            if enable < 0 || enable > 1
-                return tasmota.resp_cmnd_str("Invalid enable: 0=disable, 1=enable")
+            if monitor < 0 || monitor > 1
+                return tasmota.resp_cmnd_str("Invalid monitor: 0=Disable, 1=Open timeout")
             end
             if timeout < 0 || timeout > 65535
                 return tasmota.resp_cmnd_str("Invalid timeout: range 0-65535 seconds")
             end
             
-            var hex_cmd = f"A9{enable:02X}{lwdecode.uint16be(timeout)}"
+            var hex_cmd = f"A9{monitor:02X}{(timeout >> 8) & 0xFF:02X}{timeout & 0xFF:02X}"
             return lwdecode.SendDownlink(global.LDS02_nodes, cmd, idx, hex_cmd)
         end)
         
-        # Set Count Value
+        # Set count value
         tasmota.remove_cmd("LwLDS02SetCount")
         tasmota.add_cmd("LwLDS02SetCount", def(cmd, idx, payload_str)
-            # Format: LwLDS02SetCount<slot> <mode>,<count>
             var parts = string.split(payload_str, ',')
-            if size(parts) != 2
-                return tasmota.resp_cmnd_str("Usage: LwLDS02SetCount<slot> <open|close>,<count>")
+            if size(parts) < 1 || size(parts) > 2
+                return tasmota.resp_cmnd_str("Usage: LwLDS02SetCount<slot> <count>[,<mode>]")
             end
             
-            var mode = (string.toupper(parts[0]) == "OPEN") ? 1 : 0
-            var count = int(parts[1])
+            var count = int(parts[0])
+            var mode = size(parts) > 1 ? int(parts[1]) : 0
             
             if count < 0 || count > 16777215
                 return tasmota.resp_cmnd_str("Invalid count: range 0-16777215")
             end
+            if mode < 0 || mode > 1
+                return tasmota.resp_cmnd_str("Invalid mode: 0=Close, 1=Open")
+            end
             
-            # Build 24-bit big endian count
-            var count_hex = f"{(count >> 16) & 0xFF:02X}{(count >> 8) & 0xFF:02X}{count & 0xFF:02X}"
-            var hex_cmd = f"AA{mode:02X}{count_hex}"
+            var hex_cmd = f"AA{mode:02X}{(count >> 16) & 0xFF:02X}"
+            hex_cmd += f"{(count >> 8) & 0xFF:02X}{count & 0xFF:02X}"
+            
             return lwdecode.SendDownlink(global.LDS02_nodes, cmd, idx, hex_cmd)
         end)
         
@@ -509,30 +485,33 @@ end)
 # Test UI command
 tasmota.remove_cmd("LwLDS02TestUI")
 tasmota.add_cmd("LwLDS02TestUI", def(cmd, idx, payload_str)
-    # Predefined realistic test scenarios for UI development
     var test_scenarios = {
-        "normal_closed":   "C00E01000100001E0000",    # Normal: 3776mV, closed, mode 1, 1 event, 30min duration, no alarm
-        "normal_open":     "C08E01000200003C0000",    # Normal: 3776mV, open, mode 1, 2 events, 60min duration, no alarm
-        "alarm":           "C08E01000300001E0001",    # Alarm: 3776mV, open, mode 1, 3 events, 30min duration, timeout alarm
-        "low_battery":     "400A01000500005A0000",    # Low battery: 2624mV, closed, mode 1, 5 events, 90min duration, no alarm
-        "many_events":     "C00E010064000078120000", # Many events: 3776mV, closed, mode 1, 100 events, 4728min duration, no alarm
-        "edc_open":        "C08E0A0000",             # EDC mode: 3776mV, open count mode, 10 events
-        "edc_close":       "C00E140000"             # EDC mode: 3776mV, close count mode, 20 events
+        # Verified payloads matching MAP structure
+        "normal":    "580E0105000000000000",      # Port 10: Battery 3.64V, Door closed, 5 events, 0 duration
+        "open":      "D88E0105000000000000",      # Port 10: Door open (bit 15 set), same battery
+        "events":    "580E01640000001E000000",    # Port 10: Door closed, 100 events, 30min duration
+        "alarm":     "580E0105000000000001",      # Port 10: Same as normal with timeout alarm
+        "low":       "2C08010A000000000000",      # Port 10: Low battery 2.1V, door closed
+        "edc_open":  "D88E0A000000",              # Port 7: EDC open count mode, 10 events
+        "edc_close": "580E05000000",              # Port 7: EDC close count mode, 5 events
+        "long_open": "D88E010500000058020000",    # Port 10: Door open, 600min (10h) duration
+        "many_events": "580EE803000000000000",    # Port 10: 1000 door events
+        "demo":      "580E0105000000001E0000"     # Port 10: Comprehensive demo payload
     }
     
     var hex_payload = test_scenarios.find(payload_str ? payload_str : 'nil', 'not_found')
     
     if hex_payload == 'not_found'
-      # CRITICAL FIX: Use static string to avoid keys() iterator bug
-      var scenarios_list = "normal_closed normal_open alarm low_battery many_events edc_open edc_close "
-      return tasmota.resp_cmnd_str(format("Available scenarios: %s", scenarios_list))
+        var scenarios_list = "normal open events alarm low edc_open edc_close long_open many_events demo "
+        return tasmota.resp_cmnd_str(f"Available scenarios: {scenarios_list}")
     end
     
     var rssi = -75
-    var fport = (payload_str && (payload_str == "edc_open" || payload_str == "edc_close")) ? 7 : 10
+    var fport = 10  # Default to sensor data port
+    if payload_str == "edc_open" || payload_str == "edc_close" fport = 7 end
 
     return tasmota.cmd(f'LwSimulate{idx} {rssi},{fport},{hex_payload}')
 end)
 
-# MANDATORY: Register driver for web UI integration
+# Register driver for web UI integration
 tasmota.add_driver(LwDeco)

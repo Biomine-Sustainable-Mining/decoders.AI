@@ -22,15 +22,15 @@ This document maintains a comprehensive list of all AI-generated drivers for the
 | [LHT65](vendor/dragino/LHT65.md) | [1.2.0](vendor/dragino/LHT65.be) | 2025-09-02 | 18/18 | LHT65 | [v2.4.1](vendor/dragino/LHT65-REPORT.md) | [Temperature & humidity sensor with 9 external sensor types](vendor/dragino/LHT65-REQ.md) |
 | [PS-LB](vendor/dragino/PS-LB.md) | [2.1.0](vendor/dragino/PS-LB.be) | 2025-09-02 | 13/13 | PS-LB/LS | [v2.4.1](vendor/dragino/PS-LB-REPORT.md) | [Pressure/water level sensor with probe detection](vendor/dragino/PS-LB-REQ.md) |
 | [SE01-LB](vendor/dragino/SE01-LB.md) | [1.2.0](vendor/dragino/SE01-LB.be) | 2025-09-02 | 28/28 | SE01-LB/LS | [v2.4.1](vendor/dragino/SE01-LB-REPORT.md) | [Soil moisture & EC sensor with multi-mode support](vendor/dragino/SE01-LB-REQ.md) |
-| [SN50v3-LB](vendor/dragino/SN50v3-LB.md) | [1.1.0](vendor/dragino/SN50v3-LB.be) | 2025-08-26 | 36/36 | SN50v3-LB/LS | [v2.3.6](vendor/dragino/SN50v3-LB-REPORT.md) | [Generic LoRaWAN sensor node with 12 working modes](vendor/dragino/SN50v3-LB-REQ.md) |
+| [SN50v3-LB](vendor/dragino/SN50v3-LB.md) | [1.2.0](vendor/dragino/SN50v3-LB.be) | 2025-09-02 | 36/36 | SN50v3-LB/LS | [v2.4.1](vendor/dragino/SN50v3-LB-REPORT.md) | [Generic LoRaWAN sensor node with 12 working modes](vendor/dragino/SN50v3-LB-REQ.md) |
 
 ### Milesight
 | Model | Version | Date | Channels | Model Version | Prompt Ver | Description |
 |-------|---------|------|----------|---------------|------------|-------------|
-| [AM300](vendor/milesight/AM300.md) | [1.2.0](vendor/milesight/AM300.be) | 2025-08-26 | 20/20 | AM300(L) Series | [v2.3.6](vendor/milesight/AM300-REPORT.md) | [9-in-1 indoor air quality monitor with WELL certification](vendor/milesight/AM300-REQ.md) |
-| [AM308L](vendor/milesight/AM308L.md) | [1.0.0](vendor/milesight/AM308L.be) | 2025-08-26 | 22/22 | AM308L | [v2.3.6](vendor/milesight/AM308L-REPORT.md) | [Environmental monitoring sensor with CO2, TVOC, PM2.5/10, temperature, humidity, pressure, PIR, and light](vendor/milesight/AM308L-REQ.md) |
-| [VS321](vendor/milesight/VS321.md) | [1.0.0](vendor/milesight/VS321.be) | 2025-09-02 | 17/17 | VS321 | [v2.4.0](vendor/milesight/VS321-REPORT.md) | [AI Occupancy Sensor with people counting & desk detection](vendor/milesight/VS321-REQ.md) |
-| [WS101](vendor/milesight/WS101.md) | [2.0.0](vendor/milesight/WS101.be) | 2025-08-26 | 8/8 | WS101 | [v2.3.6](vendor/milesight/WS101-REPORT.md) | [Smart button with multiple press types](vendor/milesight/WS101-REQ.md) |
+| [AM300](vendor/milesight/AM300.md) | [1.3.0](vendor/milesight/AM300.be) | 2025-09-02 | 20/20 | AM300(L) Series | [v2.4.1](vendor/milesight/AM300-REPORT.md) | [9-in-1 indoor air quality monitor with WELL certification](vendor/milesight/AM300-REQ.md) |
+| [AM308L](vendor/milesight/AM308L.md) | [1.1.0](vendor/milesight/AM308L.be) | 2025-09-02 | 22/22 | AM308L | [v2.4.1](vendor/milesight/AM308L-REPORT.md) | [Environmental monitoring sensor with CO2, TVOC, PM2.5/10, temperature, humidity, pressure, PIR, and light](vendor/milesight/AM308L-REQ.md) |
+| [VS321](vendor/milesight/VS321.md) | [1.0.0](vendor/milesight/VS321.be) | 2025-09-02 | 17/17 | VS321 | [v2.4.1](vendor/milesight/VS321-REPORT.md) | [AI Occupancy Sensor with people counting & desk detection](vendor/milesight/VS321-REQ.md) |
+| [WS101](vendor/milesight/WS101.md) | [2.1.0](vendor/milesight/WS101.be) | 2025-09-02 | 8/8 | WS101 | [v2.4.1](vendor/milesight/WS101-REPORT.md) | [Smart button with multiple press types](vendor/milesight/WS101-REQ.md) |
 | [WS202](vendor/milesight/WS202.md) | [1.3.0](vendor/milesight/WS202.be) | 2025-08-26 | 9/9 | WS202 | [v2.3.6](vendor/milesight/WS202-REPORT.md) | [PIR & Light sensor for motion and illuminance detection](vendor/milesight/WS202-REQ.md) |
 | [WS301](vendor/milesight/WS301.md) | [1.4.0](vendor/milesight/WS301.be) | 2025-08-26 | 10/10 | WS301 | [v2.3.6](vendor/milesight/WS301-REPORT.md) | [Magnetic door/window sensor](vendor/milesight/WS301-REQ.md) |
 | [WS523](vendor/milesight/WS523.md) | [3.0.0](vendor/milesight/WS523.be) | 2025-08-26 | 33/33 | WS523 | [v2.3.6](vendor/milesight/WS523-REPORT.md) | [Portable smart socket with power monitoring](vendor/milesight/WS523-REQ.md) |
@@ -86,17 +86,11 @@ This document maintains a comprehensive list of all AI-generated drivers for the
 ### Framework Upgrade Status
 #### Current Framework: v2.3.0 | Current Template: v2.4.0
 
-**🟢 Fully Current (Framework v2.4.1 + Template v2.4.1)**: 8 drivers
-- VS321 v1.0.0 (NEW)
-- D2x v1.2.0 (UPGRADED)
-- DDS75-LB v2.1.0 (UPGRADED)
-- LDS02 v2.1.0 (UPGRADED)
-- LHT52 v2.1.0 (UPGRADED)
-- LHT65 v1.2.0 (UPGRADED)
-- PS-LB v2.1.0 (UPGRADED)
-- SE01-LB v1.2.0 (UPGRADED)
+**🟢 Fully Current (Framework v2.4.1 + Template v2.4.1)**: 13 drivers
+- D2x v1.2.0, DDS75-LB v2.1.0, LDS02 v2.1.0, LHT52 v2.1.0, LHT65 v1.2.0, PS-LB v2.1.0, SE01-LB v1.2.0, SN50v3-LB v1.2.0 (Dragino)
+- VS321 v1.0.0, AM300 v1.3.0, AM308L v1.1.0, WS101 v2.1.0 (Milesight)
 
-**🟡 Framework v2.2.9 + Template v2.3.6**: 11 drivers
+**🟡 Framework v2.2.9 + Template v2.3.6**: 6 drivers
 - All 18 existing drivers are at previous stable versions
 - Enhanced error handling and framework compatibility maintained
 - Ready for next framework upgrade cycle

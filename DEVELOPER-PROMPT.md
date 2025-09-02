@@ -1,5 +1,5 @@
 # LoRaWAN Decoder AI Generation Template
-## Version: 2.4.1 | Framework: LwDecode v2.3.0 | Platform: Tasmota Berry
+## Version: 2.5.0 | Framework: LwDecode v2.3.0 | Platform: Tasmota Berry
 
 ---
 
@@ -146,6 +146,79 @@ environment_paths:
 - [ ] Identify control commands (on/off, reset, etc.)
 - [ ] Note acknowledgment/confirmation uplinks
 - [ ] Generate [MODEL]-MAP.md with extracted data
+
+---
+
+## 🎯 TESTUI PAYLOAD QUALITY CONSTRAINTS (v2.5.0)
+
+### MANDATORY: Payload Verification Process
+```yaml
+mandatory_payload_verification:
+  1. **MAP File Construction**: Use cached MAP file specifications for accurate payload building
+  2. **Protocol Structure**: Apply correct channel IDs, types, byte ordering from PDF
+  3. **Decode Verification**: Every TestUI hex payload MUST decode back through driver
+  4. **Parameter Validation**: Decoded JSON must contain ALL expected scenario parameters
+  5. **Value Realism**: Ensure values match scenario description (normal/low/alert/config)
+  6. **Hex Format**: Validate even-length hex strings (no spaces, continuous format)
+  7. **Size Compliance**: Confirm payload size matches expected protocol length
+  8. **Regeneration Logic**: Invalid payloads regenerated up to 3 times per scenario
+```
+
+### Enhanced TestUI Generation Rules
+```berry
+# MANDATORY: Add payload verification function to driver class
+def verify_test_payload(hex_payload, scenario_name, expected_params)
+    import string
+    # Convert hex string to bytes for testing
+    var payload_bytes = []
+    var i = 0
+    while i < size(hex_payload)
+        var byte_str = hex_payload[i..i+1]
+        payload_bytes.push(int(f"0x{byte_str}"))
+        i += 2
+    end
+    
+    # Decode test payload through driver
+    var result = self.decodeUplink("TestDevice", "TEST-001", -75, fport, payload_bytes)
+    
+    if result == nil
+        print(f"PAYLOAD ERROR: {scenario_name} failed to decode")
+        return false
+    end
+    
+    # Verify expected parameters exist
+    for param: expected_params
+        if !result.contains(param)
+            print(f"PAYLOAD ERROR: {scenario_name} missing {param}")
+            return false
+        end
+    end
+    
+    # Verify scenario-specific conditions
+    if scenario_name == "low" && result.contains('battery_v') && result['battery_v'] > 3.2
+        print(f"PAYLOAD ERROR: {scenario_name} battery should be < 3.2V")
+        return false
+    end
+    
+    return true
+end
+```
+
+### Implementation Requirements
+1. **Pre-Generation MAP Validation**: Cross-reference all channel IDs from PDF
+2. **Payload Construction Logic**: Use actual protocol channel structure
+3. **Scenario-Specific Requirements**:
+   ```yaml
+   "normal": Must include ALL primary sensors at typical values
+   "low": Battery < 3.2V, sensors at minimum valid ranges
+   "alert": Trigger conditions based on PDF thresholds
+   "config": Include device info channels with version data
+   "info": Device metadata and status information
+   ```
+4. **Automatic Validation Gate**: Generate → Decode → Verify → Accept/Regenerate
+5. **Construction Logging**: Document payload building logic for debugging
+
+**Estimated Impact**: +15% generation time, -90% TestUI payload errors
 
 ---
 
@@ -696,12 +769,16 @@ tasmota.remove_cmd("Lw[MODEL]TestUI")
 tasmota.add_cmd("Lw[MODEL]TestUI", def(cmd, idx, payload_str)
     # Predefined realistic test scenarios for UI development
     var test_scenarios = {
-        # ⚠️ CRITICAL REQUIREMENT 
+        # ⚠️ CRITICAL REQUIREMENT v2.5.0 - PAYLOAD VERIFICATION MANDATORY
         # - the payload is an hex string like 'FF01E5' (2 chars x byte), the len CANT'BE odd !
-        # - Define realistic test payloads for different device states
-        # - DOUBLE CHECK THIS LIST, trying to decoding back, otherwise TOO many errors
+        # - ALL payloads MUST be decoded back through driver to verify correctness
+        # - Decoded JSON MUST contain expected parameters for scenario
+        # - Values MUST match scenario description (normal/low/high/alert)
+        # - Use MAP file channel structure for accurate construction
+        # - Apply correct byte ordering and protocol format
         # - Hex strings MUST be continuous without spaces for proper Berry parsing in LwSimulate commands.
         # - NO SPACES ALLOWED: "FF0BFF" ✅ correct, "FF0B FF" ❌ breaks parsing
+        # - REGENERATE invalid payloads up to 3 times per scenario
         #
         "normal":    "[NORMAL_HEX_PAYLOAD]",      # Normal operation
         "low":       "[LOW_BATTERY_HEX_PAYLOAD]", # Low battery/values
@@ -1638,11 +1715,17 @@ load("[MODEL].be")
 6. Implement all helper functions needed
 7. Create comprehensive documentation
 8. Document ALL downlink commands with examples
-9. Generate all test scenario for TestUI with REAL(verified) & REALISTIC payload
+9. **CRITICAL: TestUI Payload Verification (New v2.5.0)**:
+   - Generate test payloads using MAP file specifications
+   - Decode each payload through driver to verify correctness
+   - Validate expected parameters exist in decoded JSON
+   - Ensure realistic values match scenario descriptions
+   - Regenerate invalid payloads (max 3 attempts per scenario)
+   - Log construction logic for debugging
 10. Create Tasmota command examples for each payload type
-12. Update `GENERATED-DRIVER-LIST.md` when needed
-13. **MANDATORY: Generate [MODEL].md documentation file**
-14. **MANDATORY: Generate [MODEL]-REQ.md generation request file**
+11. Update `GENERATED-DRIVER-LIST.md` when needed
+12. **MANDATORY: Generate [MODEL].md documentation file**
+13. **MANDATORY: Generate [MODEL]-REQ.md generation request file**
 
 ### Phase 3: Validation (Silent)
 1. Verify no Berry reserved words used
@@ -1705,7 +1788,9 @@ load("[MODEL].be")
 ### Functional Completeness
 - [ ] 100% uplink type coverage
 - [ ] 100% downlink command coverage
-- [ ] 100% TestUI payload checked
+- [ ] **NEW v2.5.0: TestUI payload verification** - all payloads decode correctly
+- [ ] **NEW v2.5.0: Scenario parameter validation** - expected params exist in decoded JSON
+- [ ] **NEW v2.5.0: Value realism check** - values match scenario descriptions
 - [ ] All metadata fields captured
 - [ ] Configuration states tracked
 - [ ] Reset events detected
@@ -1777,6 +1862,9 @@ self.hashCheck = false  # Framework will process all payloads
 20. **🚨 Filesystem violations**: No subdirectories on ESP32 - use flat naming convention
 21. **🚨 String concatenation with nil**: Always check `if msg != nil && msg != ""` before concatenation
 22. **🚨 Missing driver registration**: Always add `tasmota.add_driver(LwDeco)` at file end
+23. **🚨 NEW v2.5.0: Invalid TestUI payloads**: Every payload must decode correctly with expected parameters
+24. **🚨 NEW v2.5.0: Unrealistic test values**: Scenario values must match descriptions (low battery < 3.2V)
+25. **🚨 NEW v2.5.0: Skipping payload verification**: All TestUI payloads require decode validation
 
 ---
 
@@ -1874,7 +1962,7 @@ This template ensures:
 Remember: The goal is a **perfect, complete decoder** that handles **100% of the device's capabilities** as documented in the manufacturer's PDF, including ALL uplink decoding and ALL downlink command generation.
 
 ---
-*Template Version: 2.4.1 | Last Updated: 2025-09-02*
+*Template Version: 2.5.0 | Last Updated: 2025-09-02*
 
 ---
 

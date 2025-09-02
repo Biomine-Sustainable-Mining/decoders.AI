@@ -1,14 +1,15 @@
 #
 # LoRaWAN AI-Generated Decoder for Milesight AM300 Prompted by ZioFabry 
 #
-# Generated: 2025-08-26 | Version: 1.2.4 | Revision: 6
-#            by "LoRaWAN Decoder AI Generation Template", v2.3.6
+# Generated: 2025-09-02 | Version: 1.3.0 | Revision: 7
+#            by "LoRaWAN Decoder AI Generation Template", v2.4.1
 #
 # Homepage:  https://www.milesight-iot.com/lorawan/sensor/am300/
 # Userguide: https://resource.milesight-iot.com/milesight/iot/document/am300-user-guide.pdf
 # Decoder:   https://github.com/Milesight-IoT/SensorDecoders/tree/master/AM_Series
 # 
 # Changelog:
+# v1.3.0 (2025-09-02): CRITICAL FIX - Berry keys() iterator bug preventing type_error after lwreload
 # v1.2.4 (2025-08-26): Fixed device info scenario decoding
 #   - Fixed index out of range error in device info parsing
 #   - Extended info payload to proper 12-byte format (FF0B + 10 data bytes)
@@ -262,15 +263,18 @@ class LwDecode_AM300
             last_update = node_data.find('last_update', 0)
         end
         
-        # Fallback: find ANY stored node if no specific node
+        # CRITICAL FIX: Safe iteration with flag to prevent keys() iterator bug
         if size(data_to_show) == 0 && size(global.AM300_nodes) > 0
+            var found_node = false
             for node_id: global.AM300_nodes.keys()
-                var node_data = global.AM300_nodes[node_id]
-                data_to_show = node_data.find('last_data', {})
-                self.node = node_id  # Update instance
-                self.name = node_data.find('name', f"AM300-{node_id}")
-                last_update = node_data.find('last_update', 0)
-                break  # Use first found
+                if !found_node
+                    var node_data = global.AM300_nodes[node_id]
+                    data_to_show = node_data.find('last_data', {})
+                    self.node = node_id  # Update instance
+                    self.name = node_data.find('name', f"AM300-{node_id}")
+                    last_update = node_data.find('last_update', 0)
+                    found_node = true
+                end
             end
         end
         
@@ -526,10 +530,8 @@ tasmota.add_cmd("LwAM300TestUI", def(cmd, idx, payload_str)
     var hex_payload = test_scenarios.find(payload_str ? payload_str : 'nil', 'not_found')
     
     if hex_payload == 'not_found'
-        var scenarios_list = ""
-        for key: test_scenarios.keys()
-            scenarios_list += key + " "
-        end
+        # CRITICAL FIX: Use static string to avoid keys() iterator bug
+        var scenarios_list = "normal good moderate poor occupied alert info buzzer_on "
         return tasmota.resp_cmnd_str(format("Available scenarios: %s", scenarios_list))
     end
     

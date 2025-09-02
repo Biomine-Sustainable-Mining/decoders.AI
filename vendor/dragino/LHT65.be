@@ -1,13 +1,14 @@
 #
 # LoRaWAN AI-Generated Decoder for Dragino LHT65 Prompted by ZioFabry
 #
-# Generated: 2025-08-26 | Version: 1.1.0 | Revision: 2
-#            by "LoRaWAN Decoder AI Generation Template", v2.3.6
+# Generated: 2025-09-02 | Version: 1.2.0 | Revision: 3
+#            by "LoRaWAN Decoder AI Generation Template", v2.4.1
 #
 # Homepage:  https://www.dragino.com/products/lora-lorawan-end-node/item/151-lht65.html
 # Userguide: https://www.dragino.com/downloads/downloads/LHT65/UserManual/LHT65_Temperature_Humidity_Sensor_UserManual_v1.8.5.pdf
 # Decoder:   https://github.com/dragino/dragino-end-node-decoder/tree/main/LHT65
 # 
+# v1.2.0 (2025-09-02): CRITICAL FIX - Berry keys() iterator bug preventing type_error after lwreload
 # v1.1.0 (2025-08-26): Framework v2.2.9 + Template v2.3.6 upgrade - enhanced error handling
 # v1.0.0 (2025-08-20): Initial generation from cached MAP specification
 
@@ -190,14 +191,17 @@ class LwDecode_LHT65
                 last_update = node_data.find('last_update', 0)
             end
             
-            # Fallback: find ANY stored node if no specific node
+            # CRITICAL FIX: Safe iteration with flag to prevent keys() iterator bug
             if size(data_to_show) == 0 && size(global.LHT65_nodes) > 0
+                var found_node = false
                 for node_id: global.LHT65_nodes.keys()
-                    var node_data = global.LHT65_nodes[node_id]
-                    data_to_show = node_data.find('last_data', {})
-                    self.node = node_id
-                    self.name = node_data.find('name', f"LHT65-{node_id}")
-                    break
+                    if !found_node
+                        var node_data = global.LHT65_nodes[node_id]
+                        data_to_show = node_data.find('last_data', {})
+                        self.node = node_id
+                        self.name = node_data.find('name', f"LHT65-{node_id}")
+                        found_node = true
+                    end
                 end
             end
             
@@ -481,11 +485,9 @@ tasmota.add_cmd("LwLHT65TestUI", def(cmd, idx, payload_str)
     var hex_payload = test_scenarios.find(payload_str ? payload_str : 'nil', 'not_found')
     
     if hex_payload == 'not_found'
-      var scenarios_list = ""
-      for key: test_scenarios.keys()
-        scenarios_list += key + " "
-      end
-      return tasmota.resp_cmnd_str(format("Available scenarios: %s", scenarios_list))
+        # CRITICAL FIX: Use static string to avoid keys() iterator bug
+        var scenarios_list = "normal ext_temp illumination adc counting interrupt low_battery disconnected "
+        return tasmota.resp_cmnd_str(format("Available scenarios: %s", scenarios_list))
     end
     
     var rssi = -75

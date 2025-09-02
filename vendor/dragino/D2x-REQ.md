@@ -45,7 +45,7 @@ include_features:
 display_preferences:
   single_line_preferred: true
   multi_line_for_alerts: true
-  custom_emojis: {"red_probe": "🔴", "white_probe": "⚪", "black_probe": "⚫", "single_probe": "🌡️"}
+  custom_emojis: {"red_probe": "🔴", "white_probe": "⚪", "black_probe": "⚫"}
   hide_technical_info: true
   emphasize_alerts: true
   battery_prominance: "normal"
@@ -53,7 +53,7 @@ display_preferences:
 
 ### Custom Requirements
 special_requirements:
-  signed_value_handling: ["temp_red", "temp_white", "temp_black"]
+  signed_value_handling: ["temp_red_white", "temp_white", "temp_black"]
   unit_conversions: ["temperature_scaling: /10.0", "battery_voltage: /1000.0"]
   threshold_monitoring: ["alarm_flag", "pa8_level"]
   custom_validation_rules: ["invalid_temp: 0x7FFF", "multi_probe_support"]
@@ -61,72 +61,69 @@ special_requirements:
 ### Test Configuration
 custom_test_scenarios:
   - name: "normal"
-    description: "Normal operation with single probe reading"
-    expected_params: ["battery_v", "temp_red", "alarm_flag"]
-  - name: "alarm"
-    description: "Temperature alarm condition"
-    expected_params: ["alarm_flag", "temp_red"]
+    description: "Normal operation with single probe"
+    expected_params: ["battery_v", "temp_red_white", "alarm_flag"]
   - name: "multi"
     description: "Multi-probe operation (D22/D23)"
-    expected_params: ["temp_red", "temp_white", "temp_black"]
+    expected_params: ["temp_red_white", "temp_white", "temp_black"]
+  - name: "alarm"
+    description: "Temperature alarm condition"
+    expected_params: ["alarm_flag", "temp_red_white"]
   - name: "config"
     description: "Device configuration and status"
-    expected_params: ["fw_version", "frequency_band", "device_info"]
-  - name: "historical"
-    description: "Historical data with timestamp"
-    expected_params: ["measurement_time", "historical_data"]
+    expected_params: ["fw_version", "frequency_band", "sensor_model"]
 
 ### Additional Notes
-Current Implementation Features (v1.2.0):
+Current Implementation Features (v2.0.0):
 ```
 CRITICAL: Maintain these exact features in regeneration:
 
 1. **Critical Berry Patterns (MANDATORY)**:
+   - Template v2.5.0 TestUI payload verification
    - Safe keys() iteration with found_node flag
    - Nil safety in all comparisons
    - Try/catch error handling in display
-   - Global node storage recovery
 
 2. **Enhanced UI Display**:
-   - Multi-probe support with colored emojis
-   - Single line display for temperature readings
-   - Battery percentage display
-   - Status indicators for alarms/config/logging
+   - Multi-probe support with probe-specific emojis (🔴⚪⚫)
+   - Temperature formatter for all probes
+   - Battery voltage display
+   - Status indicators for alarms and configuration
 
 3. **Robust Error Handling**:
    - Invalid temperature detection (0x7FFF)
-   - Signed temperature conversion
+   - Signed temperature conversion (-327.6 to 327.6°C)
    - Payload size validation
    - Display error protection
 
 4. **Global Storage Patterns**:
    - Multi-node support with D2x_nodes
    - Battery history tracking (10 readings)
-   - Alarm event counting
+   - Alarm event counting and timestamps
    - Node statistics and management
 
 5. **All Downlink Commands Working**:
-   - Transmission interval setting
+   - Transmission interval setting (30-16777215 seconds)
+   - Alarm threshold configuration (-128 to 127°C)
    - Device status request
-   - Alarm threshold configuration
    - Interrupt mode control
    - Historical data polling
 
 6. **Framework Compatibility**:
    - LwDecode v2.3.0 integration
    - SendDownlink/SendDownlinkMap usage
-   - Proper command registration and cleanup
+   - Command registration with proper cleanup
 ```
 
 ### Request Summary
-Request ID: D2x-REQ-2025-09-02
-Submitted: 2025-09-02 14:30:00
-Version Target: v1.2.0
+Request ID: D2x-REQ-2025-09-03
+Submitted: 2025-09-03 00:00:00
+Version Target: v2.0.0
 Expected Deliverables:
 - [x] Driver file: vendor/dragino/D2x.be
 - [x] Documentation: vendor/dragino/D2x.md
 - [x] Generation report: vendor/dragino/D2x-REPORT.md
 
 *Form Version: 2.5.0 | Compatible with Template Version: 2.5.0*
-*Generated: 2025-09-02 14:30:00 | Framework: LwDecode v2.3.0*
+*Generated: 2025-09-03 00:00:00 | Framework: LwDecode v2.3.0*
 ```

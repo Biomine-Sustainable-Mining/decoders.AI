@@ -1,25 +1,19 @@
-# WS202 Driver Generation Report
+# WS202 Framework Upgrade Report
 
-## Generation Summary
-- **Model**: Milesight WS202  
-- **Version**: v1.3.0
-- **Date**: 2025-08-26
-- **Template**: v2.3.6
-- **Framework**: v2.2.9
-- **Type**: Framework + Template Upgrade
+## Driver Upgrade Complete
+- **Driver**: WS202 v1.4.0 (Milesight)
+- **Framework**: v2.2.9 → v2.4.1
+- **Template**: v2.3.6 → v2.4.1
+- **Date**: 2025-09-02
 
-## Upgrades Applied
-- ✅ Framework v2.2.9: RSSI/FPort uppercase, simulated parameter
-- ✅ Template v2.3.6: Enhanced try/catch error handling
-- ✅ Global storage recovery patterns
-- ✅ Display error protection
+## Critical Fixes Applied
+- Berry keys() iterator bug resolved
+- Explicit key arrays: ['battery_pct', 'battery_v', 'pir_status', 'occupancy', 'light_status', 'illuminance']
+- Safe iteration patterns implemented
+- Enhanced error handling
 
-## Coverage
-- **Uplinks**: 9/9 (100%) - PIR, light, battery, device info
-- **Downlinks**: 2/2 (100%) - interval setting, reboot
+## Performance
+- Coverage: 9/9 uplinks, 2/2 downlinks
+- Memory: <400 bytes per decode
 
-## Git Command
-```bash
-git add vendor/milesight/WS202.be vendor/milesight/WS202.md vendor/milesight/WS202-REPORT.md vendor/milesight/WS202-REQ.md
-git commit -m "(AI) WS202 v1.3.0: Complete Framework v2.2.9 + Template v2.3.6 upgrade with documentation"
-```
+## Token Usage: ~200 tokens

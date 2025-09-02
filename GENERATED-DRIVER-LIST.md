@@ -31,20 +31,20 @@ This document maintains a comprehensive list of all AI-generated drivers for the
 | [AM308L](vendor/milesight/AM308L.md) | [1.1.0](vendor/milesight/AM308L.be) | 2025-09-02 | 22/22 | AM308L | [v2.4.1](vendor/milesight/AM308L-REPORT.md) | [Environmental monitoring sensor with CO2, TVOC, PM2.5/10, temperature, humidity, pressure, PIR, and light](vendor/milesight/AM308L-REQ.md) |
 | [VS321](vendor/milesight/VS321.md) | [1.0.0](vendor/milesight/VS321.be) | 2025-09-02 | 17/17 | VS321 | [v2.4.1](vendor/milesight/VS321-REPORT.md) | [AI Occupancy Sensor with people counting & desk detection](vendor/milesight/VS321-REQ.md) |
 | [WS101](vendor/milesight/WS101.md) | [2.1.0](vendor/milesight/WS101.be) | 2025-09-02 | 8/8 | WS101 | [v2.4.1](vendor/milesight/WS101-REPORT.md) | [Smart button with multiple press types](vendor/milesight/WS101-REQ.md) |
-| [WS202](vendor/milesight/WS202.md) | [1.3.0](vendor/milesight/WS202.be) | 2025-08-26 | 9/9 | WS202 | [v2.3.6](vendor/milesight/WS202-REPORT.md) | [PIR & Light sensor for motion and illuminance detection](vendor/milesight/WS202-REQ.md) |
-| [WS301](vendor/milesight/WS301.md) | [1.4.0](vendor/milesight/WS301.be) | 2025-08-26 | 10/10 | WS301 | [v2.3.6](vendor/milesight/WS301-REPORT.md) | [Magnetic door/window sensor](vendor/milesight/WS301-REQ.md) |
-| [WS523](vendor/milesight/WS523.md) | [3.0.0](vendor/milesight/WS523.be) | 2025-08-26 | 33/33 | WS523 | [v2.3.6](vendor/milesight/WS523-REPORT.md) | [Portable smart socket with power monitoring](vendor/milesight/WS523-REQ.md) |
-| [WS52x](vendor/milesight/WS52x.md) | [1.4.0](vendor/milesight/WS52x.be) | 2025-08-26 | 25/25 | WS52x Series | [v2.4.0](vendor/milesight/WS52x-REPORT.md) | [Smart socket with slideshow support & enhanced error handling](vendor/milesight/WS52x-REQ.md) |
+| [WS202](vendor/milesight/WS202.md) | [1.4.0](vendor/milesight/WS202.be) | 2025-09-02 | 9/9 | WS202 | [v2.4.1](vendor/milesight/WS202-REPORT.md) | [PIR & Light sensor for motion and illuminance detection](vendor/milesight/WS202-REQ.md) |
+| [WS301](vendor/milesight/WS301.md) | [1.5.0](vendor/milesight/WS301.be) | 2025-09-02 | 10/10 | WS301 | [v2.4.1](vendor/milesight/WS301-REPORT.md) | [Magnetic door/window sensor](vendor/milesight/WS301-REQ.md) |
+| [WS523](vendor/milesight/WS523.md) | [3.1.0](vendor/milesight/WS523.be) | 2025-09-02 | 33/33 | WS523 | [v2.4.1](vendor/milesight/WS523-REPORT.md) | [Portable smart socket with power monitoring](vendor/milesight/WS523-REQ.md) |
+| [WS52x](vendor/milesight/WS52x.md) | [1.5.0](vendor/milesight/WS52x.be) | 2025-09-02 | 25/25 | WS52x Series | [v2.4.1](vendor/milesight/WS52x-REPORT.md) | [Smart socket with slideshow support & enhanced error handling](vendor/milesight/WS52x-REQ.md) |
 
 ### Mutelcor
 | Model | Version | Date | Channels | Model Version | Prompt Ver | Description |
 |-------|---------|------|----------|---------------|------------|-------------|
-| [MTC-AQ01](vendor/mutelcor/MTC-AQ01.md) | [1.1.0](vendor/mutelcor/MTC-AQ01.be) | 2025-08-26 | 12/12 | MTC-AQ01/02/03 | [v2.3.6](vendor/mutelcor/MTC-AQ01-REPORT.md) | [Air quality sensor with temperature, humidity & pressure](vendor/mutelcor/MTC-AQ01-REQ.md) |
+| [MTC-AQ01](vendor/mutelcor/MTC-AQ01.md) | [1.2.0](vendor/mutelcor/MTC-AQ01.be) | 2025-09-02 | 12/12 | MTC-AQ01/02/03 | [v2.4.1](vendor/mutelcor/MTC-AQ01-REPORT.md) | [Air quality sensor with temperature, humidity & pressure](vendor/mutelcor/MTC-AQ01-REQ.md) |
 
 ### Micropelt
 | Model | Version | Date | Channels | Model Version | Prompt Ver | Description |
 |-------|---------|------|----------|---------------|------------|-------------|
-| [MLR003](vendor/micropelt/MLR003.md) | [1.1.0](vendor/micropelt/MLR003.be) | 2025-08-26 | 52/52 | MLR003 | [v2.3.6](vendor/micropelt/MLR003-REPORT.md) | [Thermostatic radiator valve with energy harvesting](vendor/micropelt/MLR003-REQ.md) |
+| [MLR003](vendor/micropelt/MLR003.md) | [1.2.0](vendor/micropelt/MLR003.be) | 2025-09-02 | 52/52 | MLR003 | [v2.4.1](vendor/micropelt/MLR003-REPORT.md) | [Thermostatic radiator valve with energy harvesting](vendor/micropelt/MLR003-REQ.md) |
 
 ### Watteco
 | Model | Version | Date | Channels | Model Version | Prompt Ver | Description |
@@ -86,14 +86,15 @@ This document maintains a comprehensive list of all AI-generated drivers for the
 ### Framework Upgrade Status
 #### Current Framework: v2.3.0 | Current Template: v2.4.0
 
-**🟢 Fully Current (Framework v2.4.1 + Template v2.4.1)**: 13 drivers
-- D2x v1.2.0, DDS75-LB v2.1.0, LDS02 v2.1.0, LHT52 v2.1.0, LHT65 v1.2.0, PS-LB v2.1.0, SE01-LB v1.2.0, SN50v3-LB v1.2.0 (Dragino)
-- VS321 v1.0.0, AM300 v1.3.0, AM308L v1.1.0, WS101 v2.1.0 (Milesight)
+**🟢 Fully Current (Framework v2.4.1 + Template v2.4.1)**: 19 drivers
+- **Dragino (8)**: D2x v1.2.0, DDS75-LB v2.1.0, LDS02 v2.1.0, LHT52 v2.1.0, LHT65 v1.2.0, PS-LB v2.1.0, SE01-LB v1.2.0, SN50v3-LB v1.2.0
+- **Milesight (8)**: VS321 v1.0.0, AM300 v1.3.0, AM308L v1.1.0, WS101 v2.1.0, WS202 v1.4.0, WS301 v1.5.0, WS523 v3.1.0, WS52x v1.5.0
+- **Mutelcor (1)**: MTC-AQ01 v1.2.0
+- **Micropelt (1)**: MLR003 v1.2.0
+- **Watteco (1)**: BOB-ASSISTANT v1.1.0
 
-**🟡 Framework v2.2.9 + Template v2.3.6**: 6 drivers
-- All 18 existing drivers are at previous stable versions
-- Enhanced error handling and framework compatibility maintained
-- Ready for next framework upgrade cycle
+**🟡 Framework v2.2.9 + Template v2.3.6**: 0 drivers
+- ✅ ALL DRIVERS NOW CURRENT
 
 **🔴 Major Upgrades Needed**: 0 drivers (0%)
 

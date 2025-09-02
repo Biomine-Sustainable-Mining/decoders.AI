@@ -1,13 +1,14 @@
 #
 # LoRaWAN AI-Generated Decoder for Milesight WS202 Prompted by ZioFabry
 #
-# Generated: 2025-08-26 | Version: 1.3.0 | Revision: 3
-#            by "LoRaWAN Decoder AI Generation Template", v2.3.6
+# Generated: 2025-09-02 | Version: 1.4.0 | Revision: 4
+#            by "LoRaWAN Decoder AI Generation Template", v2.4.1
 #
 # Homepage:  https://resource.milesight.com/milesight/iot/document/ws202-user-guide-en.pdf
 # Userguide: https://resource.milesight.com/milesight/iot/document/ws202-user-guide-en.pdf
 # Decoder:   https://resource.milesight.com/milesight/iot/document/ws202-user-guide-en.pdf
 # 
+# v1.4.0 (2025-09-02): Framework v2.4.1 upgrade - CRITICAL BERRY KEYS() ITERATOR BUG FIX
 # v1.3.0 (2025-08-26): Framework v2.2.9 + Template v2.3.6 upgrade - enhanced error handling
 # v1.0.1 (2025-08-20): Fixed hex payload spaces in TestUI scenarios
 # v1.0.0 (2025-08-20): Initial generation from PDF specification
@@ -56,6 +57,16 @@ class LwDecode_WS202
             
             # Retrieve node history from global storage
             var node_data = global.WS202_nodes.find(node, {})
+            var previous_data = node_data.find('last_data', {})
+            
+            # CRITICAL FIX: Use explicit key arrays for data recovery
+            if size(previous_data) > 0
+                for key: ['battery_pct', 'battery_v', 'pir_status', 'occupancy', 'light_status', 'illuminance']
+                    if previous_data.contains(key)
+                        data[key] = previous_data[key]
+                    end
+                end
+            end
             
             # Decode based on fport
             if fport == 85
@@ -205,13 +216,17 @@ class LwDecode_WS202
             end
             
             # Fallback: find ANY stored node if no specific node
+            # CRITICAL FIX: Use safe iteration with flag
             if size(data_to_show) == 0 && size(global.WS202_nodes) > 0
+                var found_node = false
                 for node_id: global.WS202_nodes.keys()
-                    var node_data = global.WS202_nodes[node_id]
-                    data_to_show = node_data.find('last_data', {})
-                    self.node = node_id  # Update instance
-                    self.name = node_data.find('name', f"WS202-{node_id}")
-                    break  # Use first found
+                    if !found_node
+                        var node_data = global.WS202_nodes[node_id]
+                        data_to_show = node_data.find('last_data', {})
+                        self.node = node_id
+                        self.name = node_data.find('name', f"WS202-{node_id}")
+                        found_node = true
+                    end
                 end
             end
             
@@ -416,10 +431,8 @@ tasmota.add_cmd("LwWS202TestUI", def(cmd, idx, payload_str)
     var hex_payload = test_scenarios.find(payload_str ? payload_str : 'nil', 'not_found')
     
     if hex_payload == 'not_found'
-      var scenarios_list = ""
-      for key: test_scenarios.keys()
-        scenarios_list += key + " "
-      end
+      # CRITICAL FIX: Use static string to avoid keys() iterator bug
+      var scenarios_list = "device_info normal occupied vacant low power_on "
       return tasmota.resp_cmnd_str(format("Available scenarios: %s", scenarios_list))
     end
     

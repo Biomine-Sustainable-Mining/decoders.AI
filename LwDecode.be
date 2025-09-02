@@ -24,6 +24,7 @@ class LwSensorFormatter_cls
     "conductivity":      { "u": "µS/cm", "f": " %d",    "i": "⚡"        }, # Added by SE01LB at 2025-08-20 14:42:35
     "distance":          { "u": "cm",  "f": " %.1f",  "i": "📏"        }, # Added by SN50v3LB at 2025-08-20 16:30:00
     "weight":            { "u": "kg",  "f": " %.1f",  "i": "⚖️"        }, # Added by SN50v3LB at 2025-08-20 16:30:00
+    "people":            { "u": nil,   "f": " %d",    "i": "👥"        }, # Added by VS321 at 2025-09-02 16:30:00
 ## Driver Added formatter stop here
 
     "empty":            { "u": nil,   "f": nil,      "i": nil         }

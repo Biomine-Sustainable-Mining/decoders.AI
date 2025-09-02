@@ -29,11 +29,12 @@ This document maintains a comprehensive list of all AI-generated drivers for the
 |-------|---------|------|----------|---------------|------------|-------------|
 | [AM300](vendor/milesight/AM300.md) | [1.2.0](vendor/milesight/AM300.be) | 2025-08-26 | 20/20 | AM300(L) Series | [v2.3.6](vendor/milesight/AM300-REPORT.md) | [9-in-1 indoor air quality monitor with WELL certification](vendor/milesight/AM300-REQ.md) |
 | [AM308L](vendor/milesight/AM308L.md) | [1.0.0](vendor/milesight/AM308L.be) | 2025-08-26 | 22/22 | AM308L | [v2.3.6](vendor/milesight/AM308L-REPORT.md) | [Environmental monitoring sensor with CO2, TVOC, PM2.5/10, temperature, humidity, pressure, PIR, and light](vendor/milesight/AM308L-REQ.md) |
+| [VS321](vendor/milesight/VS321.md) | [1.0.0](vendor/milesight/VS321.be) | 2025-09-02 | 17/17 | VS321 | [v2.4.0](vendor/milesight/VS321-REPORT.md) | [AI Occupancy Sensor with people counting & desk detection](vendor/milesight/VS321-REQ.md) |
 | [WS101](vendor/milesight/WS101.md) | [2.0.0](vendor/milesight/WS101.be) | 2025-08-26 | 8/8 | WS101 | [v2.3.6](vendor/milesight/WS101-REPORT.md) | [Smart button with multiple press types](vendor/milesight/WS101-REQ.md) |
 | [WS202](vendor/milesight/WS202.md) | [1.3.0](vendor/milesight/WS202.be) | 2025-08-26 | 9/9 | WS202 | [v2.3.6](vendor/milesight/WS202-REPORT.md) | [PIR & Light sensor for motion and illuminance detection](vendor/milesight/WS202-REQ.md) |
 | [WS301](vendor/milesight/WS301.md) | [1.4.0](vendor/milesight/WS301.be) | 2025-08-26 | 10/10 | WS301 | [v2.3.6](vendor/milesight/WS301-REPORT.md) | [Magnetic door/window sensor](vendor/milesight/WS301-REQ.md) |
 | [WS523](vendor/milesight/WS523.md) | [3.0.0](vendor/milesight/WS523.be) | 2025-08-26 | 33/33 | WS523 | [v2.3.6](vendor/milesight/WS523-REPORT.md) | [Portable smart socket with power monitoring](vendor/milesight/WS523-REQ.md) |
-| [WS52x](vendor/milesight/WS52x.md) | [2.0.0](vendor/milesight/WS52x.be) | 2025-08-25 | 25/25 | WS52x Series | [v2.3.6](vendor/milesight/WS52x-REPORT.md) | [Smart socket series with comprehensive power monitoring](vendor/milesight/WS52x-REQ.md) |
+| [WS52x](vendor/milesight/WS52x.md) | [1.4.0](vendor/milesight/WS52x.be) | 2025-08-26 | 25/25 | WS52x Series | [v2.4.0](vendor/milesight/WS52x-REPORT.md) | [Smart socket with slideshow support & enhanced error handling](vendor/milesight/WS52x-REQ.md) |
 
 ### Mutelcor
 | Model | Version | Date | Channels | Model Version | Prompt Ver | Description |
@@ -54,24 +55,24 @@ This document maintains a comprehensive list of all AI-generated drivers for the
 
 ### By Vendor
 - **Dragino**: 8 drivers, 142 total channels
-- **Milesight**: 7 drivers, 127 total channels
+- **Milesight**: 8 drivers, 144 total channels
 - **Mutelcor**: 1 driver, 12 total channels
 - **Micropelt**: 1 driver, 52 total channels
 - **Watteco**: 1 driver, 68 total channels
 
 ### Total
-- **Drivers**: 18
-- **Channels**: 401
+- **Drivers**: 19
+- **Channels**: 418
 - **Coverage**: 100% (all documented channels implemented)
 
 ### File Statistics
-- **Driver Files (.be)**: 18
-- **Documentation (.md)**: 18
-- **MAP Cache Files**: 17 (Dragino: 8, Milesight: 6, Mutelcor: 1, Micropelt: 1, Watteco: 1)
-- **Report Files**: 18 (Dragino: 8, Milesight: 7, Mutelcor: 1, Micropelt: 1, Watteco: 1)
-- **Generation Request Files**: 18
+- **Driver Files (.be)**: 19
+- **Documentation (.md)**: 19
+- **MAP Cache Files**: 18 (Dragino: 8, Milesight: 7, Mutelcor: 1, Micropelt: 1, Watteco: 1)
+- **Report Files**: 19 (Dragino: 8, Milesight: 8, Mutelcor: 1, Micropelt: 1, Watteco: 1)
+- **Generation Request Files**: 19
 - **Framework Files**: 16
-- **Total Project Files**: 89
+- **Total Project Files**: 93
 
 ### Framework Compliance Verification
 - ✅ **Command Naming**: All commands use "Lw[MODEL][Function]" pattern
@@ -83,19 +84,17 @@ This document maintains a comprehensive list of all AI-generated drivers for the
 - ✅ **Memory Optimization**: All drivers follow ESP32 constraints
 
 ### Framework Upgrade Status
-#### Current Framework: v2.2.9 | Current Template: v2.3.6
+#### Current Framework: v2.3.0 | Current Template: v2.4.0
 
-**🟢 Fully Current (Framework v2.2.9 + Template v2.3.6)**: 18 drivers (100%)
-- All drivers now have enhanced error handling and framework compatibility
-- Complete multi-node support with global storage recovery
-- Display error protection prevents UI crashes
-- RSSI/FPort uppercase parameter support
-- Simulated payload indicator support
+**🟢 Fully Current (Framework v2.3.0 + Template v2.4.0)**: 1 driver
+- VS321 v1.0.0 (NEW)
 
-**🟡 Needs Upgrades**: 0 drivers (0%)
+**🟡 Framework v2.2.9 + Template v2.3.6**: 18 drivers
+- All 18 existing drivers are at previous stable versions
+- Enhanced error handling and framework compatibility maintained
+- Ready for next framework upgrade cycle
+
 **🔴 Major Upgrades Needed**: 0 drivers (0%)
-
-**✅ ALL UPGRADES COMPLETE! - 100% Framework Coverage Achieved**
 
 ## Technical Standards
 
@@ -149,68 +148,38 @@ Each driver has been validated for:
 - ✅ Test command registration with cleanup
 - ✅ Documentation with test examples for ALL uplink types
 - ✅ Enhanced display error protection
-- ✅ Framework v2.2.9 compatibility
-- ✅ Template v2.3.6 patterns
+- ✅ Framework compatibility
+- ✅ Latest template patterns
 
 ## Changelog
 
-### 2025-08-26: New Driver Addition + Framework Maintenance
-- **NEW DRIVER**: AM308L v1.0.0 - Environmental monitoring sensor with comprehensive air quality features
-- **CURRENT STATUS**: All 18 drivers now at Framework v2.2.9 + Template v2.3.6
-- **Progress**: 18/18 drivers fully current (100% completion rate) 
-- **Status Update**: Framework maintained at 100% coverage with new driver addition
-
-#### Final Template v2.3.6 Upgrades Completed Today:
-- **SE01-LB v1.1.0**: Soil moisture sensor - Template v2.3.6 upgrade
-  - Enhanced error handling with try/catch blocks in display functions
-  - Global storage recovery patterns after driver reload
-  - Multi-mode support with calibrated/raw values and counting functionality
-
-- **SN50v3-LB v1.1.0**: Generic sensor node - Template v2.3.6 upgrade  
-  - 12 working modes with dynamic payload structures
-  - Complex sensor combinations (3 temps, 3 ADCs, interrupts, PWM)
-  - Comprehensive downlink command set for all operational modes
-
-- **MTC-AQ01 v1.1.0**: Air quality sensor - Template v2.3.6 upgrade
-  - Multi-message type support (heartbeat, measurements, thresholds)
-  - Threshold monitoring with alert system
-  - Temperature, humidity, and pressure measurements
-
-- **MLR003 v1.1.0**: Thermostatic valve - Template v2.3.6 upgrade
-  - Energy harvesting radiator valve with complex control modes
-  - Multiple operating modes and PID parameter configuration
-  - Advanced valve position and temperature control
-
-- **BOB-ASSISTANT v1.1.0**: Vibration sensor - Template v2.3.6 upgrade
-  - ML-powered vibration analysis with FFT data processing
-  - Multiple frame types (report, alarm, learning, state)
-  - Advanced anomaly detection with time-series analysis
-
-#### Technical Improvements Applied Today:
-- ✅ **Framework v2.2.9 Integration**: Uppercase RSSI/FPort parameters, simulated payload support
-- ✅ **Template v2.3.6 Patterns**: Enhanced try/catch error handling in display functions
-- ✅ **Global Storage Recovery**: Fallback patterns for data recovery after driver reload
-- ✅ **Display Protection**: Error handling prevents UI crashes from display issues
-- ✅ **Memory Optimization**: ESP32-compatible patterns with efficient data structures
+### 2025-09-02: New Driver Addition - VS321
+- **NEW DRIVER**: VS321 v1.0.0 - Wireless AI Occupancy Sensor
+- **Framework**: LwDecode v2.3.0 (latest)
+- **Template**: v2.4.0 (latest)
+- **Features**: AI-powered occupancy detection, dual modes (people/desk), environmental sensors
+- **Coverage**: 17/17 channels, 16/16 downlink commands
+- **Total Drivers**: 19 (new high)
+- **Total Channels**: 418 (new high)
 
 ### Previous Major Milestones:
-- **2025-08-25**: WS52x Series v2.0.0 - Smart socket with power monitoring
-- **2025-08-26**: AM300 v1.2.0 - 9-in-1 air quality monitor completed
+- **2025-08-26**: Framework maintenance completed on 18 drivers
+- **2025-08-26**: AM308L v1.0.0 - Environmental monitoring sensor
+- **2025-08-26**: Template v2.3.6 upgrade to final 5 drivers
 - **2025-08-26**: Framework v2.2.9 rollout to 13 drivers
-- **2025-08-26**: Template v2.3.6 upgrade to remaining 4 drivers
 
 ### Achievement Summary:
-- **Total Drivers**: 18 (across 5 vendors)
-- **Total Channels**: 401 (100% coverage)
-- **Framework Version**: v2.2.9 (latest)
-- **Template Version**: v2.3.6 (latest)
-- **Success Rate**: 100% (all drivers current)
+- **Total Drivers**: 19 (across 5 vendors)
+- **Total Channels**: 418 (100% coverage)
+- **Latest Framework**: v2.3.0 (1 driver)
+- **Stable Framework**: v2.2.9 (18 drivers)
+- **Success Rate**: 100% (all drivers functional)
 - **Error Handling**: Enhanced across all drivers
 - **Multi-Node Support**: Complete global storage patterns
 - **Test Coverage**: Comprehensive scenarios for all drivers
 
 ---
-*Last Updated: 2025-08-26 - New Driver Added: 18/18 drivers at latest versions*
+*Last Updated: 2025-09-02 - New Driver Added: VS321 AI Occupancy Sensor*
 
 ---
 

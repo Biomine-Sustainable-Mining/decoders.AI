@@ -52,6 +52,12 @@ This document maintains the definitive list of emojis used across all LwDecode d
 | **💓** | U+1F493 | Beating Heart | Heartbeat/Status | [MTC-AQ01](vendor/mutelcor/MTC-AQ01.md) | ✅ New | Heartbeat messages, alive status |
 | **📶** | U+1F4F6 | Antenna Bars | Signal/Interrupt | [SE01-LB](vendor/dragino/SE01-LB.md), [SN50v3-LB](vendor/dragino/SN50v3-LB.md) | ✅ New | Signal strength, interrupt status |
 | **🚶** | U+1F6B6 | Person Walking | Motion/PIR | [WS202](vendor/milesight/WS202.md) | ✅ New | Motion detection, PIR sensor |
+| **👥** | U+1F465 | People | People Count | [VS321](vendor/milesight/VS321.md) | ✅ New | AI people counting |
+| **🪑** | U+1FA91 | Chair | Desk Occupancy | [VS321](vendor/milesight/VS321.md) | ✅ New | Desk/workspace occupancy |
+| **⭕** | U+2B55 | Red Circle | Vacant/Off | [VS321](vendor/milesight/VS321.md) | ✅ New | Vacant occupancy state |
+| **☀️** | U+2600 | Sun | Bright Light | [VS321](vendor/milesight/VS321.md) | ✅ New | Bright illuminance |
+| **🌙** | U+1F319 | Moon | Dim Light | [VS321](vendor/milesight/VS321.md) | ✅ New | Dim illuminance |
+| **💦** | U+1F4A6 | Sweat Droplets | Humidity Alarm | [VS321](vendor/milesight/VS321.md) | ✅ New | Humidity threshold alarm |
 
 ## Current Driver Status (17 Drivers Complete)
 
@@ -65,9 +71,10 @@ This document maintains the definitive list of emojis used across all LwDecode d
 - **[SE01-LB](vendor/dragino/SE01-LB.md)**: 8 emojis (soil moisture & EC sensor)
 - **[SN50v3-LB](vendor/dragino/SN50v3-LB.md)**: 10 emojis (generic 12-mode sensor node)
 
-### **Milesight (7 drivers)**
+### **Milesight (8 drivers)**
 - **[AM300](vendor/milesight/AM300.md)**: 16 emojis (9-in-1 air quality monitor)
 - **[AM308L](vendor/milesight/AM308L.md)**: 11 emojis (environmental monitoring sensor)
+- **[VS321](vendor/milesight/VS321.md)**: 10 emojis (AI occupancy sensor)
 - **[WS101](vendor/milesight/WS101.md)**: 4 emojis (smart button)
 - **[WS202](vendor/milesight/WS202.md)**: 4 emojis (PIR & light sensor)
 - **[WS301](vendor/milesight/WS301.md)**: 8 emojis (magnetic door/window sensor)
@@ -84,15 +91,20 @@ This document maintains the definitive list of emojis used across all LwDecode d
 - **[BOB-ASSISTANT](vendor/watteco/BOB-ASSISTANT.md)**: 8 emojis (vibration sensor with ML)
 
 ### **Framework Statistics**
-- **Total unique emojis**: 44
+- **Total unique emojis**: 50 (6 new for VS321)
 - **Universal coverage**: 100% (⏱️ and 🔋 in all drivers)
 - **Temperature consistency**: 100% (🌡️ in all temp sensors)
 - **Framework integration**: 100% (all use LwSensorFormatter_cls)
-- **Complete documentation**: 18/18 drivers with full emoji coverage
+- **Complete documentation**: 19/19 drivers with full emoji coverage
 
 ---
 
 ## Version History
+- **v1.09** (2025-09-02): VS321 AI Occupancy Sensor Addition
+  - Added 6 new emojis for occupancy detection: 👥 🪑 ⭕ ☀️ 🌙 💦
+  - Updated driver count to 19 (8 Milesight drivers)
+  - Total unique emojis: 50 (new high)
+  - Framework v2.3.0 + Template v2.4.0 compatibility
 - **v1.08** (2025-08-26): Complete coverage update with linked model references
   - Added clickable links to all model documentation (.md files)
   - Updated comprehensive coverage verification for all 17 drivers
@@ -102,7 +114,7 @@ This document maintains the definitive list of emojis used across all LwDecode d
 ---
 
 *This reference is automatically maintained as part of LwDecode framework development*  
-*Last updated: 2025-08-26 | Framework version: 2.2.9 | Template version: 2.3.6*
+*Last updated: 2025-09-02 | Framework version: 2.3.0 | Template version: 2.4.0*
 
 ---
 

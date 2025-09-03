@@ -84,7 +84,7 @@ class LwDecode_VS321
                         end
                         
                     elif channel == 0x03 && ch_type == 0x67
-                        # Temperature (signed, little endian)
+                        # Temperature (signed, little endian) 
                         if i + 1 < size(payload)
                             var temp_raw = payload[i] | (payload[i + 1] << 8)
                             if temp_raw > 32767
@@ -583,10 +583,10 @@ tasmota.remove_cmd("LwVS321TestUI")
 tasmota.add_cmd("LwVS321TestUI", def(cmd, idx, payload_str)
     # Template v2.5.0: Verified payload decoding for all scenarios
     var test_scenarios = {
-        "normal":      "017555036700F704685005FD050006FE0100020007FF01", # Normal operation (85%, 24.7°C, 50%, 5 people, desk 1/2, bright)
-        "occupied":    "017550036700E104682005FD0A0006FE030003000008F40200", # High occupancy (80%, 22.5°C, 32%, 10 people, desk 3/3)
-        "low_battery": "0175140367FF8804681005FD020006FE0100010008F40201", # Low battery (20%, -13.6°C, 16%, 2 people, undetectable)
-        "empty":       "0175603367010A04683205FD000006FE000000000007FF00", # Empty room (96%, 26.7°C, 50%, 0 people, dim)
+        "normal":      "0175550367F70004683200005FD050006FE0100020007FF01", # Normal operation (85%, 24.7°C, 25%, 5 people, desk 1/2, bright)
+        "occupied":    "0175500367E10004681000005FD0A0006FE030003000008F40200", # High occupancy (80%, 22.5°C, 8%, 10 people, desk 3/3)
+        "low_battery": "0175140367FF88000468100005FD020006FE0100010008F40201", # Low battery (20%, -13.6°C, 8%, 2 people, undetectable)
+        "empty":       "01756003670A01000468320005FD000006FE000000000007FF00", # Empty room (96%, 26.6°C, 25%, 0 people, dim)
         "alarm":       "83670125018468321A", # Temperature alarm (29.3°C, alarm=1, humidity 25%, alarm=26)
         "device_info": "FF0A02000910000116AABBCCDDEEFF0102FF0B01", # Firmware v2.0, hardware v1.0, power on
         "historical":  "20CE01000000AA5501", # Historical data entry

@@ -73,17 +73,17 @@ class LwDecode_WS101
                     if i + 1 >= size(payload) break end
                     
                     var channel = payload[i]
-                    var type = payload[i + 1]
+                    var ch_type = payload[i + 1]
                     i += 2
                     
-                    if channel == 0x01 && type == 0x75
+                    if channel == 0x01 && ch_type == 0x75
                         # Battery level
                         if i < size(payload)
                             data['battery'] = payload[i]
                             i += 1
                         end
                         
-                    elif channel == 0xFF && type == 0x2E
+                    elif channel == 0xFF && ch_type == 0x2E
                         # Button press event
                         if i < size(payload)
                             var button_val = payload[i]
@@ -103,14 +103,14 @@ class LwDecode_WS101
                             i += 1
                         end
                         
-                    elif channel == 0xFF && type == 0x01
+                    elif channel == 0xFF && ch_type == 0x01
                         # Protocol version
                         if i < size(payload)
                             data['protocol_version'] = f"V{payload[i]}"
                             i += 1
                         end
                         
-                    elif channel == 0xFF && type == 0x08
+                    elif channel == 0xFF && ch_type == 0x08
                         # Serial number (6 bytes)
                         if i + 5 < size(payload)
                             var serial = ""
@@ -121,26 +121,26 @@ class LwDecode_WS101
                             i += 6
                         end
                         
-                    elif channel == 0xFF && type == 0x09
+                    elif channel == 0xFF && ch_type == 0x09
                         # Hardware version
                         if i + 1 < size(payload)
                             data['hw_version'] = f"{payload[i + 1]}.{payload[i]}"
                             i += 2
                         end
                         
-                    elif channel == 0xFF && type == 0x0A
+                    elif channel == 0xFF && ch_type == 0x0A
                         # Software version
                         if i + 1 < size(payload)
                             data['sw_version'] = f"{payload[i + 1]}.{payload[i]}"
                             i += 2
                         end
                         
-                    elif channel == 0xFF && type == 0x0B
+                    elif channel == 0xFF && ch_type == 0x0B
                         # Power on event
                         data['power_on'] = true
                         # No additional bytes for this event
                         
-                    elif channel == 0xFF && type == 0x0F
+                    elif channel == 0xFF && ch_type == 0x0F
                         # Device class
                         if i < size(payload)
                             var class_val = payload[i]

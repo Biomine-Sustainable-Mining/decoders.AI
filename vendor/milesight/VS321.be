@@ -73,17 +73,17 @@ class LwDecode_VS321
                     if i + 1 >= size(payload) break end
                     
                     var channel = payload[i]
-                    var type = payload[i + 1]
+                    var ch_type = payload[i + 1]
                     i += 2
                     
-                    if channel == 0x01 && type == 0x75
+                    if channel == 0x01 && ch_type == 0x75
                         # Battery level
                         if i < size(payload)
                             data['battery'] = payload[i]
                             i += 1
                         end
                         
-                    elif channel == 0x03 && type == 0x67
+                    elif channel == 0x03 && ch_type == 0x67
                         # Temperature (signed, little endian)
                         if i + 1 < size(payload)
                             var temp_raw = payload[i] | (payload[i + 1] << 8)
@@ -94,21 +94,21 @@ class LwDecode_VS321
                             i += 2
                         end
                         
-                    elif channel == 0x04 && type == 0x68
+                    elif channel == 0x04 && ch_type == 0x68
                         # Humidity
                         if i < size(payload)
                             data['humidity'] = payload[i] / 2.0
                             i += 1
                         end
                         
-                    elif channel == 0x05 && type == 0xFD
+                    elif channel == 0x05 && ch_type == 0xFD
                         # People counting (little endian)
                         if i + 1 < size(payload)
                             data['people_count'] = payload[i] | (payload[i + 1] << 8)
                             i += 2
                         end
                         
-                    elif channel == 0x06 && type == 0xFE
+                    elif channel == 0x06 && ch_type == 0xFE
                         # Desk occupancy (4 bytes)
                         if i + 3 < size(payload)
                             var enable_bits = payload[i] | (payload[i + 1] << 8)
@@ -131,14 +131,14 @@ class LwDecode_VS321
                             i += 4
                         end
                         
-                    elif channel == 0x07 && type == 0xFF
+                    elif channel == 0x07 && ch_type == 0xFF
                         # Illumination
                         if i < size(payload)
                             data['illumination'] = payload[i] == 0x01 ? "Bright" : "Dim"
                             i += 1
                         end
                         
-                    elif channel == 0x08 && type == 0xF4
+                    elif channel == 0x08 && ch_type == 0xF4
                         # Detection status
                         if i + 1 < size(payload)
                             var status = payload[i + 1]
@@ -146,7 +146,7 @@ class LwDecode_VS321
                             i += 2
                         end
                         
-                    elif channel == 0x0A && type == 0xEF
+                    elif channel == 0x0A && ch_type == 0xEF
                         # Timestamp (little endian)
                         if i + 3 < size(payload)
                             var timestamp = payload[i] | (payload[i + 1] << 8) | 
@@ -155,7 +155,7 @@ class LwDecode_VS321
                             i += 4
                         end
                         
-                    elif channel == 0x83 && type == 0x67
+                    elif channel == 0x83 && ch_type == 0x67
                         # Temperature threshold alarm
                         if i + 2 < size(payload)
                             var temp_raw = payload[i] | (payload[i + 1] << 8)
@@ -167,7 +167,7 @@ class LwDecode_VS321
                             i += 3
                         end
                         
-                    elif channel == 0x84 && type == 0x68
+                    elif channel == 0x84 && ch_type == 0x68
                         # Humidity threshold alarm
                         if i + 1 < size(payload)
                             data['humidity_threshold'] = payload[i] / 2.0
@@ -175,7 +175,7 @@ class LwDecode_VS321
                             i += 2
                         end
                         
-                    elif channel == 0x20 && type == 0xCE
+                    elif channel == 0x20 && ch_type == 0xCE
                         # Historical data
                         if i + 8 < size(payload)
                             var hist_timestamp = payload[i] | (payload[i + 1] << 8) | 
@@ -188,19 +188,19 @@ class LwDecode_VS321
                         
                     elif channel == 0xFF
                         # Device info channels
-                        if type == 0x09
+                        if ch_type == 0x09
                             # Hardware version
                             if i + 1 < size(payload)
                                 data['hw_version'] = f"{payload[i + 1]}.{payload[i]}"
                                 i += 2
                             end
-                        elif type == 0x0A
+                        elif ch_type == 0x0A
                             # Firmware version  
                             if i + 1 < size(payload)
                                 data['fw_version'] = f"{payload[i + 1]}.{payload[i]}"
                                 i += 2
                             end
-                        elif type == 0x16
+                        elif ch_type == 0x16
                             # Serial number
                             if i + 7 < size(payload)
                                 var serial = ""
@@ -210,11 +210,11 @@ class LwDecode_VS321
                                 data['serial_number'] = serial
                                 i += 8
                             end
-                        elif type == 0x0B
+                        elif ch_type == 0x0B
                             # Power on
                             data['power_on'] = true
                             i += 1
-                        elif type == 0xFE
+                        elif ch_type == 0xFE
                             # Reset report
                             data['reset_report'] = true
                             i += 1

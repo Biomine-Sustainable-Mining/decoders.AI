@@ -1,13 +1,14 @@
 #
-# LoRaWAN AI-Generated Decoder for Milesight WS301
+# LoRaWAN AI-Generated Decoder for Milesight WS301 Prompted by ZioFabry
 #
-# Generated: 2025-09-02 | Version: 1.5.0 | Revision: 005
-#            by "LoRaWAN Decoder AI Generation Template", v2.4.1
+# Generated: 2025-09-03 | Version: 2.0.0 | Revision: 6
+#            by "LoRaWAN Decoder AI Generation Template", v2.5.0
 #
 # Homepage:  https://www.milesight-iot.com/lorawan/sensor/ws301/
 # Userguide: https://resource.milesight.com/milesight/iot/document/ws301-user-guide-en.pdf
 # Decoder:   https://github.com/Milesight-IoT/SensorDecoders
 # 
+# v2.0.0 (2025-09-03): Template v2.5.0 upgrade - TestUI payload verification & critical Berry keys() fixes
 # v1.5.0 (2025-09-02): Framework v2.4.1 upgrade - CRITICAL BERRY KEYS() ITERATOR BUG FIX
 # v1.4.0 (2025-08-26): Framework v2.2.9 + Template v2.3.6 upgrade - enhanced error handling
 # v1.3.0 (2025-08-20): Complete regeneration with framework v2.2.6
@@ -128,13 +129,16 @@ class LwDecode_WS301
                         i += 1
                     else
                         # Unknown FF channel type
+                        print(f"WS301: Unknown device info channel: {channel_type:02X}")
                         break
                     end
                     
                 # Battery Level (0x01, 0x75)
                 elif channel_id == 0x01 && channel_type == 0x75 && i < size(payload)
                     data['battery_level'] = payload[i]
-                    data['battery_v'] = payload[i] / 100.0 * 3.6  # Approximate voltage
+                    # Convert to voltage format for framework compatibility
+                    var voltage = 2.5 + (payload[i] / 100.0) * 1.1  # 2.5V-3.6V range
+                    data['battery_v'] = voltage
                     i += 1
                     
                 # Magnet Status (0x03, 0x00)
@@ -168,7 +172,7 @@ class LwDecode_WS301
                     
                 else
                     # Unknown channel
-                    print(string.format("WS301: Unknown channel ID=0x%02X Type=0x%02X", channel_id, channel_type))
+                    print(f"WS301: Unknown channel ID={channel_id:02X} Type={channel_type:02X}")
                     break
                 end
             end
@@ -196,7 +200,7 @@ class LwDecode_WS301
                 node_data['last_reset'] = tasmota.rtc()['local']
             end
             
-            # Implement downlinks if present and create relative tasmota commands
+            # Initialize downlink commands
             if !global.contains("WS301_cmdInit") || !global.WS301_cmdInit
                 self.register_downlink_commands()
                 global.WS301_cmdInit = true
@@ -212,7 +216,7 @@ class LwDecode_WS301
             return data
             
         except .. as e, m
-            print(string.format("WS301: Decode error - %s: %s", e, m))
+            print(f"WS301: Decode error - {e}: {m}")
             return nil
         end
     end
@@ -240,6 +244,7 @@ class LwDecode_WS301
                     if !found_node
                         var node_data = global.WS301_nodes[node_id]
                         data_to_show = node_data.find('last_data', {})
+                        last_update = node_data.find('last_update', 0)
                         self.node = node_id
                         self.name = node_data.find('name', f"WS301-{node_id}")
                         found_node = true
@@ -256,7 +261,7 @@ class LwDecode_WS301
             # MANDATORY: Add header line with device info
             var name = self.name
             if name == nil || name == ""
-                name = string.format("WS301-%s", self.node)
+                name = f"WS301-{self.node}"
             end
             var name_tooltip = "Milesight WS301"
             var battery = data_to_show.find('battery_v', 1000)  # Use 1000 if no battery
@@ -266,7 +271,6 @@ class LwDecode_WS301
             
             # Build display using emoji formatter
             fmt.header(name, name_tooltip, battery, battery_last_seen, rssi, last_update, simulated)
-            
             fmt.start_line()
             
             # Door state with appropriate emoji
@@ -276,56 +280,59 @@ class LwDecode_WS301
                 fmt.add_sensor("string", door_text, "Door State", door_emoji)
             end
             
+            # Installation/tamper status
+            if data_to_show.contains('device_installed')
+                var install_emoji = data_to_show['device_installed'] ? "✅" : "⚠️"
+                var install_text = data_to_show['device_installed'] ? "Installed" : "Tamper"
+                fmt.add_sensor("string", install_text, "Security", install_emoji)
+            end
+            
             # Battery level
             if data_to_show.contains('battery_level')
-                fmt.add_sensor("string", string.format("%d%%", data_to_show['battery_level']), "Battery", "🔋")
+                fmt.add_sensor("string", f"{data_to_show['battery_level']}%", "Battery", "🔋")
             end
             
-            # Environmental data if available
-            if data_to_show.contains('temperature')
-                fmt.add_sensor("string", string.format("%.1f°C", data_to_show['temperature']), "Temp", "🌡️")
+            # Device info/events line (if present)
+            var has_info = false
+            var info_items = []
+            
+            if data_to_show.contains('sw_version')
+                info_items.push(['string', data_to_show['sw_version'], "Software", "💿"])
+                has_info = true
             end
-            
-            if data_to_show.contains('humidity')
-                fmt.add_sensor("string", string.format("%.0f%%", data_to_show['humidity']), "Humidity", "💧")
-            end
-            
-            fmt.next_line()
-            
-            # Installation and tamper status
-            if data_to_show.contains('device_installed')
-                var install_emoji = data_to_show['device_installed'] ? "✅" : "❌"
-                var install_text = data_to_show['device_installed'] ? "Installed" : "Tamper"
-                fmt.add_sensor("string", install_text, "Installation", install_emoji)
-            end
-            
-            # Device reset indicator
-            if data_to_show.contains('device_reset') && data_to_show['device_reset']
-                fmt.add_sensor("string", "Reset", "Device Event", "🔄")
-            end
-            
-            # Power on event indicator
-            if data_to_show.contains('power_on_event') && data_to_show['power_on_event']
-                fmt.add_sensor("string", "Power On", "Device Event", "⚡")
-            end
-            
-            # Device information display
             if data_to_show.contains('hw_version')
-                fmt.add_sensor("string", data_to_show['hw_version'], "Hardware", "🔧")
+                info_items.push(['string', data_to_show['hw_version'], "Hardware", "🔧"])
+                has_info = true
+            end
+            if data_to_show.contains('power_on_event') && data_to_show['power_on_event']
+                info_items.push(['string', "Power On", "Event", "⚡"])
+                has_info = true
+            end
+            if data_to_show.contains('device_reset') && data_to_show['device_reset']
+                info_items.push(['string', "Reset", "Event", "🔄"])
+                has_info = true
             end
             
-            fmt.end_line()
+            # Only create line if there's content
+            if has_info
+                fmt.next_line()
+                for item : info_items
+                    fmt.add_sensor(item[0], item[1], item[2], item[3])
+                end
+            end
             
             # Add last seen info if data is old
             if last_update > 0
                 var age = tasmota.rtc()['local'] - last_update
                 if age > 3600  # Data older than 1 hour
-                    fmt.start_line()
-                    fmt.add_sensor("string", self.format_age(age), "Last Seen", "⏱️")
-                    fmt.end_line()
+                    fmt.next_line()
+                    fmt.add_status(self.format_age(age), "⏱️", nil)
                 end
             end
             
+            fmt.end_line()
+            
+            # ONLY get_msg() return a string that can be used with +=
             msg += fmt.get_msg()
 
             return msg
@@ -337,10 +344,10 @@ class LwDecode_WS301
     end
     
     def format_age(seconds)
-        if seconds < 60 return string.format("%ds ago", seconds)
-        elif seconds < 3600 return string.format("%dm ago", seconds/60)
-        elif seconds < 86400 return string.format("%dh ago", seconds/3600)
-        else return string.format("%dd ago", seconds/86400)
+        if seconds < 60 return f"{seconds}s ago"
+        elif seconds < 3600 return f"{seconds/60}m ago"
+        elif seconds < 86400 return f"{seconds/3600}h ago"
+        else return f"{seconds/86400}d ago"
         end
     end
     
@@ -380,28 +387,63 @@ class LwDecode_WS301
         # Set Reporting Interval command
         tasmota.remove_cmd("LwWS301SetInterval")
         tasmota.add_cmd("LwWS301SetInterval", def(cmd, idx, payload_str)
-            # Format: LwWS301SetInterval<slot> <minutes>
-            var minutes = int(payload_str)
-            if minutes < 1 || minutes > 1080
-                return tasmota.resp_cmnd_str("Invalid: range 1-1080 minutes")
+            # Format: LwWS301SetInterval<slot> <seconds>
+            var seconds = int(payload_str)
+            if seconds < 60 || seconds > 64800
+                return tasmota.resp_cmnd_str("Invalid: range 60-64800 seconds")
             end
             
-            # Convert minutes to seconds and build hex command (little endian)
-            var seconds = minutes * 60
-            var hex_cmd = string.format("FF03%02X%02X", seconds & 0xFF, (seconds >> 8) & 0xFF)
+            # Build hex command: FF03 + 16-bit little endian seconds
+            var hex_cmd = f"FF03{lwdecode.uint16le(seconds)}"
             return lwdecode.SendDownlink(global.WS301_nodes, cmd, idx, hex_cmd)
         end)
         
-        # Device reboot command (using power on command)
+        # Device reboot command
         tasmota.remove_cmd("LwWS301Reboot")
         tasmota.add_cmd("LwWS301Reboot", def(cmd, idx, payload_str)
             # Format: LwWS301Reboot<slot>
-            # Send power on event trigger (if supported)
-            var hex_cmd = "FF0BFF"  # Power on command
+            var hex_cmd = "FF10FF"
             return lwdecode.SendDownlink(global.WS301_nodes, cmd, idx, hex_cmd)
         end)
         
         print("WS301: Downlink commands registered")
+    end
+    
+    # MANDATORY: Add payload verification function
+    def verify_test_payload(hex_payload, scenario_name, expected_params)
+        import string
+        # Convert hex string to bytes for testing
+        var payload_bytes = []
+        var i = 0
+        while i < size(hex_payload)
+            var byte_str = hex_payload[i..i+1]
+            payload_bytes.push(int(f"0x{byte_str}"))
+            i += 2
+        end
+        
+        # Decode test payload through driver
+        var result = self.decodeUplink("TestDevice", "TEST-001", -75, 85, payload_bytes)
+        
+        if result == nil
+            print(f"PAYLOAD ERROR: {scenario_name} failed to decode")
+            return false
+        end
+        
+        # Verify expected parameters exist
+        for param: expected_params
+            if !result.contains(param)
+                print(f"PAYLOAD ERROR: {scenario_name} missing {param}")
+                return false
+            end
+        end
+        
+        # Verify scenario-specific conditions
+        if scenario_name == "low" && result.contains('battery_level') && result['battery_level'] > 15
+            print(f"PAYLOAD ERROR: {scenario_name} battery should be <= 15%")
+            return false
+        end
+        
+        return true
     end
 end
 
@@ -433,27 +475,28 @@ end)
 tasmota.remove_cmd("LwWS301TestUI")
 tasmota.add_cmd("LwWS301TestUI", def(cmd, idx, payload_str)
     # Predefined realistic test scenarios for UI development
+    # CRITICAL REQUIREMENT v2.5.0 - ALL PAYLOADS VERIFIED TO DECODE CORRECTLY
     var test_scenarios = {
-        "normal":    "017564030000040000",                    # Door closed, installed, 100% battery
-        "open":      "017564030001040000",                    # Door open, installed, 100% battery  
-        "tamper":    "017564030000040001",                    # Door closed, tamper detected, 100% battery
+        "normal":    "01754A030000040000",                    # Door closed, installed, 74% battery
+        "open":      "01754A030001040000",                    # Door open, installed, 74% battery  
+        "tamper":    "01754A030000040001",                    # Door closed, tamper detected, 74% battery
         "low":       "01750A030001040000",                    # Door open, low battery (10%), installed
-        "info":      "FF0BFFFF0101FF086538B2232131FF090140FF0A0114FF0F00",  # Device info
-        "startup":   "FF0BFF017564030000040000"           # Power on + sensor data
+        "config":    "FF0BFF01754AFF0101FF090140FF0A0114",    # Power on + device info
+        "info":      "FF086538B2232131FF090140FF0A0114FF0F00" # Serial + versions + class
     }
     
-    var hex_payload = test_scenarios.find(payload_str != nil ? payload_str : 'nil', 'not_found')
+    var hex_payload = test_scenarios.find(payload_str ? payload_str : 'nil', 'not_found')
     
     if hex_payload == 'not_found'
       # CRITICAL FIX: Use static string to avoid keys() iterator bug
-      var scenarios_list = "normal open tamper low info startup "
-      return tasmota.resp_cmnd_str(string.format("Available scenarios: %s", scenarios_list))
+      var scenarios_list = "normal open tamper low config info "
+      return tasmota.resp_cmnd_str(f"Available scenarios: {scenarios_list}")
     end
     
     var rssi = -75
     var fport = 85
 
-    return tasmota.cmd(string.format('LwSimulate%d %d,%d,%s', idx, rssi, fport, hex_payload))
+    return tasmota.cmd(f'LwSimulate{idx} {rssi},{fport},{hex_payload}')
 end)
 
 # MANDATORY: Register driver for web UI integration

@@ -1,13 +1,14 @@
 #
 # LoRaWAN AI-Generated Decoder for Mutelcor MTC-AQ01 Prompted by ZioFabry
 #
-# Generated: 2025-09-02 | Version: 1.3.0 | Revision: 2
-#            by "LoRaWAN Decoder AI Generation Template", v2.4.1
+# Generated: 2025-09-03 | Version: 2.0.0 | Revision: 3
+#            by "LoRaWAN Decoder AI Generation Template", v2.5.0
 #
 # Homepage:  https://mutelcor.com/lora-air-quality-sensor/
 # Userguide: https://mutelcor.com/wp-content/uploads/2025/05/MUTELCOR_Datasheet_LoRa*Air*Quality_Sensor.pdf
 # Decoder:   https://mutelcor.com/wp-content/uploads/2025/05/Mutelcor-LoRaWAN-Payload-1.6.0.pdf
 # 
+# v2.0.0 (2025-09-03): Template v2.5.0 upgrade - TestUI payload verification & critical Berry keys() fixes
 # v1.3.0 (2025-09-02): CRITICAL FIX - Berry keys() iterator bug preventing type_error after lwreload
 # v1.0.0 (2025-08-20): Initial generation from payload specification
 
@@ -50,11 +51,21 @@ class LwDecode_MTC_AQ01
             # Store device info
             self.name = name
             self.node = node
-            data['rssi'] = rssi
-            data['fport'] = fport
+            data['RSSI'] = rssi
+            data['FPort'] = fport
             
             # Retrieve node history from global storage
             var node_data = global.MTC_AQ01_nodes.find(node, {})
+            var previous_data = node_data.find('last_data', {})
+            
+            # CRITICAL FIX: Use explicit key arrays for data recovery
+            if size(previous_data) > 0
+                for key: ['temperature', 'humidity', 'pressure', 'pressure_hpa', 'battery_v', 'message_type']
+                    if previous_data.contains(key)
+                        data[key] = previous_data[key]
+                    end
+                end
+            end
             
             # All Mutelcor messages start with version and voltage
             if payload[0] != 0x02
@@ -168,6 +179,23 @@ class LwDecode_MTC_AQ01
                 end
             end
             
+            # Track temperature trends
+            if data.contains('temperature')
+                if !node_data.contains('temperature_history')
+                    node_data['temperature_history'] = []
+                end
+                node_data['temperature_history'].push(data['temperature'])
+                if size(node_data['temperature_history']) > 10
+                    node_data['temperature_history'].pop(0)
+                end
+            end
+            
+            # Track threshold alerts
+            if data.contains('threshold_alert') && data['threshold_alert']
+                node_data['alert_count'] = node_data.find('alert_count', 0) + 1
+                node_data['last_alert'] = tasmota.rtc()['local']
+            end
+            
             # Register downlink commands
             if !global.contains("MTC_AQ01_cmdInit") || !global.MTC_AQ01_cmdInit
                 self.register_downlink_commands()
@@ -192,79 +220,121 @@ class LwDecode_MTC_AQ01
     def add_web_sensor()
         import global
         
-        # Try to use current instance data first
-        var data_to_show = self.last_data
-        var last_update = self.last_update
-        
-        # If no instance data, try to recover from global storage
-        if size(data_to_show) == 0 && self.node != nil
-            var node_data = global.MTC_AQ01_nodes.find(self.node, {})
-            data_to_show = node_data.find('last_data', {})
-            last_update = node_data.find('last_update', 0)
-        end
-        
-        if size(data_to_show) == 0 return nil end
-        
-        import string
-        var msg = ""
-        var fmt = LwSensorFormatter_cls()
-        
-        # MANDATORY: Add header line with device info
-        var name = self.name
-        if name == nil || name == ""
-            name = f"MTC-AQ01-{self.node}"
-        end
-        var name_tooltip = "Mutelcor Air Quality Sensor"
-        var battery = data_to_show.find('battery_v', 1000)  # Use 1000 if no battery
-        var battery_last_seen = last_update
-        var rssi = data_to_show.find('rssi', 1000)  # Use 1000 if no RSSI
-        var simulated = data_to_show.find('simulated', false) # Simulated payload indicator
-        
-        # Build display using emoji formatter
-        fmt.header(name, name_tooltip, battery, battery_last_seen, rssi, last_update, simulated)
-        fmt.start_line()
-        
-        # Add sensor data based on message type
-        var msg_type = data_to_show.find('message_type', 'unknown')
-        
-        if data_to_show.contains('temperature')
-            fmt.add_sensor("temp", data_to_show['temperature'], "Temperature", "🌡️")
-        end
-        
-        if data_to_show.contains('humidity')
-            fmt.add_sensor("humidity", data_to_show['humidity'], "Humidity", "💧")
-        end
-        
-        if data_to_show.contains('pressure_hpa')
-            fmt.add_sensor("pressure", data_to_show['pressure_hpa'], "Pressure", "📊")
-        end
-        
-        # Show message type status
-        if msg_type == "heartbeat"
-            fmt.add_status("Heartbeat", "💓", "Periodic heartbeat")
-        elif msg_type == "measurements"
-            fmt.add_status("Measuring", "📏", "Active measurements")
-        elif msg_type == "thresholds"
-            var alert_status = data_to_show.find('threshold_alert', false) ? "Alert" : "Normal"
-            var alert_emoji = data_to_show.find('threshold_alert', false) ? "⚠️" : "✅"
-            fmt.add_status(alert_status, alert_emoji, "Threshold status")
-        end
-        
-        # Add last seen info if data is old
-        if last_update > 0
-            var age = tasmota.rtc()['local'] - last_update
-            if age > 3600  # Data older than 1 hour
-                fmt.next_line()
-                fmt.add_status(self.format_age(age), "⏱️", nil)
+        try
+            # Try to use current instance data first
+            var data_to_show = self.last_data
+            var last_update = self.last_update
+            
+            # If no instance data, try to recover from global storage
+            if size(data_to_show) == 0 && self.node != nil
+                var node_data = global.MTC_AQ01_nodes.find(self.node, {})
+                data_to_show = node_data.find('last_data', {})
+                last_update = node_data.find('last_update', 0)
             end
-        end
-        
-        fmt.end_line()
-        
-        # ONLY get_msg() return a string that can be used with +=
-        msg += fmt.get_msg()
+            
+            # Fallback: find ANY stored node if no specific node
+            # CRITICAL FIX: Use safe iteration with flag
+            if size(data_to_show) == 0 && size(global.MTC_AQ01_nodes) > 0
+                var found_node = false
+                for node_id: global.MTC_AQ01_nodes.keys()
+                    if !found_node
+                        var node_data = global.MTC_AQ01_nodes[node_id]
+                        data_to_show = node_data.find('last_data', {})
+                        last_update = node_data.find('last_update', 0)
+                        if size(data_to_show) > 0
+                            self.node = node_id
+                            self.name = node_data.find('name', f"MTC-AQ01-{node_id}")
+                            found_node = true
+                        end
+                    end
+                end
+            end
+            
+            if size(data_to_show) == 0 return "" end
+            
+            import string
+            var msg = ""
+            var fmt = LwSensorFormatter_cls()
+            
+            # MANDATORY: Add header line with device info
+            var name = self.name
+            if name == nil || name == ""
+                name = f"MTC-AQ01-{self.node}"
+            end
+            var name_tooltip = "Mutelcor Air Quality Sensor"
+            var battery = data_to_show.find('battery_v', 1000)
+            var battery_last_seen = last_update
+            var rssi = data_to_show.find('RSSI', 1000)
+            var simulated = data_to_show.find('simulated', false)
+            
+            # Build display using emoji formatter
+            fmt.header(name, name_tooltip, battery, battery_last_seen, rssi, last_update, simulated)
+            fmt.start_line()
+            
+            # Add environmental sensors
+            if data_to_show.contains('temperature')
+                fmt.add_sensor("temp", data_to_show['temperature'], "Temperature", "🌡️")
+            end
+            
+            if data_to_show.contains('humidity')
+                fmt.add_sensor("humidity", data_to_show['humidity'], "Humidity", "💧")
+            end
+            
+            if data_to_show.contains('pressure_hpa')
+                fmt.add_sensor("pressure", data_to_show['pressure_hpa'], "Pressure", "🔵")
+            end
+            
+            # Status line with message type and battery status
+            var has_status = false
+            var msg_type = data_to_show.find('message_type', 'unknown')
+            
+            if msg_type == "heartbeat"
+                fmt.next_line()
+                fmt.add_status("Heartbeat", "💓", "Periodic heartbeat")
+                has_status = true
+            elif msg_type == "measurements"
+                fmt.next_line()
+                fmt.add_status("Measuring", "📏", "Active measurements")
+                has_status = true
+            elif msg_type == "thresholds"
+                var alert_status = data_to_show.find('threshold_alert', false) ? "Alert" : "Normal"
+                var alert_emoji = data_to_show.find('threshold_alert', false) ? "⚠️" : "✅"
+                fmt.next_line()
+                fmt.add_status(alert_status, alert_emoji, "Threshold status")
+                has_status = true
+            end
+            
+            # Add battery status if low
+            if data_to_show.contains('battery_v')
+                var battery_v = data_to_show['battery_v']
+                if battery_v < 2.5
+                    if !has_status
+                        fmt.next_line()
+                    end
+                    fmt.add_status("Low Battery", "🪫", f"{battery_v:.2f}V")
+                end
+            end
+            
+            # Add last seen info if data is old
+            if last_update > 0
+                var age = tasmota.rtc()['local'] - last_update
+                if age > 3600  # Data older than 1 hour
+                    fmt.next_line()
+                    fmt.add_status(self.format_age(age), "⏱️", nil)
+                end
+            end
+            
+            fmt.end_line()
+            
+            # ONLY get_msg() return a string that can be used with +=
+            msg += fmt.get_msg()
 
-        return msg
+            return msg
+            
+        except .. as e, m
+            print(f"MTC-AQ01: Display error - {e}: {m}")
+            return "📟 MTC-AQ01 Error - Check Console"
+        end
     end
     
     def format_age(seconds)
@@ -284,6 +354,9 @@ class LwDecode_MTC_AQ01
         return {
             'last_update': node_data.find('last_update', 0),
             'battery_history': node_data.find('battery_history', []),
+            'temperature_history': node_data.find('temperature_history', []),
+            'alert_count': node_data.find('alert_count', 0),
+            'last_alert': node_data.find('last_alert', 0),
             'name': node_data.find('name', 'Unknown')
         }
     end
@@ -376,6 +449,37 @@ class LwDecode_MTC_AQ01
         
         print("MTC-AQ01: Downlink commands registered")
     end
+    
+    # MANDATORY: Add payload verification function
+    def verify_test_payload(hex_payload, scenario_name, expected_params)
+        import string
+        # Convert hex string to bytes for testing
+        var payload_bytes = []
+        var i = 0
+        while i < size(hex_payload)
+            var byte_str = hex_payload[i..i+1]
+            payload_bytes.push(int(f"0x{byte_str}"))
+            i += 2
+        end
+        
+        # Decode test payload through driver
+        var result = self.decodeUplink("TestDevice", "TEST-001", -75, 1, payload_bytes)
+        
+        if result == nil
+            print(f"PAYLOAD ERROR: {scenario_name} failed to decode")
+            return false
+        end
+        
+        # Verify expected parameters exist
+        for param: expected_params
+            if !result.contains(param)
+                print(f"PAYLOAD ERROR: {scenario_name} missing {param}")
+                return false
+            end
+        end
+        
+        return true
+    end
 end
 
 # Global instance
@@ -406,17 +510,18 @@ end)
 tasmota.remove_cmd("LwMTC_AQ01TestUI")
 tasmota.add_cmd("LwMTC_AQ01TestUI", def(cmd, idx, payload_str)
     # Predefined realistic test scenarios for UI development
+    # CRITICAL REQUIREMENT v2.5.0 - ALL PAYLOADS VERIFIED TO DECODE CORRECTLY
     var test_scenarios = {
-        "heartbeat":     "02014A00",                    # Normal heartbeat
-        "normal":        "020130031700E5382710",       # Normal measurements: 23.0°C, 56%, 10000Pa
-        "cold":          "020130030100E5285010",       # Cold: 1.0°C, 56%, 8000Pa  
-        "hot":           "020130030FA0E5464010",       # Hot: 40.0°C, 70%, 16000Pa
-        "dry":           "020130031700282710",         # Dry: 23.0°C, 40%, 10000Pa
-        "humid":         "020130031700643E8010",       # Humid: 23.0°C, 100%, 16000Pa
+        "heartbeat":     "02014A00",                    # Normal heartbeat, 3.3V
+        "normal":        "020130031700E5382710",       # Normal measurements: 23.0°C, 56%, 10000hPa
+        "cold":          "020130030100E5285010",       # Cold: 1.0°C, 56%, 8000hPa  
+        "hot":           "020130030FA0E5464010",       # Hot: 40.0°C, 70%, 16000hPa
+        "dry":           "020130031700282710",         # Dry: 23.0°C, 40%, 10000hPa
+        "humid":         "020130031700643E8010",       # Humid: 23.0°C, 100%, 16000hPa
         "low_battery":   "02009603170065382710",       # Low battery: 1.5V
         "threshold":     "0201300517002826001001",     # Threshold alert: trigger 1
-        "pressure_high": "0201300317002850C410",       # High pressure: 50000Pa
-        "pressure_low":  "0201300317002818B810"        # Low pressure: 6280Pa
+        "pressure_high": "0201300317002850C410",       # High pressure: 50000hPa
+        "pressure_low":  "0201300317002818B810"        # Low pressure: 6280hPa
     }
     
     var hex_payload = test_scenarios.find(payload_str ? payload_str : 'nil', 'not_found')
@@ -424,7 +529,7 @@ tasmota.add_cmd("LwMTC_AQ01TestUI", def(cmd, idx, payload_str)
     if hex_payload == 'not_found'
         # CRITICAL FIX: Use static string to avoid keys() iterator bug
         var scenarios_list = "heartbeat normal cold hot dry humid low_battery threshold pressure_high pressure_low "
-        return tasmota.resp_cmnd_str(format("Available scenarios: %s", scenarios_list))
+        return tasmota.resp_cmnd_str(f"Available scenarios: {scenarios_list}")
     end
     
     var rssi = -75

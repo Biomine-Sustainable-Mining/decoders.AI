@@ -49,7 +49,7 @@ This document maintains a comprehensive list of all AI-generated drivers for the
 ### Watteco
 | Model | Version | Date | Channels | Model Version | Prompt Ver | Description |
 |-------|---------|------|----------|---------------|------------|-------------|
-| [BOB-ASSISTANT](vendor/watteco/BOB-ASSISTANT.md) | [1.1.0](vendor/watteco/BOB-ASSISTANT.be) | 2025-09-02 | 68/68 | Bob Assistant | [v2.4.1](vendor/watteco/BOB-ASSISTANT-REPORT.md) | [Vibration sensor with ML anomaly detection & FFT](vendor/watteco/BOB-ASSISTANT-REQ.md) |
+| [BOB-ASSISTANT](vendor/watteco/BOB-ASSISTANT.md) | [2.0.0](vendor/watteco/BOB-ASSISTANT.be) | 2025-09-03 | 68/68 | Bob Assistant | [v2.5.0](vendor/watteco/BOB-ASSISTANT-REPORT.md) | [Vibration sensor with ML anomaly detection & FFT](vendor/watteco/BOB-ASSISTANT-REQ.md) |
 
 ## Coverage Statistics
 

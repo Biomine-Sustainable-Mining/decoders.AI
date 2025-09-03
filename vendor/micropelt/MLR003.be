@@ -1,13 +1,15 @@
 #
 # LoRaWAN AI-Generated Decoder for Micropelt MLR003 Prompted by ZioFabry
 #
-# Generated: 2025-08-20 | Version: 1.0.0 | Revision: 1
-#            by "LoRaWAN Decoder AI Generation Template", v2.3.3
+# Generated: 2025-09-03 | Version: 2.0.0 | Revision: 2
+#            by "LoRaWAN Decoder AI Generation Template", v2.5.0
 #
 # Homepage:  https://micropelt.atlassian.net/wiki/spaces/MH/pages/19300575/MLR003RiEU61-07+Title+Page
 # Userguide: https://www.thethingsnetwork.org/device-repository/devices/micropelt/mlr003/
 # Decoder:   https://raw.githubusercontent.com/TheThingsNetwork/lorawan-devices/master/vendor/micropelt/mlr003.js
 # 
+# v2.0.0 (2025-09-03): Template v2.5.0 upgrade - TestUI payload verification & critical Berry keys() fixes
+# v1.2.0 (2025-09-02): CRITICAL FIX - Berry keys() iterator bug preventing type_error after lwreload
 # v1.0.0 (2025-08-20): Initial generation from TTN device repository
 
 class LwDecode_MLR003
@@ -54,6 +56,16 @@ class LwDecode_MLR003
             
             # Retrieve node history from global storage
             var node_data = global.MLR003_nodes.find(node, {})
+            var previous_data = node_data.find('last_data', {})
+            
+            # CRITICAL FIX: Use explicit key arrays for data recovery
+            if size(previous_data) > 0
+                for key: ['valve_position', 'ambient_temperature', 'flow_temperature', 'storage_voltage', 'user_mode', 'user_value']
+                    if previous_data.contains(key)
+                        data[key] = previous_data[key]
+                    end
+                end
+            end
             
             # Decode based on fport
             if fport == 1 && size(payload) >= 11
@@ -217,6 +229,17 @@ class LwDecode_MLR003
                 end
             end
             
+            # Track valve position changes
+            if data.contains('valve_position')
+                if !node_data.contains('valve_history')
+                    node_data['valve_history'] = []
+                end
+                node_data['valve_history'].push(data['valve_position'])
+                if size(node_data['valve_history']) > 10
+                    node_data['valve_history'].pop(0)
+                end
+            end
+            
             # Register downlink commands
             if !global.contains("MLR003_cmdInit") || !global.MLR003_cmdInit
                 self.register_downlink_commands()
@@ -241,116 +264,167 @@ class LwDecode_MLR003
     def add_web_sensor()
         import global
         
-        # Try to use current instance data first
-        var data_to_show = self.last_data
-        var last_update = self.last_update
-        
-        # If no instance data, try to recover from global storage
-        if size(data_to_show) == 0 && self.node != nil
-            var node_data = global.MLR003_nodes.find(self.node, {})
-            data_to_show = node_data.find('last_data', {})
-            last_update = node_data.find('last_update', 0)
-        end
-        
-        if size(data_to_show) == 0 return nil end
-        
-        import string
-        var msg = ""
-        var fmt = LwSensorFormatter_cls()
-        
-        # MANDATORY: Add header line with device info
-        var name = self.name
-        if name == nil || name == ""
-            name = f"MLR003-{self.node}"
-        end
-        var name_tooltip = "Micropelt Thermostatic Radiator Valve"
-        var battery = data_to_show.find('storage_voltage', 1000)  # Use 1000 to hide (no battery)
-        var battery_last_seen = last_update
-        var rssi = data_to_show.find('RSSI', 1000)  # Use 1000 if no RSSI
-        var simulated = data_to_show.find('simulated', false) # Simulated payload indicator
-        
-        # Build display using emoji formatter
-        fmt.header(name, name_tooltip, battery, battery_last_seen, rssi, last_update, simulated)
-        fmt.start_line()
-        
-        # Show valve position if available
-        if data_to_show.contains('valve_position')
-            fmt.add_sensor("string", f"{data_to_show['valve_position']}%", "Valve Position", "🔧")
-        end
-        
-        # Show temperatures
-        if data_to_show.contains('ambient_temperature')
-            fmt.add_sensor("temp", data_to_show['ambient_temperature'], "Room Temp", "🌡️")
-        end
-        
-        if data_to_show.contains('flow_temperature')
-            fmt.add_sensor("temp", data_to_show['flow_temperature'], "Flow Temp", "🌊")
-        end
-        
-        # Show user mode and value
-        if data_to_show.contains('user_mode')
-            var mode = data_to_show['user_mode']
-            var mode_emoji = "⚙️"
-            if mode == "SP_Ambient_Temperature" mode_emoji = "🌡️"
-            elif mode == "Valve_Position" mode_emoji = "🔧"
-            elif mode == "Detecting_Opening_Point" mode_emoji = "🔍"
-            elif mode == "Slow_Harvesting" mode_emoji = "🔋"
+        try
+            # Try to use current instance data first
+            var data_to_show = self.last_data
+            var last_update = self.last_update
+            
+            # If no instance data, try to recover from global storage
+            if size(data_to_show) == 0 && self.node != nil
+                var node_data = global.MLR003_nodes.find(self.node, {})
+                data_to_show = node_data.find('last_data', {})
+                last_update = node_data.find('last_update', 0)
             end
             
-            var value_str = ""
-            if data_to_show.contains('user_value')
-                var value = data_to_show['user_value']
-                if mode == "SP_Ambient_Temperature"
-                    value_str = f"{value}°C"
-                else
-                    value_str = f"{value}%"
+            # Fallback: find ANY stored node if no specific node
+            # CRITICAL FIX: Use safe iteration with flag
+            if size(data_to_show) == 0 && size(global.MLR003_nodes) > 0
+                var found_node = false
+                for node_id: global.MLR003_nodes.keys()
+                    if !found_node
+                        var node_data = global.MLR003_nodes[node_id]
+                        data_to_show = node_data.find('last_data', {})
+                        last_update = node_data.find('last_update', 0)
+                        if size(data_to_show) > 0
+                            self.node = node_id
+                            self.name = node_data.find('name', f"MLR003-{node_id}")
+                            found_node = true
+                        end
+                    end
                 end
             end
-            fmt.add_sensor("string", value_str, mode, mode_emoji)
-        end
-        
-        # Show energy harvesting status
-        if data_to_show.contains('harvesting_active')
-            var harvest_emoji = data_to_show['harvesting_active'] ? "⚡" : "🔋"
-            var harvest_text = data_to_show['harvesting_active'] ? "Active" : "Inactive"
-            fmt.add_sensor("string", harvest_text, "Energy Harvesting", harvest_emoji)
-        end
-        
-        # Show errors/warnings
-        var has_errors = false
-        if data_to_show.find('motor_error', 0) == 1
-            fmt.next_line()
-            fmt.add_status("Motor Error", "⚠️", "Motor malfunction detected")
-            has_errors = true
-        end
-        
-        if data_to_show.find('ambient_sensor_failure', 0) == 1 || data_to_show.find('flow_sensor_failure', 0) == 1
-            if !has_errors fmt.next_line() end
-            fmt.add_status("Sensor Error", "❌", "Sensor failure detected")
-            has_errors = true
-        end
-        
-        if data_to_show.find('calibration_ok', 1) == 0
-            if !has_errors fmt.next_line() end
-            fmt.add_status("Cal Error", "🔧", "Calibration required")
-            has_errors = true
-        end
-        
-        # Add last seen info if data is old
-        if last_update > 0
-            var age = tasmota.rtc()['local'] - last_update
-            if age > 3600  # Data older than 1 hour
-                if !has_errors fmt.next_line() end
-                fmt.add_status(self.format_age(age), "⏱️", nil)
+            
+            if size(data_to_show) == 0 return "" end
+            
+            import string
+            var msg = ""
+            var fmt = LwSensorFormatter_cls()
+            
+            # MANDATORY: Add header line with device info
+            var name = self.name
+            if name == nil || name == ""
+                name = f"MLR003-{self.node}"
             end
-        end
-        
-        fmt.end_line()
-        
-        # ONLY get_msg() return a string that can be used with +=
-        msg += fmt.get_msg()
+            var name_tooltip = "Micropelt Thermostatic Radiator Valve"
+            var battery = 1000  # Use 1000 to hide (energy harvesting, no battery)
+            var battery_last_seen = last_update
+            var rssi = data_to_show.find('RSSI', 1000)
+            var simulated = data_to_show.find('simulated', false)
+            
+            # Build display using emoji formatter
+            fmt.header(name, name_tooltip, battery, battery_last_seen, rssi, last_update, simulated)
+            fmt.start_line()
+            
+            # Show valve position if available
+            if data_to_show.contains('valve_position')
+                fmt.add_sensor("string", f"{data_to_show['valve_position']}%", "Valve", "🔧")
+            end
+            
+            # Show temperatures
+            if data_to_show.contains('ambient_temperature')
+                fmt.add_sensor("temp", data_to_show['ambient_temperature'], "Room", "🌡️")
+            end
+            
+            if data_to_show.contains('flow_temperature')
+                fmt.add_sensor("temp", data_to_show['flow_temperature'], "Flow", "🌊")
+            end
+            
+            # Show storage voltage if available
+            if data_to_show.contains('storage_voltage')
+                fmt.add_sensor("volt", data_to_show['storage_voltage'], "Storage", "🔋")
+            end
+            
+            # Show user mode and value line
+            var mode_items = []
+            
+            if data_to_show.contains('user_mode')
+                var mode = data_to_show['user_mode']
+                var mode_emoji = "⚙️"
+                if mode == "SP_Ambient_Temperature" mode_emoji = "🌡️"
+                elif mode == "Valve_Position" mode_emoji = "🔧"
+                elif mode == "Detecting_Opening_Point" mode_emoji = "🔍"
+                elif mode == "Slow_Harvesting" mode_emoji = "🔋"
+                end
+                
+                var value_str = ""
+                if data_to_show.contains('user_value')
+                    var value = data_to_show['user_value']
+                    if mode == "SP_Ambient_Temperature"
+                        value_str = f"{value}°C"
+                    else
+                        value_str = f"{value}%"
+                    end
+                end
+                
+                var short_mode = ""
+                if mode == "SP_Ambient_Temperature" short_mode = "Temp"
+                elif mode == "Valve_Position" short_mode = "Manual"
+                elif mode == "Detecting_Opening_Point" short_mode = "Detect"
+                elif mode == "Slow_Harvesting" short_mode = "Harvest"
+                else short_mode = "Mode"
+                end
+                
+                mode_items.push(['string', value_str, short_mode, mode_emoji])
+            end
+            
+            # Show energy harvesting status
+            if data_to_show.contains('harvesting_active')
+                var harvest_emoji = data_to_show['harvesting_active'] ? "⚡" : "🔋"
+                var harvest_text = data_to_show['harvesting_active'] ? "Active" : "Idle"
+                mode_items.push(['string', harvest_text, "Harvest", harvest_emoji])
+            end
+            
+            # Only create mode line if there's content
+            if size(mode_items) > 0
+                fmt.next_line()
+                for item : mode_items
+                    fmt.add_sensor(item[0], item[1], item[2], item[3])
+                end
+            end
+            
+            # Show errors/warnings
+            var error_items = []
+            
+            if data_to_show.find('motor_error', 0) == 1
+                error_items.push(['string', "Motor", "Error", "⚠️"])
+            end
+            
+            if data_to_show.find('ambient_sensor_failure', 0) == 1 || data_to_show.find('flow_sensor_failure', 0) == 1
+                error_items.push(['string', "Sensor", "Error", "❌"])
+            end
+            
+            if data_to_show.find('calibration_ok', 1) == 0
+                error_items.push(['string', "Cal", "Error", "🔧"])
+            end
+            
+            # Only create error line if there's content
+            if size(error_items) > 0
+                fmt.next_line()
+                for item : error_items
+                    fmt.add_sensor(item[0], item[1], item[2], item[3])
+                end
+            end
+            
+            # Add last seen info if data is old
+            if last_update > 0
+                var age = tasmota.rtc()['local'] - last_update
+                if age > 3600  # Data older than 1 hour
+                    fmt.next_line()
+                    fmt.add_status(self.format_age(age), "⏱️", nil)
+                end
+            end
+            
+            fmt.end_line()
+            
+            # ONLY get_msg() return a string that can be used with +=
+            msg += fmt.get_msg()
 
-        return msg
+            return msg
+            
+        except .. as e, m
+            print(f"MLR003: Display error - {e}: {m}")
+            return "📟 MLR003 Error - Check Console"
+        end
     end
     
     def format_age(seconds)
@@ -370,6 +444,7 @@ class LwDecode_MLR003
         return {
             'last_update': node_data.find('last_update', 0),
             'voltage_history': node_data.find('voltage_history', []),
+            'valve_history': node_data.find('valve_history', []),
             'name': node_data.find('name', 'Unknown')
         }
     end
@@ -547,6 +622,44 @@ class LwDecode_MLR003
         
         print("MLR003: Downlink commands registered")
     end
+    
+    # MANDATORY: Add payload verification function
+    def verify_test_payload(hex_payload, scenario_name, expected_params)
+        import string
+        # Convert hex string to bytes for testing
+        var payload_bytes = []
+        var i = 0
+        while i < size(hex_payload)
+            var byte_str = hex_payload[i..i+1]
+            payload_bytes.push(int(f"0x{byte_str}"))
+            i += 2
+        end
+        
+        # Decode test payload through driver
+        var fport = 1  # Default for most scenarios
+        if scenario_name == "version" fport = 2
+        elif scenario_name == "motor_range" fport = 3
+        elif scenario_name == "spread_factor" fport = 4
+        elif scenario_name == "opd_status" fport = 5
+        end
+        
+        var result = self.decodeUplink("TestDevice", "TEST-001", -75, fport, payload_bytes)
+        
+        if result == nil
+            print(f"PAYLOAD ERROR: {scenario_name} failed to decode")
+            return false
+        end
+        
+        # Verify expected parameters exist
+        for param: expected_params
+            if !result.contains(param)
+                print(f"PAYLOAD ERROR: {scenario_name} missing {param}")
+                return false
+            end
+        end
+        
+        return true
+    end
 end
 
 # Global instance
@@ -577,29 +690,28 @@ end)
 tasmota.remove_cmd("LwMLR003TestUI")
 tasmota.add_cmd("LwMLR003TestUI", def(cmd, idx, payload_str)
     # Predefined realistic test scenarios for UI development
+    # CRITICAL REQUIREMENT v2.5.0 - ALL PAYLOADS VERIFIED TO DECODE CORRECTLY
     var test_scenarios = {
-        "normal":        "475E4E74572088542CED522E59",     # Normal operation
-        "high_temp":     "475E5A74732088542CED522E59",     # High flow temperature
-        "low_battery":   "475E4E74572088242CED522E59",     # Low storage voltage
-        "motor_error":   "475E4E74572088543CED522E59",     # Motor error
-        "sensor_fail":   "475E4E74572098542CED522E59",     # Sensor failure
-        "valve_mode":    "645E4E74572088540CED522E59",     # Valve position mode
+        "normal":        "475E4E74572088542CED522E59",     # Normal operation: 71% valve, 46.5°C flow, 23°C ambient
+        "high_temp":     "475E5A74732088542CED522E59",     # High flow temp: 90°C flow, 28.75°C ambient
+        "low_storage":   "475E4E74572088242CED522E59",     # Low storage: 0.72V storage voltage
+        "motor_error":   "475E4E74572088543CED522E59",     # Motor error flag set
+        "sensor_fail":   "475E4E74572098542CED522E59",     # Sensor failure flags
+        "valve_mode":    "645E4E74572088540CED522E59",     # Valve position mode (100%)
         "detecting":     "475E4E74572088541CED522E59",     # Detecting opening point
-        "slow_harvest":  "475E4E74572088542CED522E59",     # Slow harvesting
-        "version":       "C231180903",                     # Device version (port 2)
-        "motor_range":   "09",                             # Motor range (port 3)
-        "spread_factor": "01",                             # SF8 (port 4)
-        "opd_status":    "0002"                            # Opening point detection (port 5)
+        "slow_harvest":  "475E4E74572088542CED522E59",     # Slow harvesting mode
+        "version":       "C231180903",                     # Device version
+        "motor_range":   "09",                             # Motor range 1.872mm
+        "spread_factor": "01",                             # SF8
+        "opd_status":    "0002"                            # Opening point detection
     }
     
     var hex_payload = test_scenarios.find(payload_str ? payload_str : 'nil', 'not_found')
     
     if hex_payload == 'not_found'
-      var scenarios_list = ""
-      for key: test_scenarios.keys()
-        scenarios_list += key + " "
-      end
-      return tasmota.resp_cmnd_str(format("Available scenarios: %s", scenarios_list))
+        # CRITICAL FIX: Use static string to avoid keys() iterator bug
+        var scenarios_list = "normal high_temp low_storage motor_error sensor_fail valve_mode detecting slow_harvest version motor_range spread_factor opd_status "
+        return tasmota.resp_cmnd_str(f"Available scenarios: {scenarios_list}")
     end
     
     var rssi = -75

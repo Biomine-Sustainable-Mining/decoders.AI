@@ -33,13 +33,13 @@ This document maintains a comprehensive list of all AI-generated drivers for the
 | [WS101](vendor/milesight/WS101.md) | [3.0.0](vendor/milesight/WS101.be) | 2025-09-03 | 8/8 | WS101 | [v2.5.0](vendor/milesight/WS101-REPORT.md) | [Smart button with multiple press types](vendor/milesight/WS101-REQ.md) |
 | [WS202](vendor/milesight/WS202.md) | [2.0.0](vendor/milesight/WS202.be) | 2025-09-03 | 9/9 | WS202 | [v2.5.0](vendor/milesight/WS202-REPORT.md) | [PIR & Light sensor for motion and illuminance detection](vendor/milesight/WS202-REQ.md) |
 | [WS301](vendor/milesight/WS301.md) | [2.0.0](vendor/milesight/WS301.be) | 2025-09-03 | 10/10 | WS301 | [v2.5.0](vendor/milesight/WS301-REPORT.md) | [Magnetic door/window sensor](vendor/milesight/WS301-REQ.md) |
-| [WS523](vendor/milesight/WS523.md) | [3.1.0](vendor/milesight/WS523.be) | 2025-09-02 | 33/33 | WS523 | [v2.4.1](vendor/milesight/WS523-REPORT.md) | [Portable smart socket with power monitoring](vendor/milesight/WS523-REQ.md) |
-| [WS52x](vendor/milesight/WS52x.md) | [1.7.0](vendor/milesight/WS52x.be) | 2025-09-02 | 25/25 | WS52x Series | [v2.4.1](vendor/milesight/WS52x-REPORT.md) | [Smart socket with slideshow support & enhanced error handling](vendor/milesight/WS52x-REQ.md) |
+| [WS523](vendor/milesight/WS523.md) | [4.0.0](vendor/milesight/WS523.be) | 2025-09-03 | 33/33 | WS523 | [v2.5.0](vendor/milesight/WS523-REPORT.md) | [Portable smart socket with power monitoring](vendor/milesight/WS523-REQ.md) |
+| [WS52x](vendor/milesight/WS52x.md) | [2.0.0](vendor/milesight/WS52x.be) | 2025-09-03 | 25/25 | WS52x Series | [v2.5.0](vendor/milesight/WS52x-REPORT.md) | [Smart socket with slideshow support & enhanced error handling](vendor/milesight/WS52x-REQ.md) |
 
 ### Mutelcor
 | Model | Version | Date | Channels | Model Version | Prompt Ver | Description |
 |-------|---------|------|----------|---------------|------------|-------------|
-| [MTC-AQ01](vendor/mutelcor/MTC-AQ01.md) | [1.3.0](vendor/mutelcor/MTC-AQ01.be) | 2025-09-02 | 12/12 | MTC-AQ01/02/03 | [v2.4.1](vendor/mutelcor/MTC-AQ01-REPORT.md) | [Air quality sensor with temperature, humidity & pressure](vendor/mutelcor/MTC-AQ01-REQ.md) |
+| [MTC-AQ01](vendor/mutelcor/MTC-AQ01.md) | [2.0.0](vendor/mutelcor/MTC-AQ01.be) | 2025-09-03 | 15/15 | MTC-AQ01/02/03 | [v2.5.0](vendor/mutelcor/MTC-AQ01-REPORT.md) | [Air quality sensor with temperature, humidity & pressure](vendor/mutelcor/MTC-AQ01-REQ.md) |
 
 ### Micropelt
 | Model | Version | Date | Channels | Model Version | Prompt Ver | Description |

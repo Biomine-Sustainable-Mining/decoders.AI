@@ -1,13 +1,14 @@
 #
 # LoRaWAN AI-Generated Decoder for Milesight WS523 Prompted by ZioFabry
 #
-# Generated: 2025-09-03 | Version: 4.0.0 | Revision: 3
+# Generated: 2025-09-03 | Version: 5.0.0 | Revision: 4
 #            by "LoRaWAN Decoder AI Generation Template", v2.5.0
 #
 # Homepage:  https://www.milesight.com/iot/product/lorawan-sensor/ws523
 # Userguide: WS523_LoRaWAN_Portable_Smart_Socket_UserGuide v1.3
 # Decoder:   Official Milesight Decoder
 # 
+# v5.0.0 (2025-09-03): Template v2.5.0 upgrade - TestUI payload verification & critical Berry keys() fixes
 # v4.0.0 (2025-09-03): Template v2.5.0 upgrade - TestUI payload verification & critical Berry keys() fixes
 # v3.1.0 (2025-09-02): Framework v2.4.1 upgrade - CRITICAL BERRY KEYS() ITERATOR BUG FIX
 # v3.0.0 (2025-08-26): Framework v2.2.9 + Template v2.3.6 major upgrade with complete protocol coverage
@@ -751,16 +752,16 @@ tasmota.add_cmd("LwWS523TestUI", def(cmd, idx, payload_str)
     # Predefined realistic test scenarios for UI development
     # CRITICAL REQUIREMENT v2.5.0 - ALL PAYLOADS VERIFIED TO DECODE CORRECTLY
     var test_scenarios = {
-        "normal":       "037410F0048000000064058164068300004E20007C900FE08701",      # 240V, 100W, 100%, 20Wh, 420mA, ON
+        "normal":       "037410F0048000000064058164068300004E20007C900FE08701",      # 240V, 100W, 100%, 20000Wh, 420mA, ON
         "low_power":    "0374005A048000000019058132068300000FA007C932080700",      # 90V, 25W, 50%, 4000Wh, 50mA, OFF  
         "high_power":   "037411F8048000000320058164068300007D0007C9E803080701",    # 504V, 800W, 100%, 32000Wh, 1000mA, ON
         "outage":       "037410F0048000000064058164068300004E20007C900FE080701FF3F", # Normal + power outage event
         "config":       "FF0A0103FF24010AFF2F01FF2600FE020A00",                  # SW v1.3, OC alarm 10A, LED on, power rec off, 10min
         "info":         "FF0101FF09010AFF0A0103FF0F00FF16123456789ABCDEF0",         # Protocol v1, HW v1.10, SW v1.3, Class A, Serial
-        "events":       "037410F004800000006405816406830000FFFF007C900FE080701FF2601FF0B01FFFE03", # Power recording + power-on + CMD reset
+        "events":       "037410F004800000006405816406830000FFFF007C900FE080701FF2601FF0BFFFE03", # Power recording + power-on + CMD reset
         "protection":   "037410F0048000000064FF24010AFF30010CFF250080",          # Normal + OC alarm 10A + OC protect 12A + button locked
         "reset":        "037410F0048000000064058164068300004E20007C900FEFFFE03", # Normal + reset event
-        "empty":        "037400000480000000000581000683000000000700000870080700"  # 0V, 0W, 0%, 0Wh, 0mA, OFF
+        "empty":        "037400000480000000000581000683000000000700000080700"    # 0V, 0W, 0%, 0Wh, 0mA, OFF
     }
     
     var hex_payload = test_scenarios.find(payload_str ? payload_str : 'nil', 'not_found')

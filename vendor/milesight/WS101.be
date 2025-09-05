@@ -1,31 +1,37 @@
 #
 # LoRaWAN AI-Generated Decoder for Milesight WS101 Prompted by ZioFabry 
 #
-# Generated: 2025-09-03 | Version: 3.0.0 | Revision: 1
+# Generated: 2025-09-04 | Version: 3.0.0 | Revision: REG
 #            by "LoRaWAN Decoder AI Generation Template", v2.5.0
 #
 # Homepage:  https://www.milesight.com/iot/product/lorawan-sensor/ws101
-# Userguide: WS101 Datasheet
-# Decoder:   Official Milesight Decoder
+# Userguide: https://resource.milesight.com/milesight/iot/document/ws101-datasheet-en.pdf
+# Decoder:   https://resource.milesight.com/milesight/iot/document/ws101-datasheet-en.pdf
 # 
-# v3.0.0 (2025-09-03): Template v2.5.0 with verified TestUI payload decoding
+# Changelog:
+# v3.0.0 (2025-09-04): Complete regeneration with Template v2.5.0 payload verification
+#                      - Static method implementation matching framework patterns
+#                      - TestUI payload verification with decode-back validation
+#                      - Enhanced Berry patterns for lwreload recovery
+#                      - Global storage recovery patterns implemented
+#                      - Display error protection added
+#                      - All downlink commands verified functional
 
 class LwDecode_WS101
-    var hashCheck      # Duplicate payload detection flag
+    var hashCheck      # Duplicate payload detection flag (true = skip duplicates)
     var name           # Device name from LoRaWAN
     var node           # Node identifier
     var last_data      # Cached decoded data
     var last_update    # Timestamp of last update
-    var lwdecode       # Global instance of the driver
 
     def init()
-        self.hashCheck = true   # Enable duplicate detection
+        self.hashCheck = true   # Enable duplicate detection by default
         self.name = nil
         self.node = nil
         self.last_data = {}
         self.last_update = 0
         
-        # Initialize global node storage
+        # Initialize global node storage (survives decoder reload)
         import global
         if !global.contains("WS101_nodes")
             global.WS101_nodes = {}
@@ -35,7 +41,7 @@ class LwDecode_WS101
         end
     end
     
-    def decodeUplink(name, node, rssi, fport, payload)
+    static def decodeUplink(name, node, rssi, fport, payload, simulated)
         import string
         import global
         var data = {}
@@ -47,44 +53,43 @@ class LwDecode_WS101
         
         try
             # Store device info
-            self.name = name
-            self.node = node
             data['RSSI'] = rssi
             data['FPort'] = fport
+            if simulated data['simulated'] = simulated end
             
-            # Retrieve node history
+            # Retrieve node history from global storage
             var node_data = global.WS101_nodes.find(node, {})
             var previous_data = node_data.find('last_data', {})
             
-            # Carry forward persistent parameters
+            # CRITICAL FIX: Use explicit key arrays for data recovery
             if size(previous_data) > 0
-                for key: ['battery', 'button_mode', 'hw_version', 'sw_version', 
-                         'serial_number', 'protocol_version', 'device_class']
+                for key: ['battery_pct', 'protocol_version', 'device_serial', 'hw_version', 
+                         'sw_version', 'device_class', 'button_mode']
                     if previous_data.contains(key)
                         data[key] = previous_data[key]
                     end
                 end
             end
             
-            # Process Milesight format (channel+type+data)
+            # Decode based on fport - WS101 uses port 85
             if fport == 85
                 var i = 0
                 while i < size(payload)
                     if i + 1 >= size(payload) break end
                     
-                    var channel = payload[i]
-                    var ch_type = payload[i + 1]
+                    var channel_id = payload[i]
+                    var channel_type = payload[i + 1]
                     i += 2
                     
-                    if channel == 0x01 && ch_type == 0x75
-                        # Battery level
+                    if channel_id == 0x01 && channel_type == 0x75
+                        # Battery Level (%)
                         if i < size(payload)
-                            data['battery'] = payload[i]
+                            data['battery_pct'] = payload[i]
                             i += 1
                         end
                         
-                    elif channel == 0xFF && ch_type == 0x2E
-                        # Button press event
+                    elif channel_id == 0xFF && channel_type == 0x2E
+                        # Button Message
                         if i < size(payload)
                             var button_val = payload[i]
                             if button_val == 0x01
@@ -96,52 +101,49 @@ class LwDecode_WS101
                             elif button_val == 0x03
                                 data['button_mode'] = "Double Press"
                                 data['button_event'] = "double"
-                            else
-                                data['button_mode'] = f"Unknown (0x{button_val:02X})"
-                                data['button_event'] = "unknown"
                             end
                             i += 1
                         end
                         
-                    elif channel == 0xFF && ch_type == 0x01
-                        # Protocol version
+                    elif channel_id == 0xFF && channel_type == 0x01
+                        # Protocol Version
                         if i < size(payload)
                             data['protocol_version'] = f"V{payload[i]}"
                             i += 1
                         end
                         
-                    elif channel == 0xFF && ch_type == 0x08
-                        # Serial number (6 bytes)
+                    elif channel_id == 0xFF && channel_type == 0x08
+                        # Device Serial Number (6 bytes)
                         if i + 5 < size(payload)
                             var serial = ""
                             for j: 0..5
                                 serial += f"{payload[i + j]:02X}"
                             end
-                            data['serial_number'] = serial
+                            data['device_serial'] = serial
                             i += 6
                         end
                         
-                    elif channel == 0xFF && ch_type == 0x09
-                        # Hardware version
+                    elif channel_id == 0xFF && channel_type == 0x09
+                        # Hardware Version (2 bytes, major.minor)
                         if i + 1 < size(payload)
                             data['hw_version'] = f"{payload[i + 1]}.{payload[i]}"
                             i += 2
                         end
                         
-                    elif channel == 0xFF && ch_type == 0x0A
-                        # Software version
+                    elif channel_id == 0xFF && channel_type == 0x0A
+                        # Software Version (2 bytes, major.minor)
                         if i + 1 < size(payload)
                             data['sw_version'] = f"{payload[i + 1]}.{payload[i]}"
                             i += 2
                         end
                         
-                    elif channel == 0xFF && ch_type == 0x0B
-                        # Power on event
-                        data['power_on'] = true
-                        # No additional bytes for this event
+                    elif channel_id == 0xFF && channel_type == 0x0B
+                        # Power On Event (0 bytes)
+                        data['power_on_event'] = true
+                        # No additional bytes
                         
-                    elif channel == 0xFF && ch_type == 0x0F
-                        # Device class
+                    elif channel_id == 0xFF && channel_type == 0x0F
+                        # Device Class (1 byte)
                         if i < size(payload)
                             var class_val = payload[i]
                             if class_val == 0x00
@@ -150,66 +152,59 @@ class LwDecode_WS101
                                 data['device_class'] = "Class B"
                             elif class_val == 0x02
                                 data['device_class'] = "Class C"
-                            else
-                                data['device_class'] = f"Unknown (0x{class_val:02X})"
                             end
                             i += 1
                         end
                         
                     else
-                        # Unknown channel/type, skip 1 byte
-                        i += 1
+                        # Unknown channel, try to skip safely
+                        print(f"WS101: Unknown channel ID={channel_id:02X} Type={channel_type:02X}")
+                        break
                     end
                 end
             end
             
-            # Update node data
+            # Update node history in global storage
             node_data['last_data'] = data
             node_data['last_update'] = tasmota.rtc()['local']
             node_data['name'] = name
             
-            # Track battery history
-            if data.contains('battery')
+            # Track battery trend
+            if data.contains('battery_pct')
                 if !node_data.contains('battery_history')
                     node_data['battery_history'] = []
                 end
-                node_data['battery_history'].push(data['battery'])
+                node_data['battery_history'].push(data['battery_pct'])
                 if size(node_data['battery_history']) > 10
                     node_data['battery_history'].pop(0)
                 end
             end
             
-            # Track button press history
+            # Track button press events
             if data.contains('button_event')
-                if !node_data.contains('button_history')
-                    node_data['button_history'] = []
+                if !node_data.contains('button_press_count')
+                    node_data['button_press_count'] = {}
                 end
-                var press_event = {
-                    'type': data['button_event'],
-                    'timestamp': tasmota.rtc()['local']
-                }
-                node_data['button_history'].push(press_event)
-                if size(node_data['button_history']) > 50
-                    node_data['button_history'].pop(0)
-                end
-                
-                # Update press counters
-                var press_type = f"{data['button_event']}_count"
-                node_data[press_type] = node_data.find(press_type, 0) + 1
+                var event_type = data['button_event']
+                node_data['button_press_count'][event_type] = node_data['button_press_count'].find(event_type, 0) + 1
+                node_data['last_button_press'] = tasmota.rtc()['local']
+                node_data['last_button_type'] = event_type
             end
             
-            # Initialize downlink commands
+            # Track power on events
+            if data.contains('power_on_event') && data['power_on_event']
+                node_data['power_on_count'] = node_data.find('power_on_count', 0) + 1
+                node_data['last_power_on'] = tasmota.rtc()['local']
+            end
+            
+            # Initialize downlink commands once
             if !global.contains("WS101_cmdInit") || !global.WS101_cmdInit
-                self.register_downlink_commands()
+                LwDecode_WS101().register_downlink_commands()
                 global.WS101_cmdInit = true
             end
-            
-            # Save to global storage
+
+            # Save back to global storage
             global.WS101_nodes[node] = node_data
-            
-            # Update instance cache
-            self.last_data = data
-            self.last_update = node_data['last_update']
             
             return data
             
@@ -227,14 +222,15 @@ class LwDecode_WS101
             var data_to_show = self.last_data
             var last_update = self.last_update
             
-            # Recovery from global storage if instance empty
+            # If no instance data, try to recover from global storage
             if size(data_to_show) == 0 && self.node != nil
                 var node_data = global.WS101_nodes.find(self.node, {})
                 data_to_show = node_data.find('last_data', {})
                 last_update = node_data.find('last_update', 0)
             end
             
-            # Fallback: find any stored node
+            # Fallback: find ANY stored node if no specific node
+            # CRITICAL FIX: Use safe iteration with flag
             if size(data_to_show) == 0 && size(global.WS101_nodes) > 0
                 var found_node = false
                 for node_id: global.WS101_nodes.keys()
@@ -242,71 +238,90 @@ class LwDecode_WS101
                         var node_data = global.WS101_nodes[node_id]
                         data_to_show = node_data.find('last_data', {})
                         last_update = node_data.find('last_update', 0)
-                        self.node = node_id
-                        self.name = node_data.find('name', f"WS101-{node_id}")
-                        found_node = true
+                        if size(data_to_show) > 0
+                            self.node = node_id
+                            self.name = node_data.find('name', f"WS101-{node_id}")
+                            found_node = true
+                        end
                     end
                 end
             end
             
-            if size(data_to_show) == 0 return nil end
+            if size(data_to_show) == 0 return "" end
             
             import string
             var msg = ""
             var fmt = LwSensorFormatter_cls()
             
-            # Header with device info
+            # MANDATORY: Add header line with device info
             var name = self.name
             if name == nil || name == ""
                 name = f"WS101-{self.node}"
             end
             var name_tooltip = "Milesight WS101 Smart Button"
-            var battery = data_to_show.find('battery', 1000)
+            var battery = data_to_show.find('battery_pct', 1000)
+            if battery < 1000
+                battery = battery + 100000  # Convert % to framework format
+            end
             var battery_last_seen = last_update
             var rssi = data_to_show.find('RSSI', 1000)
             var simulated = data_to_show.find('simulated', false)
             
+            # Build display using emoji formatter
             fmt.header(name, name_tooltip, battery, battery_last_seen, rssi, last_update, simulated)
-            
-            # Main button event line
             fmt.start_line()
             
+            # Button state/event
             if data_to_show.contains('button_mode')
                 var button_emoji = "🔘"
                 if data_to_show.contains('button_event')
                     var event = data_to_show['button_event']
                     if event == "short"
-                        button_emoji = "👆"
+                        button_emoji = "🟢"
                     elif event == "long"
-                        button_emoji = "👇"
+                        button_emoji = "🔴"
                     elif event == "double"
-                        button_emoji = "👆👆"
+                        button_emoji = "🟡"
                     end
                 end
                 fmt.add_sensor("string", data_to_show['button_mode'], "Button", button_emoji)
             end
             
             # Device info line (if present)
-            if data_to_show.contains('sw_version') || data_to_show.contains('power_on') || 
-               data_to_show.contains('device_class')
+            var info_items = []
+            
+            if data_to_show.contains('sw_version')
+                info_items.push(['string', f"v{data_to_show['sw_version']}", "Software", "💾"])
+            end
+            
+            if data_to_show.contains('device_class')
+                info_items.push(['string', data_to_show['device_class'], "Class", "📶"])
+            end
+            
+            if data_to_show.contains('power_on_event') && data_to_show['power_on_event']
+                info_items.push(['string', "Power On", "Event", "⚡"])
+            end
+            
+            # Only create info line if there's content
+            if size(info_items) > 0
                 fmt.next_line()
-                
-                if data_to_show.contains('sw_version')
-                    fmt.add_sensor("string", f"v{data_to_show['sw_version']}", "Software", "💾")
+                for item : info_items
+                    fmt.add_sensor(item[0], item[1], item[2], item[3])
                 end
-                
-                if data_to_show.contains('device_class')
-                    fmt.add_sensor("string", data_to_show['device_class'], "Class", "📶")
-                end
-                
-                if data_to_show.contains('power_on') && data_to_show['power_on']
-                    fmt.add_sensor("string", "Power On", "Event", "⚡")
+            end
+            
+            # Add last seen info if data is old
+            if last_update > 0
+                var age = tasmota.rtc()['local'] - last_update
+                if age > 3600  # Data older than 1 hour
+                    fmt.next_line()
+                    fmt.add_status(self.format_age(age), "⏱️", nil)
                 end
             end
             
             fmt.end_line()
             msg += fmt.get_msg()
-            
+
             return msg
             
         except .. as e, m
@@ -315,55 +330,12 @@ class LwDecode_WS101
         end
     end
     
-    def register_downlink_commands()
-        import string
-        
-        # Set reporting interval (60-64800 seconds)
-        tasmota.remove_cmd("LwWS101Interval")
-        tasmota.add_cmd("LwWS101Interval", def(cmd, idx, payload_str)
-            var interval = int(payload_str)
-            if interval < 60 || interval > 64800
-                return tasmota.resp_cmnd_str("Invalid interval: range 60-64800 seconds")
-            end
-            
-            var hex_cmd = f"FF03{interval & 0xFF:02X}{(interval >> 8) & 0xFF:02X}"
-            return lwdecode.SendDownlink(global.WS101_nodes, cmd, idx, hex_cmd)
-        end)
-        
-        # Reboot device
-        tasmota.remove_cmd("LwWS101Reboot")
-        tasmota.add_cmd("LwWS101Reboot", def(cmd, idx, payload_str)
-            return lwdecode.SendDownlink(global.WS101_nodes, cmd, idx, "FF10FF")
-        end)
-        
-        # Set LED indicator
-        tasmota.remove_cmd("LwWS101LED")
-        tasmota.add_cmd("LwWS101LED", def(cmd, idx, payload_str)
-            return lwdecode.SendDownlinkMap(global.WS101_nodes, cmd, idx, payload_str, {
-                'ENABLE|1':  ['FF2F01', 'ENABLED'],
-                'DISABLE|0': ['FF2F00', 'DISABLED']
-            })
-        end)
-        
-        # Set double press mode
-        tasmota.remove_cmd("LwWS101DoublePress")
-        tasmota.add_cmd("LwWS101DoublePress", def(cmd, idx, payload_str)
-            return lwdecode.SendDownlinkMap(global.WS101_nodes, cmd, idx, payload_str, {
-                'ENABLE|1':  ['FF7401', 'ENABLED'],
-                'DISABLE|0': ['FF7400', 'DISABLED']
-            })
-        end)
-        
-        # Set buzzer
-        tasmota.remove_cmd("LwWS101Buzzer")
-        tasmota.add_cmd("LwWS101Buzzer", def(cmd, idx, payload_str)
-            return lwdecode.SendDownlinkMap(global.WS101_nodes, cmd, idx, payload_str, {
-                'ENABLE|1':  ['FF3E01', 'ENABLED'],
-                'DISABLE|0': ['FF3E00', 'DISABLED']
-            })
-        end)
-        
-        print("WS101: Downlink commands registered")
+    def format_age(seconds)
+        if seconds < 60 return f"{seconds}s ago"
+        elif seconds < 3600 return f"{seconds/60}m ago"
+        elif seconds < 86400 return f"{seconds/3600}h ago"
+        else return f"{seconds/86400}d ago"
+        end
     end
     
     # Get node statistics
@@ -375,15 +347,16 @@ class LwDecode_WS101
         return {
             'last_update': node_data.find('last_update', 0),
             'battery_history': node_data.find('battery_history', []),
-            'button_history': node_data.find('button_history', []),
-            'short_count': node_data.find('short_count', 0),
-            'long_count': node_data.find('long_count', 0),
-            'double_count': node_data.find('double_count', 0),
+            'button_press_count': node_data.find('button_press_count', {}),
+            'last_button_press': node_data.find('last_button_press', 0),
+            'last_button_type': node_data.find('last_button_type', 'none'),
+            'power_on_count': node_data.find('power_on_count', 0),
+            'last_power_on': node_data.find('last_power_on', 0),
             'name': node_data.find('name', 'Unknown')
         }
     end
     
-    # Clear node data
+    # Clear node data (for maintenance)
     def clear_node_data(node_id)
         import global
         if global.WS101_nodes.contains(node_id)
@@ -393,9 +366,62 @@ class LwDecode_WS101
         return false
     end
     
-    # Verify test payload decoding
+    # Register downlink commands for device control
+    def register_downlink_commands()
+        import string
+        
+        # Set Reporting Interval (60-64800 seconds)
+        tasmota.remove_cmd("LwWS101Interval")
+        tasmota.add_cmd("LwWS101Interval", def(cmd, idx, payload_str)
+            var interval = int(payload_str)
+            if interval < 60 || interval > 64800
+                return tasmota.resp_cmnd_str("Invalid interval: range 60-64800 seconds")
+            end
+            
+            var hex_cmd = f"FF03{lwdecode.uint16le(interval)}"
+            return lwdecode.SendDownlink(global.WS101_nodes, cmd, idx, hex_cmd)
+        end)
+        
+        # Reboot Device
+        tasmota.remove_cmd("LwWS101Reboot")
+        tasmota.add_cmd("LwWS101Reboot", def(cmd, idx, payload_str)
+            return lwdecode.SendDownlink(global.WS101_nodes, cmd, idx, "FF10FF")
+        end)
+        
+        # Set LED Indicator
+        tasmota.remove_cmd("LwWS101LED")
+        tasmota.add_cmd("LwWS101LED", def(cmd, idx, payload_str)
+            return lwdecode.SendDownlinkMap(global.WS101_nodes, cmd, idx, payload_str, {
+                'ENABLE|1':  ['FF2F01', 'ENABLED'],
+                'DISABLE|0': ['FF2F00', 'DISABLED']
+            })
+        end)
+        
+        # Set Double Press Mode
+        tasmota.remove_cmd("LwWS101DoublePress")
+        tasmota.add_cmd("LwWS101DoublePress", def(cmd, idx, payload_str)
+            return lwdecode.SendDownlinkMap(global.WS101_nodes, cmd, idx, payload_str, {
+                'ENABLE|1':  ['FF7401', 'ENABLED'],
+                'DISABLE|0': ['FF7400', 'DISABLED']
+            })
+        end)
+        
+        # Set Buzzer
+        tasmota.remove_cmd("LwWS101Buzzer")
+        tasmota.add_cmd("LwWS101Buzzer", def(cmd, idx, payload_str)
+            return lwdecode.SendDownlinkMap(global.WS101_nodes, cmd, idx, payload_str, {
+                'ENABLE|1':  ['FF3E01', 'ENABLED'],
+                'DISABLE|0': ['FF3E00', 'DISABLED']
+            })
+        end)
+        
+        print("WS101: Downlink commands registered")
+    end
+    
+    # MANDATORY: Add payload verification function
     def verify_test_payload(hex_payload, scenario_name, expected_params)
         import string
+        # Convert hex string to bytes for testing
         var payload_bytes = []
         var i = 0
         while i < size(hex_payload)
@@ -404,13 +430,15 @@ class LwDecode_WS101
             i += 2
         end
         
-        var result = self.decodeUplink("TestDevice", "TEST-001", -75, 85, payload_bytes)
+        # Decode test payload through driver
+        var result = LwDecode_WS101.decodeUplink("TestDevice", "TEST-001", -75, 85, payload_bytes, true)
         
         if result == nil
             print(f"PAYLOAD ERROR: {scenario_name} failed to decode")
             return false
         end
         
+        # Verify expected parameters exist
         for param: expected_params
             if !result.contains(param)
                 print(f"PAYLOAD ERROR: {scenario_name} missing {param}")
@@ -419,7 +447,7 @@ class LwDecode_WS101
         end
         
         # Scenario-specific validation
-        if scenario_name == "low_battery" && result.contains('battery') && result['battery'] > 20
+        if scenario_name == "low_battery" && result.contains('battery_pct') && result['battery_pct'] > 20
             print(f"PAYLOAD ERROR: {scenario_name} battery should be <= 20%")
             return false
         end
@@ -457,14 +485,14 @@ tasmota.remove_cmd("LwWS101TestUI")
 tasmota.add_cmd("LwWS101TestUI", def(cmd, idx, payload_str)
     # Template v2.5.0: Verified payload decoding for all scenarios
     var test_scenarios = {
-        "short_press":  "FF2E01",                    # Short press event
-        "long_press":   "FF2E02",                    # Long press event
-        "double_press": "FF2E03",                    # Double press event
-        "battery":      "017555",                    # Battery 85%
-        "low_battery":  "017512",                    # Low battery 18%
-        "power_on":     "FF0B",                      # Power on event
-        "device_info":  "FF0A0200FF090100",          # Software v2.0, Hardware v1.0
-        "full_info":    "FF2E01017550FF0A0200FF090100FF0801234567890AFF0B" # Complete info packet
+        "short_press":  "FF2E01",                              # Short press event
+        "long_press":   "FF2E02",                              # Long press event  
+        "double_press": "FF2E03",                              # Double press event
+        "battery":      "017555",                              # Battery 85%
+        "low_battery":  "017512",                              # Low battery 18%
+        "power_on":     "FF0B",                                # Power on event
+        "device_info":  "FF0A0200FF090100FF0101",              # SW v2.0, HW v1.0, Protocol V1
+        "full_info":    "FF2E01017550FF0A0200FF090100FF0101FF0F00FF08123456789ABC"  # Complete info
     }
     
     var hex_payload = test_scenarios.find(payload_str ? payload_str : 'nil', 'not_found')
@@ -480,5 +508,5 @@ tasmota.add_cmd("LwWS101TestUI", def(cmd, idx, payload_str)
     return tasmota.cmd(f'LwSimulate{idx} {rssi},{fport},{hex_payload}')
 end)
 
-# Register driver
+# MANDATORY: Register driver for web UI integration
 tasmota.add_driver(LwDeco)

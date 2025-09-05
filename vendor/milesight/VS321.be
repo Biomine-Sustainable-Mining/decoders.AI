@@ -325,58 +325,61 @@ class LwDecode_VS321
             
             fmt.header(name, name_tooltip, battery, battery_last_seen, rssi, last_update, simulated)
             
-            # Main sensor data line
+            # Occupancy & People Monitoring (always show)
             fmt.start_line()
+            var people_count = data_to_show.find('people_count', '--')
+            var occupancy = data_to_show.find('occupancy_status', '--')
+            fmt.add_sensor("string", f"{people_count}", "People", "👥")
+            fmt.add_sensor("string", f"{occupancy}", "Desks", "🪑")
             
-            if data_to_show.contains('people_count')
-                fmt.add_sensor("string", f"{data_to_show['people_count']}", "People", "👥")
+            # Environmental Conditions (always show)
+            fmt.next_line()
+            var temp = data_to_show.contains('temperature') ? f"{data_to_show['temperature']:.1f}°C" : "--"
+            var humidity = data_to_show.contains('humidity') ? f"{data_to_show['humidity']:.1f}%" : "--"
+            var illumination = data_to_show.find('illumination', '--')
+            var illum_icon = illumination == "Bright" ? "☀️" : (illumination == "Dim" ? "🌙" : "💡")
+            fmt.add_sensor("string", temp, "Temp", "🌡️")
+            fmt.add_sensor("string", humidity, "Humidity", "💧")
+            fmt.add_sensor("string", illumination, "Light", illum_icon)
+            
+            # Device Status & Detection (always show)
+            fmt.next_line()
+            var detection = data_to_show.find('detection_status', '--')
+            var detect_icon = detection == "Normal" ? "✅" : (detection == "Undetectable" ? "⚠️" : "🔍")
+            fmt.add_sensor("string", detection, "Detection", detect_icon)
+            var fw_version = data_to_show.contains('fw_version') ? f"v{data_to_show['fw_version']}" : "--"
+            fmt.add_sensor("string", fw_version, "Firmware", "💾")
+            
+            # Events (only show if present with age) - 1 event per line
+            var events = []
+            if data_to_show.contains('power_on') && data_to_show['power_on']
+                events.push(["Power On", "⚡"])
+            end
+            if data_to_show.contains('reset_report') && data_to_show['reset_report']
+                events.push(["Reset", "🔄"])
+            end
+            if data_to_show.contains('temp_alarm') && data_to_show['temp_alarm'] > 0
+                events.push(["Temp Alarm", "🌡️⚠️"])
+            end
+            if data_to_show.contains('humidity_alarm') && data_to_show['humidity_alarm'] > 0
+                events.push(["Humidity Alarm", "💧⚠️"])
             end
             
-            if data_to_show.contains('occupancy_status')
-                fmt.add_sensor("string", data_to_show['occupancy_status'], "Desks", "🪑")
-            end
-            
-            if data_to_show.contains('temperature')
-                fmt.add_sensor("string", f"{data_to_show['temperature']:.1f}°C", "Temp", "🌡️")
-            end
-            
-            if data_to_show.contains('humidity')
-                fmt.add_sensor("string", f"{data_to_show['humidity']:.1f}%", "Humidity", "💧")
-            end
-            
-            # Second line for status and illumination
-            if data_to_show.contains('detection_status') || data_to_show.contains('illumination')
+            # Add each event on separate line
+            for event: events
                 fmt.next_line()
-                
-                if data_to_show.contains('detection_status')
-                    var status = data_to_show['detection_status']
-                    var status_icon = status == "Normal" ? "✅" : "⚠️"
-                    fmt.add_sensor("string", status, "Status", status_icon)
+                var age_seconds = tasmota.rtc()['local'] - last_update
+                var age_str = ""
+                if age_seconds < 60
+                    age_str = f"{age_seconds:02d}s"
+                elif age_seconds < 3600
+                    age_str = f"{age_seconds/60:02d}m"
+                elif age_seconds < 86400
+                    age_str = f"{age_seconds/3600:02d}h"
+                else
+                    age_str = f"{age_seconds/86400:02d}d"
                 end
-                
-                if data_to_show.contains('illumination')
-                    var illum = data_to_show['illumination']
-                    var illum_icon = illum == "Bright" ? "☀️" : "🌙"
-                    fmt.add_sensor("string", illum, "Light", illum_icon)
-                end
-            end
-            
-            # Third line for device info (if present)
-            if data_to_show.contains('fw_version') || data_to_show.contains('power_on') || 
-               data_to_show.contains('reset_report')
-                fmt.next_line()
-                
-                if data_to_show.contains('fw_version')
-                    fmt.add_sensor("string", f"v{data_to_show['fw_version']}", "Firmware", "💾")
-                end
-                
-                if data_to_show.contains('power_on') && data_to_show['power_on']
-                    fmt.add_sensor("string", "Power On", "Event", "⚡")
-                end
-                
-                if data_to_show.contains('reset_report') && data_to_show['reset_report']
-                    fmt.add_sensor("string", "Reset", "Event", "🔄")
-                end
+                fmt.add_sensor("string", f"{event[0]} ({age_str})", "Event", event[1])
             end
             
             fmt.end_line()
@@ -590,13 +593,14 @@ tasmota.add_cmd("LwVS321TestUI", def(cmd, idx, payload_str)
         "alarm":       "83670125018468321A", # Temperature alarm (29.3°C, alarm=1, humidity 25%, alarm=26)
         "device_info": "FF0A02000910000116AABBCCDDEEFF0102FF0B01", # Firmware v2.0, hardware v1.0, power on
         "historical":  "20CE01000000AA5501", # Historical data entry
-        "reset":       "FF0B01FEFEFF" # Power on + reset report
+        "reset":       "FF0B01FEFEFF", # Power on + reset report
+        "demo":        "0175550367F700046832050005FD050006FE0100020007FF0108F4020083671D01018468401AFF0A02000910000116AABBCCDDEEFF0102FF0B01FEFEFF" # All features demo
     }
     
     var hex_payload = test_scenarios.find(payload_str ? payload_str : 'nil', 'not_found')
     
     if hex_payload == 'not_found'
-        var scenarios_list = "normal occupied low_battery empty alarm device_info historical reset "
+        var scenarios_list = "normal occupied low_battery empty alarm device_info historical reset demo "
         return tasmota.resp_cmnd_str(f"Available scenarios: {scenarios_list}")
     end
     

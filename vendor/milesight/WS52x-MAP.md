@@ -84,6 +84,7 @@ uplinks:
         type: 0x0B
         name: "Power On Event"
         size: 1
+        description: "Device power on event with reason code"
         
       - id: 0xFF
         type: 0x0F

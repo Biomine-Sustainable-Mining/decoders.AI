@@ -1,13 +1,14 @@
 #
 # LoRaWAN AI-Generated Decoder for Milesight WS52x Prompted by ZioFabry 
 #
-# Generated: 2025-09-03 | Version: 2.0.0 | Revision: 4
+# Generated: 2025-09-06 | Version: 2.0.1 | Revision: 1
 #            by "LoRaWAN Decoder AI Generation Template", v2.5.0
 #
 # Homepage:  https://www.milesight.com/iot/product/lorawan-sensor/ws52x
 # Userguide: WS52x_LoRaWAN_Application_Guide.pdf
 # Decoder:   Official Milesight Decoder
 # 
+# v2.0.1 (2025-09-06): FIXED - Power On Event channel now correctly consumes 1 byte as per specification
 # v2.0.0 (2025-09-03): Template v2.5.0 upgrade - TestUI payload verification & critical Berry keys() fixes
 # v1.7.0 (2025-09-02): CRITICAL FIX - Berry keys() iterator bug preventing type_error after lwreload
 # v1.6.1 (2025-08-27): FIXED - Empty slides issue, added debug logging and guaranteed slide content
@@ -147,8 +148,11 @@ class LwDecode_WS52x
                         end
                         
                     elif channel_id == 0xFF && channel_type == 0x0B  # Power On Event
-                        data['power_on_event'] = true
-                        # No additional bytes
+                        if i < size(payload)
+                            data['power_on_event'] = true
+                            data['power_on_reason'] = payload[i]  # Store the reason byte
+                            i += 1
+                        end
                         
                     elif channel_id == 0xFF && channel_type == 0x0F  # Device Class
                         if i < size(payload)
